@@ -272,4 +272,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-01-v3
+// Dyad forced redeployment: 2024-08-01-v4
