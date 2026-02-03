@@ -66,52 +66,67 @@ function findBestVideoUrl(wistiaJson: WistiaJson): string | null {
   return bestAsset?.url || null;
 }
 
+/**
+ * Converts a string title into a URL-friendly slug.
+ */
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric characters (except spaces and hyphens)
+    .trim()
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-'); // Collapse multiple hyphens
+}
+
 // Simulated lesson discovery based on the course structure described by the user
 function simulateLessonDiscovery(baseUrl: string, wistiaJson: WistiaJson, userId: string, jobId: string) {
-  const baseLessonUrl = baseUrl.replace('/categories', '/lesson-');
+  // Assuming the base URL is the course page, and lessons are under /lesson-SLUG
+  // Example: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories
+  // We want: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/lesson-SLUG
+  const courseBaseUrl = baseUrl.split('/categories')[0]; 
   
-  // The main video URL is extracted from the Wistia JSON provided in the form
+  // Using a subset of the real lesson titles provided by the user
+  const lessonTitles = [
+    "Course Introduction & Foundational Knowledge",
+    "About Your Instructor",
+    "Overview of the Approach",
+    "Performance Iceberg",
+    "Neurophysiology 101",
+    "3 Stages of Stress",
+    "Threat Neurophysiology",
+    "Autonomic Nervous System Overview",
+    "BOLT Test",
+    "Lecture: Muscle Testing Fundamentals",
+    "Demo: Indicator Muscle Fundamentals",
+    "Lecture: Therapy Localisation",
+    "Lecture: Beginning Procedure (Sympathetic Down Regulation)",
+    "Harmonic Rocking",
+    "Lecture: Vagus Nerve Procedure",
+    "Lecture: Pathway Assessment Process Overview",
+    "Lecture: Cortical Brain Zones",
+    "In Class Demo: Moro Reflex, Startle",
+    "Lecture: Cranial Nerves",
+    "Lecture: Emotional Corrections",
+  ];
+
   const mainVideoUrl = findBestVideoUrl(wistiaJson);
 
-  return [
-    // Lesson 1: The main course introduction video (using the provided Wistia JSON)
-    {
+  return lessonTitles.map((title, index) => {
+    const slug = slugify(title);
+    const lessonUrl = `${courseBaseUrl}/lesson-${slug}`;
+    
+    // Only the first lesson gets the main video URL provided in the form
+    const videoUrl = index === 0 ? mainVideoUrl : null;
+
+    return {
       job_id: jobId,
       user_id: userId,
-      lesson_url: baseLessonUrl + 'introduction',
-      video_url: mainVideoUrl,
+      lesson_url: lessonUrl,
+      // Simulate video URLs for subsequent lessons
+      video_url: videoUrl || (index % 3 === 0 ? 'https://simulated-video-url.com/lesson-' + slug : null),
       status: 'pending',
-    },
-    // Simulated subsequent lessons
-    {
-      job_id: jobId,
-      user_id: userId,
-      lesson_url: baseLessonUrl + 'about-instructor',
-      video_url: null, // Assume video URL needs to be scraped later
-      status: 'pending',
-    },
-    {
-      job_id: jobId,
-      user_id: userId,
-      lesson_url: baseLessonUrl + 'overview-approach',
-      video_url: null,
-      status: 'pending',
-    },
-    {
-      job_id: jobId,
-      user_id: userId,
-      lesson_url: baseLessonUrl + 'neurophysiology-101',
-      video_url: null,
-      status: 'pending',
-    },
-    {
-      job_id: jobId,
-      user_id: userId,
-      lesson_url: baseLessonUrl + 'threat-neurophysiology',
-      video_url: null,
-      status: 'pending',
-    },
-  ];
+    };
+  });
 }
 
 
@@ -209,10 +224,18 @@ serve(async (req) => {
       await new Promise(resolve => setTimeout(resolve, 500)); 
       lessonsProcessed++;
 
-      // Simulate updating the lesson status (e.g., video URL found, content archived)
+      // Determine the final video URL for the lesson
+      let finalVideoUrl = lesson.video_url;
+      if (!finalVideoUrl) {
+        // Simulate finding a video URL for lessons that didn't get the main Wistia JSON URL
+        const lessonSlug = lesson.lesson_url.split('lesson-')[1];
+        finalVideoUrl = 'https://simulated-video-url.com/' + lessonSlug + '.mp4';
+      }
+
+      // Simulate updating the lesson status
       const { error: updateLessonError } = await supabaseAdmin
         .from('lessons')
-        .update({ status: 'completed', video_url: lesson.video_url || 'https://simulated-video-url.com/lesson-' + lessonsProcessed })
+        .update({ status: 'completed', video_url: finalVideoUrl })
         .eq('id', lesson.id) // Now lesson.id is correctly populated
         .select()
 
@@ -274,4 +297,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-01-v5
+// Dyad forced redeployment: 2024-08-01-v6
