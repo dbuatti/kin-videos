@@ -20,7 +20,7 @@ interface LessonListDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Define the desired order of modules based on user request
+// Define the desired order of modules
 const MODULE_ORDER = [
   "Weekly Q & A",
   "Course Introduction & Foundational Knowledge",
@@ -72,8 +72,19 @@ const getLessonName = (url: string) => {
   }
 };
 
-const groupLessonsByCategory = (lessons: Lesson[]): Record<string, Lesson[]> => {
-  return lessons.reduce((acc, lesson) => {
+// Helper function to generate the structured filename
+const generateFilename = (categoryNumber: number, lessonNumber: number, categoryName: string, lessonName: string): string => {
+  // Clean up category and lesson names for file system compatibility
+  const cleanCategory = categoryName.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
+  const cleanLesson = lessonName.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
+  
+  // Format: [C].[L] - [Category] - [Lesson Name].mp4
+  return `${categoryNumber}.${lessonNumber} - ${cleanCategory} - ${cleanLesson}.mp4`;
+};
+
+// Function to group, sort, and number lessons
+const processLessons = (lessons: Lesson[]): Record<string, (Lesson & { displayIndex: string, filename: string })[]> => {
+  const grouped = lessons.reduce((acc, lesson) => {
     const category = lesson.category || 'Uncategorized';
     if (!acc[category]) {
       acc[category] = [];
@@ -81,29 +92,49 @@ const groupLessonsByCategory = (lessons: Lesson[]): Record<string, Lesson[]> => 
     acc[category].push(lesson);
     return acc;
   }, {} as Record<string, Lesson[]>);
+
+  // Sort categories based on MODULE_ORDER
+  const sortedCategories = Object.keys(grouped).sort((a, b) => {
+    const indexA = MODULE_ORDER.indexOf(a);
+    const indexB = MODULE_ORDER.indexOf(b);
+    const finalIndexA = indexA === -1 ? Infinity : indexA;
+    const finalIndexB = indexB === -1 ? Infinity : indexB;
+    return finalIndexA - finalIndexB;
+  });
+
+  const numberedLessons: Record<string, (Lesson & { displayIndex: string, filename: string })[]> = {};
+  
+  sortedCategories.forEach((category, categoryIndex) => {
+    const categoryNumber = categoryIndex + 1;
+    const categoryLessons = grouped[category];
+    
+    numberedLessons[category] = categoryLessons.map((lesson, lessonIndex) => {
+      const lessonNumber = lessonIndex + 1;
+      const displayIndex = `${categoryNumber}.${lessonNumber}`;
+      const lessonName = getLessonName(lesson.lesson_url);
+      
+      return {
+        ...lesson,
+        displayIndex,
+        filename: generateFilename(categoryNumber, lessonNumber, category, lessonName),
+      };
+    });
+  });
+
+  return numberedLessons;
 };
+
 
 const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl, isOpen, onOpenChange }) => {
   const { data: lessons, isLoading, isError } = useJobLessons(jobId);
 
-  const groupedLessons = lessons ? groupLessonsByCategory(lessons) : {};
-  
-  // Custom sorting logic using MODULE_ORDER
-  const categories = Object.keys(groupedLessons).sort((a, b) => {
-    const indexA = MODULE_ORDER.indexOf(a);
-    const indexB = MODULE_ORDER.indexOf(b);
-
-    // Treat categories not found in the order list as lowest priority (Infinity)
-    const finalIndexA = indexA === -1 ? Infinity : indexA;
-    const finalIndexB = indexB === -1 ? Infinity : indexB;
-
-    return finalIndexA - finalIndexB;
-  });
+  const numberedGroupedLessons = lessons ? processLessons(lessons) : {};
+  const categories = Object.keys(numberedGroupedLessons);
   
   // Set the first category in the custom order to be open by default
   const [defaultOpenCategory] = categories;
 
-  const handleDownloadAll = (category: string, lessons: Lesson[]) => {
+  const handleDownloadAll = (category: string, lessons: (Lesson & { displayIndex: string, filename: string })[]) => {
     const completedVideos = lessons.filter(l => l.status === 'completed' && l.video_url);
     
     if (completedVideos.length === 0) {
@@ -111,12 +142,14 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
       return;
     }
 
-    // Simulate initiating a bulk download (e.g., triggering a zip file generation)
+    // In a real application, this would trigger a server-side endpoint to generate a zip file.
     showSuccess(`Initiating bulk download for '${category}' module (${completedVideos.length} videos).`);
     
-    // Fallback/Simulated action: open the first video link
+    // Simulated action: open the first video link with the structured filename
     if (completedVideos[0].video_url) {
-      window.open(completedVideos[0].video_url, '_blank');
+      const firstLesson = completedVideos[0];
+      // We append the filename as a query parameter or path segment to hint the download name
+      window.open(`${firstLesson.video_url}?filename=${encodeURIComponent(firstLesson.filename)}`, '_blank');
     }
   };
 
@@ -149,7 +182,7 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
           {categories.length > 0 ? (
             <Accordion type="multiple" defaultValue={[defaultOpenCategory]} className="w-full space-y-2">
               {categories.map((category) => {
-                const lessons = groupedLessons[category];
+                const lessons = numberedGroupedLessons[category];
                 const completedCount = lessons.filter(l => l.status === 'completed' && l.video_url).length;
                 const totalCount = lessons.length;
                 const isDownloadable = completedCount > 0;
@@ -165,7 +198,9 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                     <div className="flex justify-between items-center py-4">
                       <AccordionTrigger className="flex-1 p-0 hover:no-underline">
                         <div className="flex flex-col items-start flex-1 cursor-pointer hover:text-indigo-600 transition-colors">
-                          <span className="font-bold text-lg text-indigo-800 text-left">{category}</span>
+                          <span className="font-bold text-lg text-indigo-800 text-left">
+                            {lessons[0].displayIndex.split('.')[0]}. {category}
+                          </span>
                           <span className="text-sm text-gray-500 mt-1">
                             {totalCount} Lessons ({completedCount} ready)
                           </span>
@@ -192,11 +227,11 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                     </div>
                     <AccordionContent className="pt-2 pb-4">
                       <div className="space-y-3 border-t pt-3">
-                        {lessons.map((lesson, index) => (
+                        {lessons.map((lesson) => (
                           <div key={lesson.id} className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
                             <div className="flex-1 min-w-0 mr-4">
                               <p className="font-medium text-gray-800 truncate">
-                                {index + 1}. {getLessonName(lesson.lesson_url)}
+                                {lesson.displayIndex} - {getLessonName(lesson.lesson_url)}
                               </p>
                               <div className="flex items-center space-x-2 mt-1">
                                 {getLessonStatusBadge(lesson.status)}
@@ -221,7 +256,13 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                                   size="sm" 
                                   className="rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-100"
                                 >
-                                  <a href={lesson.video_url} target="_blank" rel="noopener noreferrer" download>
+                                  {/* Use the generated filename for download attribute and append .mp4 to the URL */}
+                                  <a 
+                                    href={`${lesson.video_url}.mp4`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    download={lesson.filename}
+                                  >
                                     <Download className="w-4 h-4 mr-1" /> Download
                                   </a>
                                 </Button>
