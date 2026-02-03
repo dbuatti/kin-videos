@@ -285,18 +285,14 @@ function simulateLessonDiscovery(baseUrl: string, wistiaJson: WistiaJson, userId
   const mainVideoUrl = findBestVideoUrl(wistiaJson);
   
   const lessonsToInsert = [];
-  let lessonIndex = 0;
 
   for (const module of COURSE_STRUCTURE) {
     for (const title of module.lessons) {
       const slug = slugify(title);
       const lessonUrl = `${courseBaseUrl}/lesson-${slug}`;
       
-      // Ensure every lesson has a video URL for download testing.
-      // The first lesson gets the actual Wistia URL, others get a simulated one.
-      const videoUrl = lessonIndex === 0 
-        ? mainVideoUrl 
-        : `https://simulated-video-url.com/${slug}-${lessonIndex}.mp4`;
+      // Assign the actual extracted video URL to ALL lessons
+      const videoUrl = mainVideoUrl;
 
       lessonsToInsert.push({
         job_id: jobId,
@@ -306,7 +302,6 @@ function simulateLessonDiscovery(baseUrl: string, wistiaJson: WistiaJson, userId
         status: 'completed', // Set to completed for immediate download testing
         category: module.category, // NEW: Assign category
       });
-      lessonIndex++;
     }
   }
   
@@ -429,4 +424,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-02-v4
+// Dyad forced redeployment: 2024-08-02-v5
