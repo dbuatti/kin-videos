@@ -81,9 +81,15 @@ function slugify(text: string): string {
 // Define the structure of the course content with categories and lessons
 const COURSE_STRUCTURE = [
   {
+    category: "Weekly Q & A",
+    lessons: [
+      "Weekly Q & A",
+    ]
+  },
+  {
     category: "Course Introduction & Foundational Knowledge",
     lessons: [
-      "Course Introduction & Foundational Knowledge",
+      "Learning Materials",
       "About Your Instructor",
       "Overview of the Approach",
       "Performance Iceberg",
@@ -91,15 +97,23 @@ const COURSE_STRUCTURE = [
       "3 Stages of Stress",
       "Threat Neurophysiology",
       "Autonomic Nervous System Overview",
+    ]
+  },
+  {
+    category: "Clinical Assessments",
+    lessons: [
       "BOLT Test",
+      "Breathing Assessment Quiz",
+      "Lecture: Muscle Testing Fundamentals",
+      "Muscle Testing Quiz",
+      "Demo: Indicator Muscle Fundamentals",
+      "Lecture: Therapy Localisation",
+      "Lecture: Intention Based Muscle Testing",
     ]
   },
   {
     category: "Direct Muscle Tests",
     lessons: [
-      "Lecture: Muscle Testing Fundamentals",
-      "Demo: Indicator Muscle Fundamentals",
-      "Lecture: Therapy Localisation",
       "Muscle Tests: Intrinsic Stabilisation System",
       "Muscle Tests: Transverse Abdominals",
       "Demo: TVA Muscle Test",
@@ -110,11 +124,6 @@ const COURSE_STRUCTURE = [
       "Demo: Quadriceps Group",
       "Deltoids, Mid & Lower Traps, Pecs and Serratus Anterior",
       "Biceps and Triceps",
-      "Hamstrings",
-      "TFL",
-      "Glute Med",
-      "Glute Max",
-      "Upper Trapezius and SCM",
     ]
   },
   {
@@ -130,9 +139,20 @@ const COURSE_STRUCTURE = [
     ]
   },
   {
+    category: "Lymphatic System Assessment and Correction",
+    lessons: [
+      "Lecture: Lymphatic System",
+      "Lymphatic Cranial Reflex Zone",
+      "Lymphatic Release Positions",
+      "Lymphatic System Full Procedure",
+    ]
+  },
+  {
     category: "Vagus Nerve",
     lessons: [
+      "Vagus Nerve Masterclass",
       "Lecture: Vagus Nerve Procedure",
+      "Demonstration: Vagus Nerve Screen",
     ]
   },
   {
@@ -153,6 +173,27 @@ const COURSE_STRUCTURE = [
       "In Class Lecture: Unconscious Mechanoreception",
       "Demo: Mechanoreceptor (Unconscious)",
       "In class lecture and Demo: Nociception",
+    ]
+  },
+  {
+    category: "Primitive Reflexes",
+    lessons: [
+      "Background Information for the Primitive Reflexes",
+      "Lecture: Primitive Reflexes Overview",
+      "In Class Demo: Moro Reflex, Startle",
+      "In Class Demo: Spinal Gallant Reflex",
+      "ATNR Assessment Demo",
+      "Tonic Labrynthine Reflex (TLR) Assessment Demo",
+      "Fear Paralyis Reflex Demo",
+      "Babinski Reflex Demo",
+      "Moro/Startle Reflex Demo",
+      "ATNR",
+    ]
+  },
+  {
+    category: "Postural Reflexes",
+    lessons: [
+      "Occular & Labrythine Righting Reflexes Assessment",
     ]
   },
   {
@@ -184,19 +225,52 @@ const COURSE_STRUCTURE = [
       "Demo: Emotional Correction",
     ]
   },
-  // Add placeholders for other categories mentioned by the user, even if they have no lessons in this simulation
-  { category: "Weekly Q & A", lessons: [] },
-  { category: "Clinical Assessments", lessons: [] },
-  { category: "Lymphatic System Assessment and Correction", lessons: [] },
-  { category: "Primitive Reflexes", lessons: [] },
-  { category: "Postural Reflexes", lessons: [] },
-  { category: "Modules18", lessons: [] },
-  { category: "Finishing Procedures and Home Reinforcement", lessons: [] },
-  { category: "Background Information", lessons: [] },
-  { category: "Masterclasses", lessons: [] },
-  { category: "Functional Anatomy and Biomechanics", lessons: [] },
-  { category: "Putting it all Together", lessons: [] },
-  { category: "FNH Foundations Exam", lessons: [] },
+  {
+    category: "Finishing Procedures and Home Reinforcement",
+    lessons: [
+      "Lecture: Gaits Integration",
+      "Gaits Integration Procedure",
+      "In class Lecture: Gaits",
+      "Things to Check during the session and for Home Reinforcement",
+    ]
+  },
+  {
+    category: "Background Information",
+    lessons: [
+      "Lecture: How the Brain Maps Movement",
+      "Chronic Pain and the Brain",
+    ]
+  },
+  {
+    category: "Masterclasses",
+    lessons: [
+      "Vertigo Masterclass - 21/Nov/2023",
+      "Personal Mindset Mastery Masterclass (Jan 3rd, 2024)",
+      "Neuro Mastery Masterclass: Muscle Testing Nuance and Back Pain Demo",
+      "Tendon Guard Reflex Masterclass",
+    ]
+  },
+  {
+    category: "Functional Anatomy and Biomechanics",
+    lessons: [
+      "Functional Anatomy Basics of the Saggital Plane",
+      "Functional Anatomy Basics of the Frontal Plane",
+      "Functional Anatomy basics of the Transverse Plane",
+    ]
+  },
+  {
+    category: "Putting it all Together",
+    lessons: [
+      "Lower Back Pain (In Class Demo)",
+      "Q and A - 5/8/2025 (STNR test, Navigating Challenging Muscle Tests)",
+    ]
+  },
+  {
+    category: "FNH Foundations Exam",
+    lessons: [
+      "FNH Foundations Theory Exam",
+    ]
+  },
 ];
 
 
