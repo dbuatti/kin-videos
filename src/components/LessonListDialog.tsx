@@ -256,9 +256,9 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                                   size="sm" 
                                   className="rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-100"
                                 >
-                                  {/* Use the generated filename for download attribute and append .mp4 to the URL */}
+                                  {/* FIX: Conditionally append .mp4 to prevent double extension on simulated URLs */}
                                   <a 
-                                    href={`${lesson.video_url}.mp4`} 
+                                    href={lesson.video_url.endsWith('.mp4') ? lesson.video_url : `${lesson.video_url}.mp4`} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
                                     download={lesson.filename}
