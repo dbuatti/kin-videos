@@ -1,14 +1,14 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useCrawlerJobs } from '@/hooks/use-crawler-jobs';
 import { CrawlerJob } from '@/types/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, XCircle, Clock, Zap, Download } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, Zap, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import LessonListDialog from './LessonListDialog';
 
 const getStatusBadge = (status: CrawlerJob['status']) => {
   switch (status) {
@@ -24,13 +24,17 @@ const getStatusBadge = (status: CrawlerJob['status']) => {
   }
 };
 
-const formatTime = (timestamp: string | null) => {
-  if (!timestamp) return 'N/A';
-  return new Date(timestamp).toLocaleString();
-};
-
 const JobTable: React.FC = () => {
   const { data: jobs, isLoading, isError } = useCrawlerJobs();
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobUrl, setSelectedJobUrl] = useState<string>('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleViewLessons = (job: CrawlerJob) => {
+    setSelectedJobId(job.id);
+    setSelectedJobUrl(job.target_url);
+    setIsDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -62,71 +66,57 @@ const JobTable: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-indigo-100 overflow-hidden">
-      <h3 className="text-xl font-bold text-indigo-700 p-6 border-b border-indigo-100">Recent Crawl Jobs ({jobs.length})</h3>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-indigo-50 hover:bg-indigo-50">
-              <TableHead className="w-[100px] text-indigo-800">Status</TableHead>
-              <TableHead className="text-indigo-800">Target URL</TableHead>
-              <TableHead className="text-indigo-800">Progress</TableHead>
-              <TableHead className="text-indigo-800">Video URL</TableHead>
-              <TableHead className="text-indigo-800">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {jobs.map((job) => (
-              <TableRow key={job.id} className="hover:bg-gray-50 transition-colors">
-                <TableCell>{getStatusBadge(job.status)}</TableCell>
-                <TableCell className="font-medium text-gray-700 truncate max-w-xs sm:max-w-md">
-                  <a href={job.target_url} target="_blank" rel="noopener noreferrer" className="hover:underline text-indigo-600">
-                    {job.target_url}
-                  </a>
-                </TableCell>
-                <TableCell>
-                  {job.total_lessons > 0 
-                    ? `${job.lessons_processed} / ${job.total_lessons}` 
-                    : (job.status === 'running' ? 'Discovering...' : '0 / 0')}
-                </TableCell>
-                <TableCell className="text-sm text-gray-500 truncate max-w-[150px]">
-                  {job.video_url ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="cursor-pointer hover:text-indigo-600">
-                          {job.video_url.substring(0, 30)}...
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-lg break-all">
-                        <p>{job.video_url}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : 'N/A'}
-                </TableCell>
-                <TableCell>
-                  {job.video_url && job.status === 'completed' ? (
+    <>
+      <div className="bg-white rounded-2xl shadow-lg border border-indigo-100 overflow-hidden">
+        <h3 className="text-xl font-bold text-indigo-700 p-6 border-b border-indigo-100">Recent Crawl Jobs ({jobs.length})</h3>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-indigo-50 hover:bg-indigo-50">
+                <TableHead className="w-[100px] text-indigo-800">Status</TableHead>
+                <TableHead className="text-indigo-800">Target Course URL</TableHead>
+                <TableHead className="text-indigo-800">Progress</TableHead>
+                <TableHead className="text-indigo-800">Lessons</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {jobs.map((job) => (
+                <TableRow key={job.id} className="hover:bg-gray-50 transition-colors">
+                  <TableCell>{getStatusBadge(job.status)}</TableCell>
+                  <TableCell className="font-medium text-gray-700 truncate max-w-xs sm:max-w-md">
+                    <a href={job.target_url} target="_blank" rel="noopener noreferrer" className="hover:underline text-indigo-600">
+                      {job.target_url}
+                    </a>
+                  </TableCell>
+                  <TableCell>
+                    {job.total_lessons > 0 
+                      ? `${job.lessons_processed} / ${job.total_lessons}` 
+                      : (job.status === 'running' ? 'Discovering...' : '0 / 0')}
+                  </TableCell>
+                  <TableCell>
                     <Button 
-                      asChild
+                      onClick={() => handleViewLessons(job)}
                       variant="outline" 
                       size="sm" 
                       className="rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-50"
                     >
-                      <a href={job.video_url} target="_blank" rel="noopener noreferrer" download>
-                        <Download className="w-4 h-4" />
-                      </a>
+                      <ListChecks className="w-4 h-4 mr-1" /> View
                     </Button>
-                  ) : (
-                    <Button variant="outline" size="sm" disabled className="rounded-lg">
-                      <Download className="w-4 h-4 text-gray-400" />
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+      
+      <LessonListDialog 
+        jobId={selectedJobId}
+        jobTargetUrl={selectedJobUrl}
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
+    </>
   );
 };
 

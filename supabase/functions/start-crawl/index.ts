@@ -66,6 +66,54 @@ function findBestVideoUrl(wistiaJson: WistiaJson): string | null {
   return bestAsset?.url || null;
 }
 
+// Simulated lesson discovery based on the course structure described by the user
+function simulateLessonDiscovery(baseUrl: string, wistiaJson: WistiaJson, userId: string, jobId: string) {
+  const baseLessonUrl = baseUrl.replace('/categories', '/lesson-');
+  
+  // The main video URL is extracted from the Wistia JSON provided in the form
+  const mainVideoUrl = findBestVideoUrl(wistiaJson);
+
+  return [
+    // Lesson 1: The main course introduction video (using the provided Wistia JSON)
+    {
+      job_id: jobId,
+      user_id: userId,
+      lesson_url: baseLessonUrl + 'introduction',
+      video_url: mainVideoUrl,
+      status: 'pending',
+    },
+    // Simulated subsequent lessons
+    {
+      job_id: jobId,
+      user_id: userId,
+      lesson_url: baseLessonUrl + 'about-instructor',
+      video_url: null, // Assume video URL needs to be scraped later
+      status: 'pending',
+    },
+    {
+      job_id: jobId,
+      user_id: userId,
+      lesson_url: baseLessonUrl + 'overview-approach',
+      video_url: null,
+      status: 'pending',
+    },
+    {
+      job_id: jobId,
+      user_id: userId,
+      lesson_url: baseLessonUrl + 'neurophysiology-101',
+      video_url: null,
+      status: 'pending',
+    },
+    {
+      job_id: jobId,
+      user_id: userId,
+      lesson_url: baseLessonUrl + 'threat-neurophysiology',
+      video_url: null,
+      status: 'pending',
+    },
+  ];
+}
+
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -81,6 +129,7 @@ serve(async (req) => {
 
   let job_id: string | undefined;
   let wistiaJson: WistiaJson | undefined;
+  let jobData: { user_id: string, target_url: string } | null = null;
 
   try {
     const body = await req.json();
@@ -96,26 +145,50 @@ serve(async (req) => {
       })
     }
     
-    let videoUrl: string | null = null;
-    if (wistiaJson) {
-      videoUrl = findBestVideoUrl(wistiaJson);
-      console.log(`[start-crawl] Extracted best video URL: ${videoUrl}`)
-    } else {
-      console.warn("[start-crawl] No Wistia JSON provided in request body.")
+    // 1. Fetch job details (user_id and target_url) from the database
+    const { data: jobResult, error: fetchError } = await supabaseAdmin
+      .from('crawler_jobs')
+      .select('user_id, target_url')
+      .eq('id', job_id)
+      .single()
+
+    if (fetchError || !jobResult) {
+      console.error("[start-crawl] Error fetching job details:", fetchError?.message || "Job not found")
+      throw new Error("Job details could not be retrieved.")
     }
-
-    // 1. Update status to 'running', set initial lessons count, and video URL
-    const totalLessons = 18; // Placeholder for actual discovery
     
-    const updateData: Record<string, any> = { 
-      status: 'running', 
-      total_lessons: totalLessons,
-      video_url: videoUrl, // Include videoUrl here
-    };
+    jobData = jobResult;
+    const { user_id, target_url } = jobData;
 
+    // 2. Simulate Lesson Discovery
+    const lessonsToInsert = simulateLessonDiscovery(target_url, wistiaJson, user_id, job_id);
+    const totalLessons = lessonsToInsert.length;
+    
+    console.log(`[start-crawl] Discovered ${totalLessons} lessons for job ${job_id}.`)
+
+    // 3. Insert lessons into the 'lessons' table
+    const { error: insertLessonsError } = await supabaseAdmin
+      .from('lessons')
+      .insert(lessonsToInsert)
+      .select()
+
+    if (insertLessonsError) {
+      console.error("[start-crawl] Error inserting lessons:", insertLessonsError)
+      throw new Error(insertLessonsError.message)
+    }
+    console.log(`[start-crawl] Successfully inserted ${totalLessons} lessons.`)
+
+
+    // 4. Update main job status to 'running' and set total lessons count
     const { error: updateError1 } = await supabaseAdmin
       .from('crawler_jobs')
-      .update(updateData)
+      .update({ 
+        status: 'running', 
+        total_lessons: totalLessons,
+        // We clear video_url from the main job as it's now per lesson, 
+        // but we keep it for the first lesson in the lessons table.
+        video_url: null, 
+      })
       .eq('id', job_id)
       .select()
 
@@ -123,28 +196,42 @@ serve(async (req) => {
       console.error("[start-crawl] Error updating initial job data:", updateError1)
       throw new Error(updateError1.message)
     }
-    console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons and video URL.`)
+    console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons.`)
 
-    // --- SIMULATE CRAWLING PROGRESS ---
+    // --- SIMULATE CRAWLING PROGRESS (Processing Lessons) ---
     console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}.`)
     
-    for (let i = 1; i <= totalLessons; i++) {
+    let lessonsProcessed = 0;
+    for (const lesson of lessonsToInsert) {
       // Simulate work delay
       await new Promise(resolve => setTimeout(resolve, 500)); 
+      lessonsProcessed++;
 
-      const { error: updateError2 } = await supabaseAdmin
+      // Simulate updating the lesson status (e.g., video URL found, content archived)
+      const { error: updateLessonError } = await supabaseAdmin
+        .from('lessons')
+        .update({ status: 'completed', video_url: lesson.video_url || 'https://simulated-video-url.com/lesson-' + lessonsProcessed })
+        .eq('id', lesson.id)
+        .select()
+
+      if (updateLessonError) {
+        console.error(`[start-crawl] Error updating lesson ${lesson.id} status:`, updateLessonError)
+      }
+      
+      // Update main job progress
+      const { error: updateJobProgressError } = await supabaseAdmin
         .from('crawler_jobs')
-        .update({ lessons_processed: i })
+        .update({ lessons_processed: lessonsProcessed })
         .eq('id', job_id)
         .select()
 
-      if (updateError2) {
-        console.error(`[start-crawl] Error updating progress for lesson ${i}:`, updateError2)
+      if (updateJobProgressError) {
+        console.error(`[start-crawl] Error updating job progress:`, updateJobProgressError)
       }
-      console.log(`[start-crawl] Job ${job_id}: Processed lesson ${i}/${totalLessons} (Simulated)`)
+      console.log(`[start-crawl] Job ${job_id}: Processed lesson ${lessonsProcessed}/${totalLessons} (Simulated)`)
     }
 
-    // 2. Update status to 'completed' and set end time
+    // 5. Update status to 'completed' and set end time
     const { error: updateError3 } = await supabaseAdmin
       .from('crawler_jobs')
       .update({ status: 'completed', end_time: new Date().toISOString() })
@@ -185,4 +272,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-01-v2
+// Dyad forced redeployment: 2024-08-01-v3

@@ -9,5 +9,15 @@ export interface CrawlerJob {
   lessons_processed: number;
   error_log: string | null;
   created_at: string;
-  video_url: string | null; // Added video_url
+  video_url: string | null; // Main video URL (if applicable to the course page itself)
+}
+
+export interface Lesson {
+  id: string;
+  job_id: string;
+  user_id: string;
+  lesson_url: string;
+  video_url: string | null;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  created_at: string;
 }
