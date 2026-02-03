@@ -6,7 +6,12 @@ import { CrawlerJob } from '@/types/supabase';
 
 const EDGE_FUNCTION_URL = "https://xebtjnvfkroiplyzftas.supabase.co/functions/v1/start-crawl";
 
-const fetchCrawlerJobs = async (userId: string): Promise<CrawlerJob[]> => {
+interface FetchJobsResult {
+  jobs: CrawlerJob[];
+  needsPolling: boolean;
+}
+
+const fetchCrawlerJobs = async (userId: string): Promise<FetchJobsResult> => {
   const { data, error } = await supabase
     .from('crawler_jobs')
     .select('*')
@@ -14,18 +19,31 @@ const fetchCrawlerJobs = async (userId: string): Promise<CrawlerJob[]> => {
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data as CrawlerJob[];
+  
+  const jobs = data as CrawlerJob[];
+  // Determine if any job is still running or pending to enable polling
+  const needsPolling = jobs.some(job => job.status === 'pending' || job.status === 'running');
+  
+  return { jobs, needsPolling };
 };
 
 export const useCrawlerJobs = () => {
   const { user } = useAuth();
   const userId = user?.id;
 
-  return useQuery<CrawlerJob[], Error>({
+  const query = useQuery<FetchJobsResult, Error>({
     queryKey: ['crawlerJobs', userId],
     queryFn: () => fetchCrawlerJobs(userId!),
     enabled: !!userId,
+    // Poll every 3 seconds if there are pending or running jobs
+    refetchInterval: (data) => (data?.needsPolling ? 3000 : false),
   });
+  
+  // Return the jobs array directly for easier consumption in JobTable
+  return {
+    ...query,
+    data: query.data?.jobs,
+  };
 };
 
 interface CreateJobPayload {
@@ -79,7 +97,7 @@ export const useCreateCrawlerJob = () => {
         user_id: user!.id 
       }),
     onSuccess: () => {
-      // Invalidate queries to show the new job immediately
+      // Invalidate queries to show the new job immediately and start polling if needed
       queryClient.invalidateQueries({ queryKey: ['crawlerJobs'] });
       showSuccess("Crawler job initiated successfully! Processing started.");
     },
