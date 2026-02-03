@@ -132,6 +132,21 @@ const COURSE_STRUCTURE = [
     category: "Cranial Nerves",
     lessons: [
       "Lecture: Cranial Nerves",
+      "Cranial Nerve I (Olfactory)",
+      "Cranial Nerve II (Optic Nerve)",
+      "Cranial Nerve III (Oculomotor)",
+      "Cranial Nerve IV (Trochlear)",
+      "Cranial Nerve V (Trigeminal)",
+      "Cranial Nerve VI (Abducens)",
+      "Cranial Nerve VII (Facial)",
+      "Cranial Nerve VIII (Vestibulo-cochlear)",
+      "Cranial Nerve IX (Glossopharyngeal)",
+      "Cranial Nerve X (Vagus)",
+      "Cranial Nerve XI (Accessory)",
+      "Cranial Nerve XII (Hypoglossal)",
+      "Demo: Cranial Nerve Assessment",
+      "Demo: Cranial Nerve Correction",
+      "Q&A Mentoring Call - 12/14/2023 (Cranial Nerves Homework)",
     ]
   },
   {
@@ -305,4 +320,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-02-v3
+// Dyad forced redeployment: 2024-08-02-v4
