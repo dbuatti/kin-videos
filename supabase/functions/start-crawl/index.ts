@@ -168,6 +168,8 @@ const COURSE_STRUCTURE = [
     category: "Emotional Corrections",
     lessons: [
       "Lecture: Emotional Corrections",
+      "In class Lecture and Demo: Emotions",
+      "Demo: Emotional Correction",
     ]
   },
   // Add placeholders for other categories mentioned by the user, even if they have no lessons in this simulation
