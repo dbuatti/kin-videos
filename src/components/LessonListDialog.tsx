@@ -131,14 +131,16 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                     value={category} 
                     className="border border-indigo-200 rounded-xl shadow-md bg-white px-4"
                   >
-                    <AccordionTrigger className="flex justify-between items-center py-4 hover:no-underline">
-                      <div className="flex flex-col items-start">
-                        <span className="font-bold text-lg text-indigo-800 text-left">{category}</span>
-                        <span className="text-sm text-gray-500 mt-1">
-                          {totalCount} Lessons ({completedCount} ready)
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-3">
+                    <div className="flex justify-between items-center py-4">
+                      <AccordionTrigger asChild>
+                        <div className="flex flex-col items-start flex-1 cursor-pointer hover:text-indigo-600 transition-colors">
+                          <span className="font-bold text-lg text-indigo-800 text-left">{category}</span>
+                          <span className="text-sm text-gray-500 mt-1">
+                            {totalCount} Lessons ({completedCount} ready)
+                          </span>
+                        </div>
+                      </AccordionTrigger>
+                      <div className="flex items-center space-x-3 ml-4">
                         <Button
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent accordion from toggling
@@ -152,7 +154,7 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                           <FolderDown className="w-4 h-4 mr-1" /> Download All
                         </Button>
                       </div>
-                    </AccordionTrigger>
+                    </div>
                     <AccordionContent className="pt-2 pb-4">
                       <div className="space-y-3 border-t pt-3">
                         {lessons.map((lesson, index) => (
