@@ -107,6 +107,11 @@ const COURSE_STRUCTURE = [
     lessons: [
       "Lecture: Beginning Procedure (Sympathetic Down Regulation)",
       "Harmonic Rocking",
+      "Lecture: T1 - Sympathetic Chain",
+      "T1 - Sympathetic Chain Demonstration",
+      "Lecture: Phrenic Nerve",
+      "In Class Demo: Phrenic Nerve",
+      "Phrenic Nerve Demonstration",
     ]
   },
   {
@@ -301,4 +306,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-02-v1
+// Dyad forced redeployment: 2024-08-02-v2
