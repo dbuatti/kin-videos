@@ -28,7 +28,8 @@ const AuthComponent = () => (
         },
       },
     }}
-    view="sign_in" // Ensure we start on sign_in, which allows switching to sign_up
+    // Setting the initial view to sign_in, which allows switching to sign_up
+    view="sign_in" 
     theme="light"
     redirectTo={window.location.origin + '/'}
   />
