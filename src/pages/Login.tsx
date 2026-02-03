@@ -12,7 +12,7 @@ import React from 'react';
 const AuthComponent = () => (
   <Auth
     supabaseClient={supabase}
-    providers={[]}
+    providers={['google']}
     appearance={{
       theme: ThemeSupa,
       variables: {
