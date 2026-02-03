@@ -18,55 +18,22 @@ const SAMPLE_WISTIA_JSON = JSON.stringify({
     "accountId": 98633,
     "assets": [
       {
-        "is_enhanced": false,
         "type": "original",
-        "slug": "original",
         "display_name": "Original File",
-        "width": 1920,
-        "height": 1080,
-        "size": 219018552,
-        "bitrate": 8619,
-        "url": "https://embed-ssl.wistia.com/deliveries/aa3ea31f8e14f0fe07d2f83d7b72775e.bin",
-        "created_at": 1674018301
+        "width": 1152,
+        "height": 720,
+        "url": "https://embed-ssl.wistia.com/deliveries/140c1d17f4eb8afbc7ea1e29fedcb7e7.bin",
       },
       {
-        "is_enhanced": false,
-        "type": "iphone_video",
-        "slug": "mp4_h264_660k",
-        "display_name": "360p",
-        "width": 640,
-        "height": 360,
-        "size": 16782580,
-        "bitrate": 660,
-        "url": "https://embed-ssl.wistia.com/deliveries/68ee76bf8496c518bb8582c98bf4a0003242743f.bin",
-        "created_at": 1674018323
-      },
-      {
-        "is_enhanced": false,
         "type": "hd_mp4_video",
-        "slug": "mp4_h264_2911k",
-        "display_name": "1080p",
-        "width": 1920,
-        "height": 1080,
-        "size": 73968216,
-        "bitrate": 2911,
-        "url": "https://embed-ssl.wistia.com/deliveries/09992becc69fc18767252d9048037fb58b3e59de.bin",
-        "created_at": 1674018323
-      },
-      {
-        "is_enhanced": false,
-        "type": "still_image",
-        "slug": "still_image_1920x1080",
-        "display_name": "Thumbnail Image",
-        "width": 1920,
-        "height": 1080,
-        "url": "https://embed-ssl.wistia.com/deliveries/12d2ebc7d0fd8f6d3caeffeb06b46e1ea8642546.bin",
-        "created_at": 1674018323
+        "display_name": "540p",
+        "width": 960,
+        "height": 600,
+        "url": "https://embed-ssl.wistia.com/deliveries/0b631b4fbb073c88b18c1c98a928aea853df1abf.bin",
       }
     ],
-    "duration": 198.506,
     "mediaType": "Video",
-    "name": "file-uploads/sites/2147587442/video/8efb330-75e-a43d-33aa-ad3b7af5dc4_Moro_Startle.MOV",
+    "name": "Phrenic_Nerve_Lecture.mp4",
   },
   "options": {}
 }, null, 2);

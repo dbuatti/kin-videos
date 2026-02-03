@@ -168,12 +168,11 @@ function simulateLessonDiscovery(baseUrl: string, wistiaJson: WistiaJson, userId
       const slug = slugify(title);
       const lessonUrl = `${courseBaseUrl}/lesson-${slug}`;
       
-      // Only the first lesson gets the main video URL provided in the form
+      // Ensure every lesson has a video URL for download testing.
+      // The first lesson gets the actual Wistia URL, others get a simulated one.
       const videoUrl = lessonIndex === 0 
         ? mainVideoUrl 
-        : (lessonIndex % 3 === 0 
-          ? `https://simulated-video-url.com/${slug}-${lessonIndex}.mp4` 
-          : null); // Simulate some lessons not having a video URL immediately
+        : `https://simulated-video-url.com/${slug}-${lessonIndex}.mp4`;
 
       lessonsToInsert.push({
         job_id: jobId,
@@ -306,4 +305,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-02-v2
+// Dyad forced redeployment: 2024-08-02-v3
