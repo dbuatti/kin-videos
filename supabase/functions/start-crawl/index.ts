@@ -78,55 +78,111 @@ function slugify(text: string): string {
     .replace(/-+/g, '-'); // Collapse multiple hyphens
 }
 
-// Simulated lesson discovery based on the course structure described by the user
+// Define the structure of the course content with categories and lessons
+const COURSE_STRUCTURE = [
+  {
+    category: "Course Introduction & Foundational Knowledge",
+    lessons: [
+      "Course Introduction & Foundational Knowledge",
+      "About Your Instructor",
+      "Overview of the Approach",
+      "Performance Iceberg",
+      "Neurophysiology 101",
+      "3 Stages of Stress",
+      "Threat Neurophysiology",
+      "Autonomic Nervous System Overview",
+      "BOLT Test",
+    ]
+  },
+  {
+    category: "Direct Muscle Tests",
+    lessons: [
+      "Lecture: Muscle Testing Fundamentals",
+      "Demo: Indicator Muscle Fundamentals",
+      "Lecture: Therapy Localisation",
+    ]
+  },
+  {
+    category: "Beginning Procedures - Sympathetic Down Regulation",
+    lessons: [
+      "Lecture: Beginning Procedure (Sympathetic Down Regulation)",
+      "Harmonic Rocking",
+    ]
+  },
+  {
+    category: "Vagus Nerve",
+    lessons: [
+      "Lecture: Vagus Nerve Procedure",
+    ]
+  },
+  {
+    category: "Pathway Assessments and Corrections",
+    lessons: [
+      "Lecture: Pathway Assessment Process Overview",
+      "Lecture: Cortical Brain Zones",
+      "In Class Demo: Moro Reflex, Startle",
+    ]
+  },
+  {
+    category: "Cranial Nerves",
+    lessons: [
+      "Lecture: Cranial Nerves",
+    ]
+  },
+  {
+    category: "Emotional Corrections",
+    lessons: [
+      "Lecture: Emotional Corrections",
+    ]
+  },
+  // Add placeholders for other categories mentioned by the user, even if they have no lessons in this simulation
+  { category: "Weekly Q & A", lessons: [] },
+  { category: "Clinical Assessments", lessons: [] },
+  { category: "Lymphatic System Assessment and Correction", lessons: [] },
+  { category: "Primitive Reflexes", lessons: [] },
+  { category: "Postural Reflexes", lessons: [] },
+  { category: "Modules18", lessons: [] },
+  { category: "Finishing Procedures and Home Reinforcement", lessons: [] },
+  { category: "Background Information", lessons: [] },
+  { category: "Masterclasses", lessons: [] },
+  { category: "Functional Anatomy and Biomechanics", lessons: [] },
+  { category: "Putting it all Together", lessons: [] },
+  { category: "FNH Foundations Exam", lessons: [] },
+];
+
+
 function simulateLessonDiscovery(baseUrl: string, wistiaJson: WistiaJson, userId: string, jobId: string) {
-  // Assuming the base URL is the course page, and lessons are under /lesson-SLUG
-  // Example: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories
-  // We want: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/lesson-SLUG
   const courseBaseUrl = baseUrl.split('/categories')[0]; 
-  
-  // Using a subset of the real lesson titles provided by the user
-  const lessonTitles = [
-    "Course Introduction & Foundational Knowledge",
-    "About Your Instructor",
-    "Overview of the Approach",
-    "Performance Iceberg",
-    "Neurophysiology 101",
-    "3 Stages of Stress",
-    "Threat Neurophysiology",
-    "Autonomic Nervous System Overview",
-    "BOLT Test",
-    "Lecture: Muscle Testing Fundamentals",
-    "Demo: Indicator Muscle Fundamentals",
-    "Lecture: Therapy Localisation",
-    "Lecture: Beginning Procedure (Sympathetic Down Regulation)",
-    "Harmonic Rocking",
-    "Lecture: Vagus Nerve Procedure",
-    "Lecture: Pathway Assessment Process Overview",
-    "Lecture: Cortical Brain Zones",
-    "In Class Demo: Moro Reflex, Startle",
-    "Lecture: Cranial Nerves",
-    "Lecture: Emotional Corrections",
-  ];
-
   const mainVideoUrl = findBestVideoUrl(wistiaJson);
+  
+  const lessonsToInsert = [];
+  let lessonIndex = 0;
 
-  return lessonTitles.map((title, index) => {
-    const slug = slugify(title);
-    const lessonUrl = `${courseBaseUrl}/lesson-${slug}`;
-    
-    // Only the first lesson gets the main video URL provided in the form
-    const videoUrl = index === 0 ? mainVideoUrl : null;
+  for (const module of COURSE_STRUCTURE) {
+    for (const title of module.lessons) {
+      const slug = slugify(title);
+      const lessonUrl = `${courseBaseUrl}/lesson-${slug}`;
+      
+      // Only the first lesson gets the main video URL provided in the form
+      const videoUrl = lessonIndex === 0 
+        ? mainVideoUrl 
+        : (lessonIndex % 3 === 0 
+          ? `https://simulated-video-url.com/${slug}-${lessonIndex}.mp4` 
+          : null); // Simulate some lessons not having a video URL immediately
 
-    return {
-      job_id: jobId,
-      user_id: userId,
-      lesson_url: lessonUrl,
-      // Simulate video URLs for subsequent lessons
-      video_url: videoUrl || (index % 3 === 0 ? 'https://simulated-video-url.com/lesson-' + slug : null),
-      status: 'pending',
-    };
-  });
+      lessonsToInsert.push({
+        job_id: jobId,
+        user_id: userId,
+        lesson_url: lessonUrl,
+        video_url: videoUrl,
+        status: 'completed', // Set to completed for immediate download testing
+        category: module.category, // NEW: Assign category
+      });
+      lessonIndex++;
+    }
+  }
+  
+  return lessonsToInsert;
 }
 
 
@@ -196,15 +252,16 @@ serve(async (req) => {
     console.log(`[start-crawl] Successfully inserted ${lessonsForProcessing.length} lessons.`)
 
 
-    // 4. Update main job status to 'running' and set total lessons count
+    // 4. Update main job status to 'completed' and set total lessons count and processed count
+    // Since we are simulating completion immediately, we set status to completed and processed count to total.
     const { error: updateError1 } = await supabaseAdmin
       .from('crawler_jobs')
       .update({ 
-        status: 'running', 
+        status: 'completed', 
         total_lessons: totalLessons,
-        // We clear video_url from the main job as it's now per lesson, 
-        // but we keep it for the first lesson in the lessons table.
+        lessons_processed: totalLessons, // Set to total for immediate completion
         video_url: null, 
+        end_time: new Date().toISOString()
       })
       .eq('id', job_id)
       .select()
@@ -213,63 +270,10 @@ serve(async (req) => {
       console.error("[start-crawl] Error updating initial job data:", updateError1)
       throw new Error(updateError1.message)
     }
-    console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons.`)
+    console.log(`[start-crawl] Job ${job_id} status set to completed with ${totalLessons} total lessons.`)
 
-    // --- SIMULATE CRAWLING PROGRESS (Processing Lessons) ---
-    console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}.`)
+    // --- SIMULATE CRAWLING PROGRESS (Skipped, as we set status to completed above) ---
     
-    let lessonsProcessed = 0;
-    for (const lesson of lessonsForProcessing) { // Use the lessons with generated IDs
-      // Simulate work delay
-      await new Promise(resolve => setTimeout(resolve, 500)); 
-      lessonsProcessed++;
-
-      // Determine the final video URL for the lesson
-      let finalVideoUrl = lesson.video_url;
-      if (!finalVideoUrl) {
-        // Simulate finding a video URL for lessons that didn't get the main Wistia JSON URL
-        const lessonSlug = lesson.lesson_url.split('lesson-')[1];
-        finalVideoUrl = 'https://simulated-video-url.com/' + lessonSlug + '.mp4';
-      }
-
-      // Simulate updating the lesson status
-      const { error: updateLessonError } = await supabaseAdmin
-        .from('lessons')
-        .update({ status: 'completed', video_url: finalVideoUrl })
-        .eq('id', lesson.id) // Now lesson.id is correctly populated
-        .select()
-
-      if (updateLessonError) {
-        console.error(`[start-crawl] Error updating lesson ${lesson.id} status:`, updateLessonError)
-      }
-      
-      // Update main job progress
-      const { error: updateJobProgressError } = await supabaseAdmin
-        .from('crawler_jobs')
-        .update({ lessons_processed: lessonsProcessed })
-        .eq('id', job_id)
-        .select()
-
-      if (updateJobProgressError) {
-        console.error(`[start-crawl] Error updating job progress:`, updateJobProgressError)
-      }
-      console.log(`[start-crawl] Job ${job_id}: Processed lesson ${lessonsProcessed}/${totalLessons} (Simulated)`)
-    }
-
-    // 5. Update status to 'completed' and set end time
-    const { error: updateError3 } = await supabaseAdmin
-      .from('crawler_jobs')
-      .update({ status: 'completed', end_time: new Date().toISOString() })
-      .eq('id', job_id)
-      .select()
-
-    if (updateError3) {
-      console.error("[start-crawl] Error updating status to completed:", updateError3)
-      throw new Error(updateError3.message)
-    }
-    console.log(`[start-crawl] Job ${job_id} completed successfully.`)
-
-
     return new Response(JSON.stringify({ message: 'Crawl job processed successfully' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
@@ -297,4 +301,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-01-v6
+// Dyad forced redeployment: 2024-08-02-v1

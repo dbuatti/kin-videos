@@ -20,4 +20,5 @@ export interface Lesson {
   video_url: string | null;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
+  category: string | null; // New field
 }
