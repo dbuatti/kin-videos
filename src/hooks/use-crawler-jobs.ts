@@ -48,14 +48,13 @@ export const useCrawlerJobs = () => {
 
 interface CreateJobPayload {
   target_url: string;
-  wistia_json: any; // We expect a parsed JSON object here
   user_id: string;
 }
 
 const createCrawlerJob = async (payload: CreateJobPayload) => {
-  const { target_url, wistia_json, user_id } = payload;
+  const { target_url, user_id } = payload;
   
-  // 1. Insert job into database
+  // 1. Insert job into database (status defaults to 'pending')
   const { data, error } = await supabase
     .from('crawler_jobs')
     .insert([{ target_url, user_id }]) // Only insert URL and user_id initially
@@ -66,7 +65,7 @@ const createCrawlerJob = async (payload: CreateJobPayload) => {
   
   const jobId = data.id;
 
-  // 2. Invoke Edge Function to start the crawl process and process JSON
+  // 2. Invoke Edge Function to start the discovery process (Pass 1)
   const response = await fetch(EDGE_FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -74,7 +73,7 @@ const createCrawlerJob = async (payload: CreateJobPayload) => {
       // Pass the user's JWT for potential authentication/logging within the function
       'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
     },
-    body: JSON.stringify({ job_id: jobId, wistia_json: wistia_json }),
+    body: JSON.stringify({ job_id: jobId, target_url: target_url }),
   });
 
   if (!response.ok) {
@@ -90,16 +89,15 @@ export const useCreateCrawlerJob = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (data: { targetUrl: string, wistiaJson: any }) => 
+    mutationFn: (data: { targetUrl: string }) => 
       createCrawlerJob({ 
         target_url: data.targetUrl, 
-        wistia_json: data.wistiaJson, 
         user_id: user!.id 
       }),
     onSuccess: () => {
       // Invalidate queries to show the new job immediately and start polling if needed
       queryClient.invalidateQueries({ queryKey: ['crawlerJobs'] });
-      showSuccess("Crawler job initiated successfully! Processing started.");
+      showSuccess("Crawler job initiated successfully! Discovery (Pass 1) started.");
     },
     onError: (error) => {
       showError(`Failed to start job: ${error.message}`);
