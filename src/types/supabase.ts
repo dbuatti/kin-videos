@@ -9,4 +9,5 @@ export interface CrawlerJob {
   lessons_processed: number;
   error_log: string | null;
   created_at: string;
+  video_url: string | null; // Added video_url
 }

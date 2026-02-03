@@ -9,6 +9,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface WistiaAsset {
+  type: string;
+  width: number;
+  height: number;
+  size: number;
+  url: string;
+  display_name: string;
+}
+
+interface WistiaMedia {
+  assets: WistiaAsset[];
+}
+
+interface WistiaJson {
+  media: WistiaMedia;
+}
+
+/**
+ * Finds the highest quality video URL from the Wistia JSON assets.
+ * Prioritizes 'original' or the highest resolution MP4 asset.
+ */
+function findBestVideoUrl(wistiaJson: WistiaJson): string | null {
+  const assets = wistiaJson.media?.assets;
+  if (!assets || assets.length === 0) {
+    return null;
+  }
+
+  let bestAsset: WistiaAsset | null = null;
+  let maxResolution = 0;
+
+  for (const asset of assets) {
+    // Skip non-video assets like images and storyboards
+    if (asset.type === 'still_image' || asset.type === 'storyboard') {
+      continue;
+    }
+
+    // Prioritize 'original' if available, as it's often the highest quality source file
+    if (asset.type === 'original') {
+      return asset.url;
+    }
+
+    // Calculate resolution (width * height)
+    const resolution = asset.width * asset.height;
+
+    // Check if this asset is better than the current best
+    if (resolution > maxResolution) {
+      maxResolution = resolution;
+      bestAsset = asset;
+    } else if (resolution === maxResolution && bestAsset && asset.size > bestAsset.size) {
+      // If resolutions are equal, prefer the larger file size (higher bitrate)
+      bestAsset = asset;
+    }
+  }
+
+  return bestAsset?.url || null;
+}
+
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -22,10 +80,13 @@ serve(async (req) => {
   })
 
   let job_id: string | undefined;
+  let wistiaJson: WistiaJson | undefined;
 
   try {
     const body = await req.json();
     job_id = body.job_id;
+    wistiaJson = body.wistia_json;
+    
     console.log("[start-crawl] Received job ID:", job_id)
 
     if (!job_id) {
@@ -34,12 +95,30 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    
+    let videoUrl: string | null = null;
+    if (wistiaJson) {
+      videoUrl = findBestVideoUrl(wistiaJson);
+      console.log(`[start-crawl] Extracted best video URL: ${videoUrl}`)
+    } else {
+      console.warn("[start-crawl] No Wistia JSON provided in request body.")
+    }
 
-    // 1. Update status to 'running' and set initial lessons count (simulated discovery of 18 modules)
-    const totalLessons = 18;
+    // 1. Update status to 'running', set initial lessons count, and store video URL
+    const totalLessons = 18; // Placeholder for actual discovery
+    
+    const updateData: Record<string, any> = { 
+      status: 'running', 
+      total_lessons: totalLessons 
+    };
+
+    if (videoUrl) {
+      updateData.video_url = videoUrl;
+    }
+
     const { error: updateError1 } = await supabaseAdmin
       .from('crawler_jobs')
-      .update({ status: 'running', total_lessons: totalLessons })
+      .update(updateData)
       .eq('id', job_id)
       .select()
 
@@ -50,12 +129,9 @@ serve(async (req) => {
     console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons.`)
 
     // --- SIMULATE CRAWLING PROGRESS ---
-    console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}. (Actual video download logic is currently a placeholder)`)
+    console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}.`)
     
     for (let i = 1; i <= totalLessons; i++) {
-      // In a real scenario, this is where the actual scraping/downloading logic would go.
-      // Since Edge Functions are limited, this is currently simulated.
-      
       // Simulate work delay
       await new Promise(resolve => setTimeout(resolve, 500)); 
 

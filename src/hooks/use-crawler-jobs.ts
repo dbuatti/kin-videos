@@ -28,11 +28,19 @@ export const useCrawlerJobs = () => {
   });
 };
 
-const createCrawlerJob = async (jobData: { target_url: string, user_id: string }) => {
+interface CreateJobPayload {
+  target_url: string;
+  wistia_json: any; // We expect a parsed JSON object here
+  user_id: string;
+}
+
+const createCrawlerJob = async (payload: CreateJobPayload) => {
+  const { target_url, wistia_json, user_id } = payload;
+  
   // 1. Insert job into database
   const { data, error } = await supabase
     .from('crawler_jobs')
-    .insert([jobData])
+    .insert([{ target_url, user_id }]) // Only insert URL and user_id initially
     .select('id')
     .single();
 
@@ -40,7 +48,7 @@ const createCrawlerJob = async (jobData: { target_url: string, user_id: string }
   
   const jobId = data.id;
 
-  // 2. Invoke Edge Function to start the crawl process
+  // 2. Invoke Edge Function to start the crawl process and process JSON
   const response = await fetch(EDGE_FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -48,7 +56,7 @@ const createCrawlerJob = async (jobData: { target_url: string, user_id: string }
       // Pass the user's JWT for potential authentication/logging within the function
       'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
     },
-    body: JSON.stringify({ job_id: jobId }),
+    body: JSON.stringify({ job_id: jobId, wistia_json: wistia_json }),
   });
 
   if (!response.ok) {
@@ -64,7 +72,12 @@ export const useCreateCrawlerJob = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (target_url: string) => createCrawlerJob({ target_url, user_id: user!.id }),
+    mutationFn: (data: { targetUrl: string, wistiaJson: any }) => 
+      createCrawlerJob({ 
+        target_url: data.targetUrl, 
+        wistia_json: data.wistiaJson, 
+        user_id: user!.id 
+      }),
     onSuccess: () => {
       // Invalidate queries to show the new job immediately
       queryClient.invalidateQueries({ queryKey: ['crawlerJobs'] });

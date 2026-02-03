@@ -5,8 +5,10 @@ import { useCrawlerJobs } from '@/hooks/use-crawler-jobs';
 import { CrawlerJob } from '@/types/supabase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, CheckCircle, XCircle, Clock, Zap } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, Zap, Download } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const getStatusBadge = (status: CrawlerJob['status']) => {
   switch (status) {
@@ -66,11 +68,11 @@ const JobTable: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-indigo-50 hover:bg-indigo-50">
-              <TableHead className="w-[200px] text-indigo-800">Status</TableHead>
+              <TableHead className="w-[100px] text-indigo-800">Status</TableHead>
               <TableHead className="text-indigo-800">Target URL</TableHead>
               <TableHead className="text-indigo-800">Progress</TableHead>
-              <TableHead className="text-indigo-800">Started At</TableHead>
-              <TableHead className="text-indigo-800">Finished At</TableHead>
+              <TableHead className="text-indigo-800">Video URL</TableHead>
+              <TableHead className="text-indigo-800">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -87,8 +89,38 @@ const JobTable: React.FC = () => {
                     ? `${job.lessons_processed} / ${job.total_lessons}` 
                     : (job.status === 'running' ? 'Discovering...' : '0 / 0')}
                 </TableCell>
-                <TableCell className="text-sm text-gray-500">{formatTime(job.start_time)}</TableCell>
-                <TableCell className="text-sm text-gray-500">{formatTime(job.end_time)}</TableCell>
+                <TableCell className="text-sm text-gray-500 truncate max-w-[150px]">
+                  {job.video_url ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-pointer hover:text-indigo-600">
+                          {job.video_url.substring(0, 30)}...
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-lg break-all">
+                        <p>{job.video_url}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : 'N/A'}
+                </TableCell>
+                <TableCell>
+                  {job.video_url && job.status === 'completed' ? (
+                    <Button 
+                      asChild
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-lg text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+                    >
+                      <a href={job.video_url} target="_blank" rel="noopener noreferrer" download>
+                        <Download className="w-4 h-4" />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" disabled className="rounded-lg">
+                      <Download className="w-4 h-4 text-gray-400" />
+                    </Button>
+                  )}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
