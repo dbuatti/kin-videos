@@ -50,9 +50,15 @@ serve(async (req) => {
     console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons.`)
 
     // --- SIMULATE CRAWLING PROGRESS ---
+    console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}. (Actual video download logic is currently a placeholder)`)
+    
     for (let i = 1; i <= totalLessons; i++) {
-      // In a real scenario, this loop would perform the actual scraping work.
+      // In a real scenario, this is where the actual scraping/downloading logic would go.
+      // Since Edge Functions are limited, this is currently simulated.
       
+      // Simulate work delay
+      await new Promise(resolve => setTimeout(resolve, 500)); 
+
       const { error: updateError2 } = await supabaseAdmin
         .from('crawler_jobs')
         .update({ lessons_processed: i })
@@ -62,7 +68,7 @@ serve(async (req) => {
       if (updateError2) {
         console.error(`[start-crawl] Error updating progress for lesson ${i}:`, updateError2)
       }
-      console.log(`[start-crawl] Job ${job_id}: Processed lesson ${i}/${totalLessons}`)
+      console.log(`[start-crawl] Job ${job_id}: Processed lesson ${i}/${totalLessons} (Simulated)`)
     }
 
     // 2. Update status to 'completed' and set end time
