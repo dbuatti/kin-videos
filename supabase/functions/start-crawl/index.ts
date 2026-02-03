@@ -166,8 +166,8 @@ serve(async (req) => {
     
     console.log(`[start-crawl] Discovered ${totalLessons} lessons for job ${job_id}.`)
 
-    // 3. Insert lessons into the 'lessons' table
-    const { error: insertLessonsError } = await supabaseAdmin
+    // 3. Insert lessons into the 'lessons' table and capture the inserted data (with IDs)
+    const { data: insertedLessons, error: insertLessonsError } = await supabaseAdmin
       .from('lessons')
       .insert(lessonsToInsert)
       .select()
@@ -176,7 +176,9 @@ serve(async (req) => {
       console.error("[start-crawl] Error inserting lessons:", insertLessonsError)
       throw new Error(insertLessonsError.message)
     }
-    console.log(`[start-crawl] Successfully inserted ${totalLessons} lessons.`)
+    
+    const lessonsForProcessing = insertedLessons || [];
+    console.log(`[start-crawl] Successfully inserted ${lessonsForProcessing.length} lessons.`)
 
 
     // 4. Update main job status to 'running' and set total lessons count
@@ -202,7 +204,7 @@ serve(async (req) => {
     console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}.`)
     
     let lessonsProcessed = 0;
-    for (const lesson of lessonsToInsert) {
+    for (const lesson of lessonsForProcessing) { // Use the lessons with generated IDs
       // Simulate work delay
       await new Promise(resolve => setTimeout(resolve, 500)); 
       lessonsProcessed++;
@@ -211,7 +213,7 @@ serve(async (req) => {
       const { error: updateLessonError } = await supabaseAdmin
         .from('lessons')
         .update({ status: 'completed', video_url: lesson.video_url || 'https://simulated-video-url.com/lesson-' + lessonsProcessed })
-        .eq('id', lesson.id)
+        .eq('id', lesson.id) // Now lesson.id is correctly populated
         .select()
 
       if (updateLessonError) {
@@ -272,4 +274,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-01-v4
+// Dyad forced redeployment: 2024-08-01-v5
