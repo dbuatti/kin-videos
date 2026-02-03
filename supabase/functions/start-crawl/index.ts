@@ -188,6 +188,12 @@ const COURSE_STRUCTURE = [
       "Babinski Reflex Demo",
       "Moro/Startle Reflex Demo",
       "ATNR",
+      "Spinal Gallant",
+      "STNR",
+      "TLR",
+      "Rooting Reflex + Correction",
+      "Palmar Reflex",
+      "Palmer Reflex (Track 2) Testing & Clearing Process",
     ]
   },
   {
