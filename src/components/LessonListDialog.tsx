@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Lesson } from '@/types/supabase';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { showSuccess, showError } from '@/utils/toast';
+import { cn } from '@/lib/utils';
 
 interface LessonListDialogProps {
   jobId: string | null;
@@ -76,16 +77,12 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
       return;
     }
 
-    // In a real application, this would trigger a server-side endpoint to generate a zip file.
-    // For simulation, we will open the first video URL and notify the user.
-    const firstVideoUrl = completedVideos[0].video_url;
-    
     // Simulate initiating a bulk download (e.g., triggering a zip file generation)
     showSuccess(`Initiating bulk download for '${category}' module (${completedVideos.length} videos).`);
     
     // Fallback/Simulated action: open the first video link
-    if (firstVideoUrl) {
-      window.open(firstVideoUrl, '_blank');
+    if (completedVideos[0].video_url) {
+      window.open(completedVideos[0].video_url, '_blank');
     }
   };
 
@@ -132,7 +129,8 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                     className="border border-indigo-200 rounded-xl shadow-md bg-white px-4"
                   >
                     <div className="flex justify-between items-center py-4">
-                      <AccordionTrigger asChild>
+                      {/* AccordionTrigger must wrap exactly one child element */}
+                      <AccordionTrigger className="flex-1 p-0 hover:no-underline">
                         <div className="flex flex-col items-start flex-1 cursor-pointer hover:text-indigo-600 transition-colors">
                           <span className="font-bold text-lg text-indigo-800 text-left">{category}</span>
                           <span className="text-sm text-gray-500 mt-1">
@@ -140,6 +138,8 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                           </span>
                         </div>
                       </AccordionTrigger>
+                      
+                      {/* Download button is separate from the trigger */}
                       <div className="flex items-center space-x-3 ml-4">
                         <Button
                           onClick={(e) => {
@@ -149,7 +149,10 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                           disabled={!isDownloadable}
                           variant="default"
                           size="sm"
-                          className={`rounded-lg h-8 transition-all ${isDownloadable ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+                          className={cn(
+                            "rounded-lg h-8 transition-all",
+                            isDownloadable ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                          )}
                         >
                           <FolderDown className="w-4 h-4 mr-1" /> Download All
                         </Button>
