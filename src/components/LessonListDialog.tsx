@@ -20,6 +20,29 @@ interface LessonListDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Define the desired order of modules based on user request
+const MODULE_ORDER = [
+  "Weekly Q & A",
+  "Course Introduction & Foundational Knowledge",
+  "Clinical Assessments",
+  "Direct Muscle Tests",
+  "Beginning Procedures - Sympathetic Down Regulation",
+  "Lymphatic System Assessment and Correction",
+  "Vagus Nerve",
+  "Pathway Assessments and Corrections",
+  "Primitive Reflexes",
+  "Postural Reflexes",
+  "Cranial Nerves",
+  "Emotional Corrections",
+  "Finishing Procedures and Home Reinforcement",
+  "Background Information",
+  "Masterclasses",
+  "Functional Anatomy and Biomechanics",
+  "Putting it all Together",
+  "FNH Foundations Exam",
+  "Uncategorized", // Fallback for any missing category
+];
+
 const getLessonStatusBadge = (status: Lesson['status']) => {
   switch (status) {
     case 'processing':
@@ -64,9 +87,20 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
   const { data: lessons, isLoading, isError } = useJobLessons(jobId);
 
   const groupedLessons = lessons ? groupLessonsByCategory(lessons) : {};
-  const categories = Object.keys(groupedLessons).sort(); // Sort categories alphabetically
   
-  // Set the first category to be open by default
+  // Custom sorting logic using MODULE_ORDER
+  const categories = Object.keys(groupedLessons).sort((a, b) => {
+    const indexA = MODULE_ORDER.indexOf(a);
+    const indexB = MODULE_ORDER.indexOf(b);
+
+    // Treat categories not found in the order list as lowest priority (Infinity)
+    const finalIndexA = indexA === -1 ? Infinity : indexA;
+    const finalIndexB = indexB === -1 ? Infinity : indexB;
+
+    return finalIndexA - finalIndexB;
+  });
+  
+  // Set the first category in the custom order to be open by default
   const [defaultOpenCategory] = categories;
 
   const handleDownloadAll = (category: string, lessons: Lesson[]) => {
@@ -129,7 +163,6 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                     className="border border-indigo-200 rounded-xl shadow-md bg-white px-4"
                   >
                     <div className="flex justify-between items-center py-4">
-                      {/* AccordionTrigger must wrap exactly one child element */}
                       <AccordionTrigger className="flex-1 p-0 hover:no-underline">
                         <div className="flex flex-col items-start flex-1 cursor-pointer hover:text-indigo-600 transition-colors">
                           <span className="font-bold text-lg text-indigo-800 text-left">{category}</span>
@@ -139,7 +172,6 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                         </div>
                       </AccordionTrigger>
                       
-                      {/* Download button is separate from the trigger */}
                       <div className="flex items-center space-x-3 ml-4">
                         <Button
                           onClick={(e) => {
