@@ -139,8 +139,20 @@ const COURSE_STRUCTURE = [
     category: "Pathway Assessments and Corrections",
     lessons: [
       "Lecture: Pathway Assessment Process Overview",
+      "Lecture: Nociceptive Threat Assessment",
+      "Nociceptive Threat Assessment Demonstration",
+      "Nociceptive Demo Review",
+      "Lecture: Efferent Pathway Correction",
       "Lecture: Cortical Brain Zones",
-      "In Class Demo: Moro Reflex, Startle",
+      "Lecture: Sub-Corticol Brain Zones",
+      "Locating the Brain Reflex Areas",
+      "Lecture: Mechanoreceptor (Conscious)",
+      "Demo: Mechanoreceptor (Conscious)",
+      "Lecture: Mechanoreception (Unconscious)",
+      "Masterclass: Unconscious Mechanoreception & The Cerebellar Gateway",
+      "In Class Lecture: Unconscious Mechanoreception",
+      "Demo: Mechanoreceptor (Unconscious)",
+      "In class lecture and Demo: Nociception",
     ]
   },
   {
