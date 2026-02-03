@@ -28,6 +28,7 @@ const AuthComponent = () => (
         },
       },
     }}
+    view="sign_in" // Ensure we start on sign_in, which allows switching to sign_up
     theme="light"
     redirectTo={window.location.origin + '/'}
   />
@@ -56,7 +57,7 @@ const Login = () => {
             FNH Archiver Login
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Sign in to manage your crawling jobs.
+            Sign in or sign up to manage your crawling jobs.
           </p>
         </CardHeader>
         <CardContent>
