@@ -104,12 +104,13 @@ serve(async (req) => {
       console.warn("[start-crawl] No Wistia JSON provided in request body.")
     }
 
-    // 1. Update status to 'running' and set initial lessons count (using only known columns)
+    // 1. Update status to 'running', set initial lessons count, and video URL
     const totalLessons = 18; // Placeholder for actual discovery
     
     const updateData: Record<string, any> = { 
       status: 'running', 
-      total_lessons: totalLessons 
+      total_lessons: totalLessons,
+      video_url: videoUrl, // Include videoUrl here
     };
 
     const { error: updateError1 } = await supabaseAdmin
@@ -119,26 +120,10 @@ serve(async (req) => {
       .select()
 
     if (updateError1) {
-      console.error("[start-crawl] Error updating status to running:", updateError1)
+      console.error("[start-crawl] Error updating initial job data:", updateError1)
       throw new Error(updateError1.message)
     }
-    console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons.`)
-
-    // 1b. Attempt to update video URL separately. If this fails, we log and continue.
-    if (videoUrl) {
-      const { error: videoUpdateError } = await supabaseAdmin
-        .from('crawler_jobs')
-        .update({ video_url: videoUrl })
-        .eq('id', job_id)
-        .select()
-      
-      if (videoUpdateError) {
-        // Log the error but DO NOT throw, as the main job is running.
-        console.error("[start-crawl] WARNING: Failed to update video_url (likely schema cache issue):", videoUpdateError)
-      } else {
-        console.log(`[start-crawl] Successfully updated video URL for job ${job_id}.`)
-      }
-    }
+    console.log(`[start-crawl] Job ${job_id} status set to running with ${totalLessons} total lessons and video URL.`)
 
     // --- SIMULATE CRAWLING PROGRESS ---
     console.log(`[start-crawl] Starting simulated archiving process for job ${job_id}.`)
@@ -200,4 +185,4 @@ serve(async (req) => {
     })
   }
 })
-// Dyad forced redeployment: 2024-08-01
+// Dyad forced redeployment: 2024-08-01-v2
