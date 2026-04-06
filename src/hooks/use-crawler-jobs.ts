@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
@@ -21,7 +23,7 @@ const fetchCrawlerJobs = async (userId: string): Promise<FetchJobsResult> => {
   if (error) throw new Error(error.message);
   
   const jobs = data as CrawlerJob[];
-  // Determine if any job is still running or pending to enable polling
+  // Poll if any job is still in a non-terminal state
   const needsPolling = jobs.some(job => job.status === 'pending' || job.status === 'running');
   
   return { jobs, needsPolling };
@@ -35,30 +37,23 @@ export const useCrawlerJobs = () => {
     queryKey: ['crawlerJobs', userId],
     queryFn: () => fetchCrawlerJobs(userId!),
     enabled: !!userId,
-    // Poll every 3 seconds if there are pending or running jobs
-    // In TanStack Query v5, the callback receives the query object
+    // Poll every 3 seconds if active jobs exist, otherwise stop polling to save resources
     refetchInterval: (query) => (query.state.data?.needsPolling ? 3000 : false),
+    // Ensure we refetch when the window regains focus
+    refetchOnWindowFocus: true,
   });
   
-  // Return the jobs array directly for easier consumption in JobTable
   return {
     ...query,
     data: query.data?.jobs,
   };
 };
 
-interface CreateJobPayload {
-  target_url: string;
-  user_id: string;
-}
-
-const createCrawlerJob = async (payload: CreateJobPayload) => {
-  const { target_url, user_id } = payload;
-  
-  // 1. Insert job into database (status defaults to 'pending')
+const createCrawlerJob = async (target_url: string, userId: string) => {
+  // 1. Create the job record first to get an ID
   const { data, error } = await supabase
     .from('crawler_jobs')
-    .insert([{ target_url, user_id }]) // Only insert URL and user_id initially
+    .insert([{ target_url, user_id: userId, status: 'pending' }])
     .select('id')
     .single();
 
@@ -66,20 +61,24 @@ const createCrawlerJob = async (payload: CreateJobPayload) => {
   
   const jobId = data.id;
 
-  // 2. Invoke Edge Function to start the discovery process (Pass 1)
+  // 2. Trigger the Edge Function with the user's session token for security
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+
   const response = await fetch(EDGE_FUNCTION_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      // Pass the user's JWT for potential authentication/logging within the function
-      'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ job_id: jobId, target_url: target_url }),
+    body: JSON.stringify({ job_id: jobId, target_url }),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(`Edge Function failed: ${errorData.error || response.statusText}`);
+    // If the function fails, we should mark the job as failed in the DB
+    await supabase.from('crawler_jobs').update({ status: 'failed', error_log: errorData.error }).eq('id', jobId);
+    throw new Error(errorData.error || "Failed to start crawler service.");
   }
 
   return data;
@@ -90,18 +89,13 @@ export const useCreateCrawlerJob = () => {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: (data: { targetUrl: string }) => 
-      createCrawlerJob({ 
-        target_url: data.targetUrl, 
-        user_id: user!.id 
-      }),
+    mutationFn: (data: { targetUrl: string }) => createCrawlerJob(data.targetUrl, user!.id),
     onSuccess: () => {
-      // Invalidate queries to show the new job immediately and start polling if needed
       queryClient.invalidateQueries({ queryKey: ['crawlerJobs'] });
-      showSuccess("Crawler job initiated successfully! Discovery (Pass 1) started.");
+      showSuccess("Crawler job initiated! Discovery phase is starting.");
     },
-    onError: (error) => {
-      showError(`Failed to start job: ${error.message}`);
+    onError: (error: Error) => {
+      showError(error.message);
     },
   });
 };
