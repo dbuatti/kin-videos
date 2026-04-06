@@ -16,25 +16,20 @@ import {
   AlertCircle,
   Search,
   Terminal,
-  Copy,
   PlayCircle,
   Download,
-  Map as MapIcon,
   RefreshCw,
   FolderDown,
-  ChevronDown,
-  ChevronRight,
-  Command
+  Command,
+  CloudDownload
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const VIDEO_PATH = "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos";
 
@@ -47,6 +42,7 @@ const Library = () => {
   const [pasteValue, setPasteValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   const handleSync = () => {
     const lines = pasteValue.split('\n');
@@ -74,7 +70,7 @@ const Library = () => {
   };
 
   const processedData = useMemo(() => {
-    if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 } };
+    if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 }, remainingLessons: [] };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
     
@@ -95,6 +91,7 @@ const Library = () => {
 
     let total = 0;
     let downloaded = 0;
+    const remainingLessons: any[] = [];
 
     const groups = sortedCategories.map((category, catIdx) => {
       const categoryLessons = grouped[category].map((lesson, lesIdx) => {
@@ -120,7 +117,15 @@ const Library = () => {
 
         const finalMatch = isDownloaded || fuzzyMatch;
         total++;
-        if (finalMatch) downloaded++;
+        if (finalMatch) {
+          downloaded++;
+        } else {
+          remainingLessons.push({
+            ...lesson,
+            expectedFilename,
+            displayIndex: `${catIdx + 1}.${lesIdx + 1}`
+          });
+        }
 
         return {
           ...lesson,
@@ -139,7 +144,7 @@ const Library = () => {
       };
     });
 
-    return { groups, stats: { total, downloaded } };
+    return { groups, stats: { total, downloaded }, remainingLessons };
   }, [lessons, localFiles]);
 
   const filteredGroups = useMemo(() => {
@@ -154,6 +159,16 @@ const Library = () => {
     })).filter(group => group.lessons.length > 0);
   }, [processedData.groups, searchQuery]);
 
+  const triggerDownload = (url: string, filename: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleDownloadModule = async (group: any) => {
     const toDownload = group.lessons.filter((l: any) => !l.isDownloaded);
     if (toDownload.length === 0) {
@@ -165,14 +180,33 @@ const Library = () => {
     
     for (let i = 0; i < toDownload.length; i++) {
       const lesson = toDownload[i];
-      const link = document.createElement('a');
-      link.href = lesson.video_url!;
-      link.download = lesson.expectedFilename;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      triggerDownload(lesson.video_url!, lesson.expectedFilename);
+      await new Promise(resolve => setTimeout(resolve, 1200));
+    }
+  };
+
+  const handleDownloadRemaining = async () => {
+    const remaining = processedData.remainingLessons;
+    if (remaining.length === 0) {
+      showSuccess("No remaining videos to download!");
+      return;
+    }
+
+    setIsDownloadingAll(true);
+    showSuccess(`Starting bulk download for ${remaining.length} remaining videos...`);
+    
+    try {
+      for (let i = 0; i < remaining.length; i++) {
+        const lesson = remaining[i];
+        triggerDownload(lesson.video_url!, lesson.expectedFilename);
+        // Slightly longer delay for bulk downloads to prevent browser blocking
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+      showSuccess("All remaining downloads triggered!");
+    } catch (err) {
+      showError("Bulk download interrupted.");
+    } finally {
+      setIsDownloadingAll(false);
     }
   };
 
@@ -205,6 +239,17 @@ const Library = () => {
             Refresh
           </Button>
           
+          <Button 
+            onClick={handleDownloadRemaining}
+            disabled={isDownloadingAll || processedData.remainingLessons.length === 0}
+            variant="outline" 
+            size="sm" 
+            className="text-amber-600 border-amber-200 hover:bg-amber-50 rounded-xl"
+          >
+            <CloudDownload className={cn("w-4 h-4 mr-2", isDownloadingAll && "animate-bounce")} />
+            {isDownloadingAll ? "Downloading..." : `Download Remaining (${processedData.remainingLessons.length})`}
+          </Button>
+
           <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 rounded-xl">
             <Link to="/gallery">
               <PlayCircle className="w-4 h-4 mr-2" />

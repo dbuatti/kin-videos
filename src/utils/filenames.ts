@@ -1,5 +1,6 @@
 export const cleanString = (str: string) => {
-  return str.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
+  // Remove characters that are illegal in filenames but keep spaces and basic punctuation
+  return str.replace(/[/\\?%*:|"<>]/g, '').trim();
 };
 
 export const generateLessonFilename = (
@@ -10,7 +11,9 @@ export const generateLessonFilename = (
 ): string => {
   const cleanCategory = cleanString(categoryName);
   const cleanLesson = cleanString(lessonName);
-  return `${categoryNumber}.${lessonNumber} - ${cleanCategory} - ${cleanLesson}.mp4`;
+  // Format: (ModuleNumber) CategoryName / (LessonNumber) LessonName.mp4
+  // Note: Browsers will usually convert the '/' to an underscore or similar during download
+  return `(${categoryNumber}) ${cleanCategory} / (${lessonNumber}) ${cleanLesson}.mp4`;
 };
 
 export const MODULE_ORDER = [
