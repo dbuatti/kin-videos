@@ -134,8 +134,8 @@ const MasterPlayer = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
-      <header className="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+    <div className="h-screen bg-slate-950 text-slate-200 flex flex-col overflow-hidden">
+      <header className="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md shrink-0 z-50">
         <div className="flex items-center space-x-2 sm:x-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-slate-800 text-slate-400 h-9 w-9">
             <ArrowLeft className="w-5 h-5" />
@@ -204,7 +204,7 @@ const MasterPlayer = () => {
           isTheaterMode ? "lg:p-0" : ""
         )}>
           <div className={cn(
-            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative p-1",
+            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative p-1 shrink-0",
             isTheaterMode ? "max-w-full aspect-video rounded-none border-none p-0" : "max-w-5xl aspect-video"
           )}>
             {isAudioOnly && (
@@ -230,7 +230,7 @@ const MasterPlayer = () => {
             />
           </div>
 
-          <div className="mt-6 sm:mt-8 flex flex-col items-center w-full max-w-2xl">
+          <div className="mt-6 sm:mt-8 flex flex-col items-center w-full max-w-2xl shrink-0 pb-8">
             <div className="flex items-center space-x-4 sm:space-x-6 w-full justify-center mb-6">
               <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
                 <SkipBack className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -257,18 +257,18 @@ const MasterPlayer = () => {
         </div>
 
         {!isMobile && !isTheaterMode && (
-          <aside className="w-full lg:w-96 p-4 lg:p-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
+          <aside className="w-full lg:w-96 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col overflow-hidden">
             <PlaylistCard 
               playlist={playlist}
               currentIndex={currentIndex}
               onSelectVideo={selectVideo}
               isAudioOnly={isAudioOnly}
-              className="h-full lg:rounded-none lg:border-none"
+              className="h-full rounded-none border-none bg-transparent"
             />
           </aside>
         )}
       </main>
-      <footer className="p-3 sm:p-4 border-t border-slate-800 bg-slate-900/50">
+      <footer className="p-3 sm:p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
         <MadeWithDyad />
       </footer>
     </div>
