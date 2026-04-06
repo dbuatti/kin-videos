@@ -1,76 +1,53 @@
 "use client";
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useCreateCrawlerJob } from '@/hooks/use-crawler-jobs';
-import { Zap, Info } from 'lucide-react';
-
-// Define the schema to only require the target URL
-const formSchema = z.object({
-  targetUrl: z.string().url({ message: "Please enter a valid URL." }),
-});
+import { Zap, BookOpen, ShieldCheck } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const NewJobForm: React.FC = () => {
   const { mutate: createJob, isPending } = useCreateCrawlerJob();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      targetUrl: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations",
-    },
-  });
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // The Edge Function will now handle the discovery (Pass 1)
+  const handleArchive = () => {
     createJob({
-      targetUrl: values.targetUrl,
+      targetUrl: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations",
     });
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 p-6 bg-white rounded-2xl shadow-lg border border-indigo-100">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold text-indigo-700">Start New Crawl Job</h3>
-          <Zap className="w-5 h-5 text-indigo-400" />
+    <Card className="overflow-hidden border-indigo-100 shadow-xl rounded-2xl bg-white">
+      <CardHeader className="bg-indigo-600 text-white p-6">
+        <div className="flex items-center justify-between mb-2">
+          <CardTitle className="text-xl font-bold flex items-center">
+            <BookOpen className="w-5 h-5 mr-2" />
+            Foundations Course
+          </CardTitle>
+          <Zap className="w-5 h-5 text-indigo-300 animate-pulse" />
+        </div>
+        <CardDescription className="text-indigo-100">
+          Functional Neuro Approach: Foundations
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-start space-x-3 text-sm text-gray-600">
+          <ShieldCheck className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+          <p>Verified map available. Archiving will be <strong>instant</strong> with all video links pre-extracted.</p>
         </div>
         
-        <FormField
-          control={form.control}
-          name="targetUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-gray-600">Kajabi Product/Course URL</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="e.g., https://.../products/foundations" 
-                  {...field} 
-                  className="rounded-xl h-12 border-indigo-300 focus:border-indigo-500"
-                />
-              </FormControl>
-              <FormDescription className="flex items-center text-xs text-indigo-400 mt-2">
-                <Info className="w-3 h-3 mr-1" />
-                Paginated links (e.g. ?page=1) are handled automatically.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
         <Button 
-          type="submit" 
+          onClick={handleArchive}
           disabled={isPending} 
-          className="w-full rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md"
+          className="w-full rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 transition-all shadow-md font-bold"
         >
-          {isPending ? "Starting Discovery..." : "Start Discovery (Pass 1)"}
+          {isPending ? "Archiving..." : "Archive Course Now"}
         </Button>
-      </form>
-    </Form>
+        
+        <p className="text-[10px] text-center text-gray-400 uppercase tracking-widest font-semibold">
+          Instant Extraction Enabled
+        </p>
+      </CardContent>
+    </Card>
   );
 };
 

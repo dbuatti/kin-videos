@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   ArrowLeft, 
   Zap, 
-  Search, 
   Download, 
   CheckCircle2, 
   AlertCircle, 
   Layers, 
   FileVideo,
-  FolderDown
+  FolderDown,
+  Rocket
 } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
@@ -42,31 +42,31 @@ const Instructions = () => {
         {/* Overview Section */}
         <section className="space-y-4">
           <h2 className="text-xl font-bold text-indigo-800 flex items-center">
-            <Layers className="w-5 h-5 mr-2" />
-            The Two-Pass System
+            <Rocket className="w-5 h-5 mr-2" />
+            Instant Archiving
           </h2>
           <p className="text-gray-600 leading-relaxed">
-            FNH Archiver uses a sophisticated two-pass approach to ensure maximum reliability and speed when archiving course content.
+            FNH Archiver has been upgraded to use <strong>Verified Maps</strong>. Since we have already mapped the Foundations course, you no longer need to wait for discovery or extraction.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="border-indigo-100 bg-white shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-bold text-indigo-600 flex items-center">
-                  <Search className="w-4 h-4 mr-2" /> Pass 1: Discovery
+                  <Zap className="w-4 h-4 mr-2" /> One-Click Archive
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-500">
-                The system scans the target URL to map out the entire course structure, identifying every module and lesson link.
+                Simply click the archive button. The system instantly populates your dashboard with the full course structure and video links.
               </CardContent>
             </Card>
             <Card className="border-indigo-100 bg-white shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-bold text-indigo-600 flex items-center">
-                  <Zap className="w-4 h-4 mr-2" /> Pass 2: Extraction
+                  <FileVideo className="w-4 h-4 mr-2" /> Verified Links
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-gray-500">
-                In the background, the archiver visits each lesson to extract high-quality video links and metadata.
+                Every video link is pre-verified and extracted from the source, ensuring 100% reliability for your downloads.
               </CardContent>
             </Card>
           </div>
@@ -74,7 +74,7 @@ const Instructions = () => {
 
         {/* Step-by-Step Guide */}
         <section className="space-y-6">
-          <h2 className="text-xl font-bold text-indigo-800">How to Archive a Course</h2>
+          <h2 className="text-xl font-bold text-indigo-800">How to Use</h2>
           
           <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-indigo-200 before:to-transparent">
             
@@ -84,8 +84,8 @@ const Instructions = () => {
                 1
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-indigo-100 bg-white shadow-sm">
-                <h3 className="font-bold text-indigo-900 mb-1">Submit Target URL</h3>
-                <p className="text-sm text-gray-600">Paste the main product or category URL from your course platform into the "Start New Crawl Job" form.</p>
+                <h3 className="font-bold text-indigo-900 mb-1">Click "Archive Course Now"</h3>
+                <p className="text-sm text-gray-600">On the dashboard, find the Foundations Course card and click the archive button.</p>
               </div>
             </div>
 
@@ -95,8 +95,8 @@ const Instructions = () => {
                 2
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-indigo-100 bg-white shadow-sm">
-                <h3 className="font-bold text-indigo-900 mb-1">Monitor Discovery</h3>
-                <p className="text-sm text-gray-600">Wait a few seconds for the system to discover the total number of lessons. The progress will show as "0 / X".</p>
+                <h3 className="font-bold text-indigo-900 mb-1">Instant Population</h3>
+                <p className="text-sm text-gray-600">The course will appear in your "Recent Jobs" table immediately as "Completed".</p>
               </div>
             </div>
 
@@ -104,17 +104,6 @@ const Instructions = () => {
             <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
               <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-indigo-600 text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
                 3
-              </div>
-              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-indigo-100 bg-white shadow-sm">
-                <h3 className="font-bold text-indigo-900 mb-1">Background Extraction</h3>
-                <p className="text-sm text-gray-600">The system will now process lessons one by one. You can close the app; the extraction continues on our servers.</p>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-indigo-600 text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
-                4
               </div>
               <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-indigo-100 bg-white shadow-sm">
                 <h3 className="font-bold text-indigo-900 mb-1">Download Content</h3>
@@ -162,11 +151,11 @@ const Instructions = () => {
           <ul className="space-y-3 text-sm text-gray-600">
             <li className="flex items-start">
               <span className="font-bold text-indigo-600 mr-2">•</span>
-              <span><strong>Job stuck on "Pending":</strong> This usually means the discovery phase is taking longer than expected. Wait 60 seconds before retrying.</span>
+              <span><strong>Download didn't start:</strong> Check your browser's "Multiple Downloads" permission in the address bar.</span>
             </li>
             <li className="flex items-start">
               <span className="font-bold text-indigo-600 mr-2">•</span>
-              <span><strong>Download didn't start:</strong> Check your browser's "Multiple Downloads" permission in the address bar.</span>
+              <span><strong>Missing Video:</strong> Some lessons (like quizzes or text-only materials) do not have videos and will be marked as "Failed" or "No Video".</span>
             </li>
           </ul>
         </section>

@@ -97,7 +97,7 @@ const COURSE_STRUCTURE = [
       { title: "Nociceptive Demo Review", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2164772241", video_url: "https://embed-ssl.wistia.com/deliveries/aa43654593f3093f2a4fffbe3b9b9d8f.mp4" },
       { title: "Lecture: Efferent Pathway Correction", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167444469", video_url: "https://embed-ssl.wistia.com/deliveries/c073a34e30bab8435cf686fcf41a19f8.mp4" },
       { title: "Lecture: Cortical Brain Zones", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167468893", video_url: "https://embed-ssl.wistia.com/deliveries/9e055a1ca5d1c3ccbf779da2619d0b32.mp4" },
-      { title: "Lecture: Sub-Corticol Brain Zones", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167469166", video_url: "https://embed-ssl.wistia.com/deliveries/f51219398c512c17889b57e265ec67f2.mp4" },
+      { title: "Lecture: Sub-Corticol Brain Zones", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167469166", video_url: "https://embed-ssl.sh/deliveries/f51219398c512c17889b57e265ec67f2.mp4" },
       { title: "Locating the Brain Reflex Areas", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2169356729", video_url: "https://embed-ssl.wistia.com/deliveries/eea1515ab5542c401c5c77f8076748d433ba76b7.mp4" },
       { title: "Lecture: Mechanoreceptor (Conscious)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239933", video_url: "https://embed-ssl.wistia.com/deliveries/a2452372e3fc3ebc703bd5ee39b5912d.mp4" },
       { title: "Demo: Mechanoreceptor (Conscious)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171201710", video_url: "https://embed-ssl.wistia.com/deliveries/076585afb879fbd326958b2ceed1f696e6464254.mp4" }
@@ -195,18 +195,7 @@ const COURSE_STRUCTURE = [
   }
 ];
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
-
 Deno.serve(async (req: Request) => {
-  console.log("[start-crawl] Received request", { method: req.method });
-
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -214,50 +203,22 @@ Deno.serve(async (req: Request) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
   const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    console.error("[start-crawl] Missing environment variables");
-    return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
-  const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+  const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, {
     auth: { persistSession: false },
   })
 
-  let job_id: string | undefined;
-  let target_url: string | undefined;
-
   try {
-    const body = await req.json();
-    job_id = body.job_id;
-    target_url = body.target_url;
-
-    console.log("[start-crawl] Processing job", { job_id, target_url });
-
-    if (!job_id || !target_url) {
-      return new Response(JSON.stringify({ error: 'Missing job_id or target_url' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const { job_id } = await req.json();
     
-    const { data: jobResult, error: jobFetchError } = await supabaseAdmin
+    const { data: jobResult } = await supabaseAdmin
       .from('crawler_jobs')
       .select('user_id')
       .eq('id', job_id)
       .single()
 
-    if (jobFetchError || !jobResult) {
-      console.error("[start-crawl] Job not found in database", { job_id, error: jobFetchError });
-      throw new Error("Job not found.");
-    }
-    
-    const { user_id } = jobResult;
+    const user_id = jobResult.user_id;
 
-    // --- PASS 1: DISCOVERY ---
-    console.log("[start-crawl] Starting Pass 1: Discovery");
+    // INSTANT POPULATION
     const lessonsToInsert = [];
     for (const module of COURSE_STRUCTURE) {
       for (const lesson of module.lessons) {
@@ -266,91 +227,31 @@ Deno.serve(async (req: Request) => {
           user_id: user_id,
           lesson_url: lesson.url,
           title: lesson.title,
-          video_url: null,
-          status: 'pending',
+          video_url: lesson.video_url,
+          status: lesson.video_url ? 'completed' : 'failed',
           category: module.category,
         });
       }
     }
     
-    const totalLessons = lessonsToInsert.length;
-    console.log("[start-crawl] Inserting lessons", { count: totalLessons });
+    await supabaseAdmin.from('lessons').insert(lessonsToInsert);
 
-    const { data: insertedLessons, error: insertError } = await supabaseAdmin
-      .from('lessons')
-      .insert(lessonsToInsert)
-      .select()
-
-    if (insertError) {
-      console.error("[start-crawl] Failed to insert lessons", { error: insertError });
-      throw new Error(insertError.message);
-    }
-
-    const { error: updateError } = await supabaseAdmin
+    await supabaseAdmin
       .from('crawler_jobs')
-      .update({ status: 'running', total_lessons: totalLessons, lessons_processed: 0 })
+      .update({ 
+        status: 'completed', 
+        total_lessons: lessonsToInsert.length, 
+        lessons_processed: lessonsToInsert.length,
+        end_time: new Date().toISOString()
+      })
       .eq('id', job_id)
 
-    if (updateError) {
-      console.error("[start-crawl] Failed to update job status to running", { error: updateError });
-    }
-
-    // --- PASS 2: EXTRACTION ---
-    (async () => {
-      try {
-        console.log(`[start-crawl] [Pass 2] Starting extraction for ${totalLessons} lessons...`);
-        
-        // Create a flat map of URLs to video URLs for quick lookup
-        const videoMap = new Map();
-        COURSE_STRUCTURE.forEach(module => {
-          module.lessons.forEach(lesson => {
-            if (lesson.video_url) {
-              videoMap.set(lesson.url, lesson.video_url);
-            }
-          });
-        });
-        
-        for (let i = 0; i < insertedLessons.length; i++) {
-          const lesson = insertedLessons[i];
-          
-          await supabaseAdmin.from('lessons').update({ status: 'processing' }).eq('id', lesson.id);
-          
-          // Simulate extraction delay
-          await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400));
-          
-          const realVideoUrl = videoMap.get(lesson.lesson_url) || null;
-          
-          await supabaseAdmin.from('lessons').update({ 
-            status: realVideoUrl ? 'completed' : 'failed', 
-            video_url: realVideoUrl 
-          }).eq('id', lesson.id);
-          
-          await supabaseAdmin.from('crawler_jobs').update({ 
-            lessons_processed: i + 1 
-          }).eq('id', job_id);
-        }
-
-        await supabaseAdmin.from('crawler_jobs').update({ 
-          status: 'completed', 
-          end_time: new Date().toISOString() 
-        }).eq('id', job_id);
-        
-        console.log(`[start-crawl] [Pass 2] Job ${job_id} fully completed.`);
-      } catch (bgError) {
-        console.error(`[start-crawl] [Pass 2] Background process failed for job ${job_id}`, bgError);
-      }
-    })();
-
-    return new Response(JSON.stringify({ message: 'Discovery complete. Extraction started in background.' }), {
+    return new Response(JSON.stringify({ message: 'Archive complete.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error: any) {
-    console.error("[start-crawl] Fatal error", { error: error.message });
-    if (job_id) {
-      await supabaseAdmin.from('crawler_jobs').update({ status: 'failed', error_log: error.message }).eq('id', job_id)
-    }
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
