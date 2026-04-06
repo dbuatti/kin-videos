@@ -151,7 +151,7 @@ const MasterPlayer = () => {
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Player Section */}
-        <div className="flex-1 flex flex-col p-4 lg:p-8 justify-center items-center bg-black/40">
+        <div className="flex-1 flex flex-col p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto">
           <div className={cn(
             "w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative"
           )}>
@@ -203,7 +203,7 @@ const MasterPlayer = () => {
           </div>
 
           {/* Controls */}
-          <div className="mt-8 flex items-center space-x-6">
+          <div className="mt-8 flex items-center space-x-6 pb-12">
             <Button 
               variant="ghost" 
               size="icon" 

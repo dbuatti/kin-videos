@@ -4,13 +4,14 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones, Video } from "lucide-react";
+import { LogOut, Zap, BookOpen, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import React, { useState } from 'react';
 import { cn } from "@/lib/utils";
+import SyllabusClipboard from "@/components/SyllabusClipboard";
 
 const Index = () => {
   const { user } = useAuth();
@@ -76,7 +77,10 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto">
+      <main className="max-w-5xl mx-auto space-y-12">
+        {/* Syllabus Clipboard Section */}
+        <SyllabusClipboard />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
           {/* Virtual Video Stitcher Card */}
