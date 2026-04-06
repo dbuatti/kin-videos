@@ -22,6 +22,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { downloadFile } from '@/utils/download';
 import LessonSkeleton from '@/components/LessonSkeleton';
+import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -90,22 +91,25 @@ const VideoGallery = () => {
           </div>
         </div>
 
-        <div className="relative max-w-md w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <Input 
-            placeholder="Search lessons..." 
-            className="pl-11 pr-11 rounded-2xl border-white/5 bg-white/5 h-12 text-sm focus-visible:ring-primary"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          <div className="relative max-w-md w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Input 
+              placeholder="Search lessons..." 
+              className="pl-11 pr-11 rounded-2xl border-white/5 bg-white/5 h-12 text-sm focus-visible:ring-primary"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <PlaybackSpeedControl className="border-white/5 bg-white/5 text-slate-400 h-12 px-4" />
         </div>
       </header>
 
