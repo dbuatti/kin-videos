@@ -20,7 +20,7 @@ interface LessonListDialogProps {
 }
 
 const MODULE_ORDER = [
-  "Weekly Q & A",
+  "General / Intro",
   "Course Introduction & Foundational Knowledge",
   "Clinical Assessments",
   "Direct Muscle Tests",
@@ -38,7 +38,6 @@ const MODULE_ORDER = [
   "Functional Anatomy and Biomechanics",
   "Putting it all Together",
   "FNH Foundations Exam",
-  "Uncategorized",
 ];
 
 const getLessonStatusBadge = (status: Lesson['status']) => {
@@ -52,20 +51,6 @@ const getLessonStatusBadge = (status: Lesson['status']) => {
     case 'pending':
     default:
       return <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-full"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
-  }
-};
-
-const getLessonName = (url: string) => {
-  try {
-    const parts = url.split('/');
-    const lastPart = parts[parts.length - 1];
-    if (lastPart.startsWith('lesson-')) {
-      const decoded = decodeURIComponent(lastPart.replace('lesson-', ''));
-      return decoded.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-    }
-    return lastPart;
-  } catch {
-    return url;
   }
 };
 
@@ -94,7 +79,7 @@ const processLessons = (lessons: Lesson[]): Record<string, (Lesson & { displayIn
     const categoryNumber = categoryIndex + 1;
     numberedLessons[category] = grouped[category].map((lesson, lessonIndex) => {
       const lessonNumber = lessonIndex + 1;
-      const lessonName = getLessonName(lesson.lesson_url);
+      const lessonName = lesson.title || 'Untitled Lesson';
       return {
         ...lesson,
         displayIndex: `${categoryNumber}.${lessonNumber}`,
@@ -177,7 +162,7 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
                       {lessons.map((lesson) => (
                         <div key={lesson.id} className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
                           <div className="flex-1 min-w-0 mr-4">
-                            <p className="font-medium text-sm text-gray-800 truncate">{lesson.displayIndex} - {getLessonName(lesson.lesson_url)}</p>
+                            <p className="font-medium text-sm text-gray-800 truncate">{lesson.displayIndex} - {lesson.title}</p>
                             <div className="flex items-center space-x-2 mt-1">{getLessonStatusBadge(lesson.status)}</div>
                           </div>
                           {lesson.video_url && lesson.status === 'completed' ? (

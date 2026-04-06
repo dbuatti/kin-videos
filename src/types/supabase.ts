@@ -17,8 +17,9 @@ export interface Lesson {
   job_id: string;
   user_id: string;
   lesson_url: string;
+  title: string | null; // New field
   video_url: string | null;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: string;
-  category: string | null; // New field
+  category: string | null;
 }
