@@ -3,12 +3,13 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, Info, ShieldCheck, Zap } from "lucide-react";
+import { LogOut, Info, ShieldCheck, Zap, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import NewJobForm from "@/components/NewJobForm";
 import JobTable from "@/components/JobTable";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   const { user } = useAuth();
@@ -31,7 +32,13 @@ const Index = () => {
             FNH Archiver
           </h1>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:bg-indigo-50 hidden sm:flex">
+            <Link to="/instructions">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Manual
+            </Link>
+          </Button>
           <span className="text-sm text-gray-600 hidden md:inline">
             <ShieldCheck className="w-4 h-4 inline mr-1 text-green-500" />
             {user?.email}
@@ -53,7 +60,8 @@ const Index = () => {
           <Info className="h-5 w-5 text-indigo-600" />
           <AlertTitle className="text-indigo-900 font-bold">How it works</AlertTitle>
           <AlertDescription className="text-indigo-700">
-            Our <strong>Two-Pass System</strong> first discovers the course structure (Pass 1) and then extracts high-quality video links in the background (Pass 2). You can start downloading lessons as soon as they appear as "Completed."
+            Our <strong>Two-Pass System</strong> first discovers the course structure (Pass 1) and then extracts high-quality video links in the background (Pass 2). 
+            <Link to="/instructions" className="ml-2 underline font-semibold hover:text-indigo-900">Read the full manual →</Link>
           </AlertDescription>
         </Alert>
 
