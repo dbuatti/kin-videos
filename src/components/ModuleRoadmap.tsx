@@ -1,15 +1,17 @@
 "use client";
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { useCourseProgress } from '@/hooks/use-course-progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MODULE_ORDER } from '@/utils/filenames';
-import { CheckCircle2, Circle, Map as MapIcon } from 'lucide-react';
+import { CheckCircle2, Circle, Map as MapIcon, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
 const ModuleRoadmap = () => {
+  const navigate = useNavigate();
   const { data: lessons } = useJobLessons();
   
   const moduleStats = React.useMemo(() => {
@@ -32,6 +34,10 @@ const ModuleRoadmap = () => {
     }).filter(m => m.total > 0);
   }, [lessons]);
 
+  const handleModuleClick = (category: string) => {
+    navigate(`/gallery?search=${encodeURIComponent(category)}`);
+  };
+
   return (
     <Card className="border-none shadow-xl rounded-[2.5rem] bg-slate-900/50 backdrop-blur-md text-white border border-white/5">
       <CardHeader className="p-8 pb-4">
@@ -43,7 +49,11 @@ const ModuleRoadmap = () => {
       <CardContent className="p-8 pt-0">
         <div className="space-y-6">
           {moduleStats.map((mod) => (
-            <div key={mod.category} className="group">
+            <button 
+              key={mod.category} 
+              onClick={() => handleModuleClick(mod.category)}
+              className="w-full text-left group block"
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-3 min-w-0">
                   <div className={cn(
@@ -53,10 +63,11 @@ const ModuleRoadmap = () => {
                     {mod.isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-[10px] font-bold">{mod.index}</span>}
                   </div>
                   <span className={cn(
-                    "text-xs font-bold truncate transition-colors",
+                    "text-xs font-bold truncate transition-colors flex items-center",
                     mod.isCompleted ? "text-emerald-400" : "text-slate-300 group-hover:text-white"
                   )}>
                     {mod.category}
+                    <ChevronRight className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
                   </span>
                 </div>
                 <span className="text-[10px] font-black text-slate-500 ml-4">{mod.percentage}%</span>
@@ -68,7 +79,7 @@ const ModuleRoadmap = () => {
                   mod.isCompleted ? "[&>div]:bg-emerald-500" : "[&>div]:bg-primary/50"
                 )} 
               />
-            </div>
+            </button>
           ))}
         </div>
       </CardContent>
