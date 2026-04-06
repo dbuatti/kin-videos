@@ -15,7 +15,9 @@ import {
   Music,
   ListMusic,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Keyboard,
+  Info
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
@@ -27,6 +29,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useVideoProgress } from '@/hooks/use-video-progress';
 import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
@@ -149,6 +152,46 @@ const MasterPlayer = () => {
         </div>
 
         <div className="flex items-center space-x-2">
+          {!isMobile && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
+                  <Keyboard className="w-5 h-5" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-slate-900 border-slate-800 text-white rounded-3xl">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center">
+                    <Keyboard className="w-5 h-5 mr-2 text-primary" />
+                    Keyboard Shortcuts
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-xs text-slate-400">Play/Pause</span>
+                    <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">Space</kbd>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-xs text-slate-400">Forward 10s</span>
+                    <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">→</kbd>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-xs text-slate-400">Backward 10s</span>
+                    <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">←</kbd>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                    <span className="text-xs text-slate-400">Fullscreen</span>
+                    <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">F</kbd>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl col-span-2">
+                    <span className="text-xs text-slate-400">Command Palette</span>
+                    <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">⌘ K</kbd>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+
           {!isMobile && (
             <Button 
               variant="ghost" 

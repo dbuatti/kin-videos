@@ -16,7 +16,8 @@ import {
   BookOpen,
   Settings,
   User as UserIcon,
-  ChevronRight
+  ChevronRight,
+  Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { showSuccess, showError } from '@/utils/toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import CommandPalette from './CommandPalette';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -190,6 +192,7 @@ const AppLayout = () => {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
+        <CommandPalette />
         <header className="h-20 bg-background/80 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-40">
           <div className="flex items-center space-x-3">
             <div className="bg-primary p-1.5 rounded-lg">
@@ -239,6 +242,7 @@ const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
+      <CommandPalette />
       <aside className="w-72 bg-background border-r border-white/5 sticky top-0 h-screen overflow-y-auto hidden lg:block">
         <NavContent />
       </aside>

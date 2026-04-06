@@ -22,6 +22,7 @@ import React from 'react';
 import { useLastWatched } from "@/hooks/use-last-watched";
 import { useCourseProgress } from "@/hooks/use-course-progress";
 import { Progress } from "@/components/ui/progress";
+import ModuleRoadmap from "@/components/ModuleRoadmap";
 
 const Index = () => {
   const { user } = useAuth();
@@ -111,12 +112,46 @@ const Index = () => {
                 )}
               </div>
             )}
+
+            {/* Primary Modes Grid moved inside for better layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 animate-in-slide-up [animation-delay:200ms]">
+              <Link to="/master-player?mode=video" className="group">
+                <Card className="h-full border-none shadow-xl rounded-[2rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-primary/50 hover:bg-slate-900/80">
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                    <div className="bg-primary p-4 rounded-2xl shadow-2xl shadow-primary/20 group-hover:scale-110 transition-transform duration-500">
+                      <Video className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-lg font-black tracking-tighter">Video Player</h3>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link to="/master-player?mode=audio" className="group">
+                <Card className="h-full border-none shadow-xl rounded-[2rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-accent/50 hover:bg-slate-900/80">
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                    <div className="bg-accent p-4 rounded-2xl shadow-2xl shadow-accent/20 group-hover:scale-110 transition-transform duration-500">
+                      <Headphones className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-lg font-black tracking-tighter">Audio Player</h3>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link to="/gallery" className="group">
+                <Card className="h-full border-none shadow-xl rounded-[2rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-white/20 hover:bg-slate-900/80">
+                  <CardContent className="p-6 flex flex-col items-center text-center space-y-4">
+                    <div className="bg-white/10 p-4 rounded-2xl shadow-2xl group-hover:scale-110 transition-transform duration-500 border border-white/10">
+                      <LayoutGrid className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="text-lg font-black tracking-tighter">Library</h3>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           </div>
 
-          {/* 2. QUICK STATS */}
-          <div className="space-y-6 animate-in-slide-up [animation-delay:100ms]">
-            <Card className="border-none shadow-xl rounded-[2.5rem] bg-slate-900/50 backdrop-blur-md text-white border border-white/5 h-full">
-              <CardContent className="p-8 flex flex-col h-full">
+          {/* 2. SIDEBAR STATS & ROADMAP */}
+          <div className="space-y-8 animate-in-slide-up [animation-delay:100ms]">
+            <Card className="border-none shadow-xl rounded-[2.5rem] bg-slate-900/50 backdrop-blur-md text-white border border-white/5">
+              <CardContent className="p-8 flex flex-col">
                 <div className="flex items-center space-x-3 mb-8">
                   <div className="bg-accent/20 p-3 rounded-2xl border border-accent/30">
                     <BarChart3 className="w-6 h-6 text-accent" />
@@ -124,7 +159,7 @@ const Index = () => {
                   <h3 className="font-black text-sm uppercase tracking-widest text-slate-400">Course Stats</h3>
                 </div>
 
-                <div className="flex-1 space-y-8">
+                <div className="space-y-8">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
                       <p className="text-3xl font-black text-white">{progress?.watchedCount || 0}</p>
@@ -143,73 +178,12 @@ const Index = () => {
                     </div>
                     <Progress value={progress?.percentage || 0} className="h-2 bg-white/5" />
                   </div>
-
-                  <div className="pt-4 grid grid-cols-2 gap-4">
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 mb-2" />
-                      <p className="text-xl font-black text-white">{progress?.watchedCount || 0}</p>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Verified</p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                      <Clock className="w-5 h-5 text-amber-400 mb-2" />
-                      <p className="text-xl font-black text-white">{(progress?.totalCount || 0) - (progress?.watchedCount || 0)}</p>
-                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Remaining</p>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
+
+            <ModuleRoadmap />
           </div>
-        </div>
-
-        {/* 3. PRIMARY MODES GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 animate-in-slide-up [animation-delay:200ms]">
-          
-          {/* Master Video Player */}
-          <Link to="/master-player?mode=video" className="group">
-            <Card className="h-full border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-primary/50 hover:bg-slate-900/80">
-              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
-                <div className="bg-primary p-6 rounded-[1.5rem] shadow-2xl shadow-primary/20 group-hover:scale-110 transition-transform duration-500">
-                  <Video className="w-10 h-10 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black tracking-tighter">Video Player</h3>
-                  <p className="text-primary font-black text-[10px] uppercase tracking-[0.3em] mt-2">Full Experience</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Master Audio Player */}
-          <Link to="/master-player?mode=audio" className="group">
-            <Card className="h-full border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-accent/50 hover:bg-slate-900/80">
-              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
-                <div className="bg-accent p-6 rounded-[1.5rem] shadow-2xl shadow-accent/20 group-hover:scale-110 transition-transform duration-500">
-                  <Headphones className="w-10 h-10 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black tracking-tighter">Audio Player</h3>
-                  <p className="text-accent font-black text-[10px] uppercase tracking-[0.3em] mt-2">Podcast Mode</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Browse All */}
-          <Link to="/gallery" className="group">
-            <Card className="h-full border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-white/20 hover:bg-slate-900/80">
-              <CardContent className="p-8 flex flex-col items-center text-center space-y-6">
-                <div className="bg-white/10 p-6 rounded-[1.5rem] shadow-2xl group-hover:scale-110 transition-transform duration-500 border border-white/10">
-                  <LayoutGrid className="w-10 h-10 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black tracking-tighter">Library</h3>
-                  <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.3em] mt-2">Browse All</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
         </div>
 
       </main>
