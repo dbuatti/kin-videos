@@ -11,6 +11,7 @@ import { Lesson } from '@/types/supabase';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 
 interface LessonListDialogProps {
   jobId: string | null;
@@ -18,27 +19,6 @@ interface LessonListDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const MODULE_ORDER = [
-  "General / Intro",
-  "Course Introduction & Foundational Knowledge",
-  "Clinical Assessments",
-  "Direct Muscle Tests",
-  "Beginning Procedures - Sympathetic Down Regulation",
-  "Lymphatic System Assessment and Correction",
-  "Vagus Nerve",
-  "Pathway Assessments and Corrections",
-  "Primitive Reflexes",
-  "Postural Reflexes",
-  "Cranial Nerves",
-  "Emotional Corrections",
-  "Finishing Procedures and Home Reinforcement",
-  "Background Information",
-  "Masterclasses",
-  "Functional Anatomy and Biomechanics",
-  "Putting it all Together",
-  "FNH Foundations Exam",
-];
 
 const getLessonStatusBadge = (status: Lesson['status']) => {
   switch (status) {
@@ -52,12 +32,6 @@ const getLessonStatusBadge = (status: Lesson['status']) => {
     default:
       return <Badge variant="secondary" className="bg-yellow-500 hover:bg-yellow-600 text-white rounded-full"><Clock className="w-3 h-3 mr-1" /> Pending</Badge>;
   }
-};
-
-const generateFilename = (categoryNumber: number, lessonNumber: number, categoryName: string, lessonName: string): string => {
-  const cleanCategory = categoryName.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
-  const cleanLesson = lessonName.replace(/[^a-zA-Z0-9\s&]/g, '').trim();
-  return `${categoryNumber}.${lessonNumber} - ${cleanCategory} - ${cleanLesson}.mp4`;
 };
 
 const processLessons = (lessons: Lesson[]): Record<string, (Lesson & { displayIndex: string, filename: string })[]> => {
@@ -83,7 +57,7 @@ const processLessons = (lessons: Lesson[]): Record<string, (Lesson & { displayIn
       return {
         ...lesson,
         displayIndex: `${categoryNumber}.${lessonNumber}`,
-        filename: generateFilename(categoryNumber, lessonNumber, category, lessonName),
+        filename: generateLessonFilename(categoryNumber, lessonNumber, category, lessonName),
       };
     });
   });

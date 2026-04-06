@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Instructions from "./pages/Instructions";
 import Debug from "./pages/Debug";
+import Library from "./pages/Library";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/instructions" element={<Instructions />} />
               <Route path="/debug" element={<Debug />} />
+              <Route path="/library" element={<Library />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
