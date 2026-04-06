@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MODULE_ORDER } from '@/utils/filenames';
+import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
 import VideoPlayer from '@/components/VideoPlayer';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
@@ -54,14 +54,24 @@ const MasterPlayer = () => {
     
     const videoOnly = lessons.filter(l => l.video_url);
     
+    // Sort strictly by the verified lesson order provided in the curriculum
     const sorted = videoOnly.sort((a, b) => {
+      const indexA = VERIFIED_LESSON_ORDER.indexOf(a.lesson_url);
+      const indexB = VERIFIED_LESSON_ORDER.indexOf(b.lesson_url);
+      
+      // If both are in the verified list, sort by their position there
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      
+      // Fallback to category order if URL not found in verified list
       const catA = a.category || 'Uncategorized';
       const catB = b.category || 'Uncategorized';
-      const indexA = MODULE_ORDER.indexOf(catA);
-      const indexB = MODULE_ORDER.indexOf(catB);
+      const catIndexA = MODULE_ORDER.indexOf(catA);
+      const catIndexB = MODULE_ORDER.indexOf(catB);
       
-      if (indexA !== indexB) {
-        return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+      if (catIndexA !== catIndexB) {
+        return (catIndexA === -1 ? Infinity : catIndexA) - (catIndexB === -1 ? Infinity : catIndexB);
       }
       
       return (a.title || '').localeCompare(b.title || '');
