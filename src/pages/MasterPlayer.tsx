@@ -13,7 +13,9 @@ import {
   Zap,
   Loader2,
   Music,
-  ListMusic
+  ListMusic,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
@@ -21,11 +23,12 @@ import VideoPlayer from '@/components/VideoPlayer';
 import PlaylistCard from '@/components/PlaylistCard';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { useVideoProgress } from '@/hooks/use-video-progress';
 import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -39,6 +42,7 @@ const MasterPlayer = () => {
   const [autoPlay, setAutoPlay] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
 
   useEffect(() => {
     const mode = isAudioOnly ? 'audio' : 'video';
@@ -105,6 +109,15 @@ const MasterPlayer = () => {
     }
   };
 
+  const handleVideoEnded = () => {
+    if (currentIndex < playlist.length - 1) {
+      toast.info(`Next lesson starting in 3 seconds...`, {
+        duration: 3000,
+        onAutoClose: handleNext
+      });
+    }
+  };
+
   const selectVideo = (index: number) => {
     setCurrentIndex(index);
     setAutoPlay(true);
@@ -115,17 +128,6 @@ const MasterPlayer = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
-      </div>
-    );
-  }
-
-  if (!isLoading && playlist.length === 0) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-slate-400 p-8">
-        <Video className="w-16 h-16 mb-4 opacity-20" />
-        <h2 className="text-xl font-bold text-white mb-2">No Videos Found</h2>
-        <p className="text-center max-w-md mb-6">Make sure your course data is synced.</p>
-        <Button onClick={() => navigate('/')} variant="outline" className="border-slate-700">Return to Dashboard</Button>
       </div>
     );
   }
@@ -142,13 +144,20 @@ const MasterPlayer = () => {
               <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
               <span className="truncate">{isAudioOnly ? "Audio Stitcher" : "Video Stitcher"}</span>
             </h1>
-            <p className="hidden sm:block text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-              Independent Progress Tracking
-            </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-2">
+          {!isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsTheaterMode(!isTheaterMode)}
+              className="text-slate-400 hover:text-white"
+            >
+              {isTheaterMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </Button>
+          )}
           <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800 h-9" />
           
           {isMobile && (
@@ -159,12 +168,6 @@ const MasterPlayer = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="h-[80vh] p-0 bg-slate-950 border-slate-800">
-                <SheetHeader className="p-4 border-b border-slate-800">
-                  <SheetTitle className="text-slate-200 flex items-center">
-                    <ListMusic className="w-5 h-5 mr-2 text-indigo-400" />
-                    Course Playlist
-                  </SheetTitle>
-                </SheetHeader>
                 <PlaylistCard 
                   playlist={playlist}
                   currentIndex={currentIndex}
@@ -195,27 +198,24 @@ const MasterPlayer = () => {
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 flex flex-col p-3 sm:p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto">
-          <div className="w-full max-w-5xl aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative">
+        <div className={cn(
+          "flex-1 flex flex-col p-3 sm:p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto transition-all duration-500",
+          isTheaterMode ? "lg:p-0" : ""
+        )}>
+          <div className={cn(
+            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative",
+            isTheaterMode ? "max-w-full aspect-video rounded-none border-none" : "max-w-5xl aspect-video"
+          )}>
             {isAudioOnly && (
               <div className="absolute inset-0 z-10 flex flex-col items-center space-y-4 sm:space-y-6 text-center p-4 sm:p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
                 <div className="relative">
                   <div className="w-24 h-24 sm:w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
                     <Music className="w-12 h-12 sm:w-20 sm:h-20 text-indigo-500" />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-indigo-600 p-1.5 sm:p-2 rounded-lg shadow-lg">
-                    <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                  </div>
                 </div>
                 <div className="max-w-md">
                   <Badge variant="outline" className="mb-2 sm:mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5 text-[10px] sm:text-xs">{currentVideo?.category}</Badge>
                   <h2 className="text-xl sm:text-3xl font-black text-white mb-1 sm:mb-2 tracking-tight line-clamp-2">{currentVideo?.title}</h2>
-                  <p className="text-slate-400 text-[10px] sm:text-sm font-medium">Virtual Audio Stitcher Mode</p>
-                </div>
-                <div className="flex items-center space-x-1 h-6 sm:h-8">
-                  {[...Array(isMobile ? 8 : 12)].map((_, i) => (
-                    <div key={i} className="w-1 bg-indigo-500 rounded-full animate-bounce" style={{ height: `${30 + Math.random() * 70}%`, animationDuration: `${0.5 + Math.random()}s`, animationDelay: `${Math.random()}s` }} />
-                  ))}
                 </div>
               </div>
             )}
@@ -224,7 +224,7 @@ const MasterPlayer = () => {
               videoId={currentVideo?.id || ''} 
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
               className="w-full h-full"
-              onEnded={handleNext}
+              onEnded={handleVideoEnded}
               autoPlay={autoPlay}
             />
           </div>
@@ -244,7 +244,7 @@ const MasterPlayer = () => {
           </div>
         </div>
 
-        {!isMobile && (
+        {!isMobile && !isTheaterMode && (
           <aside className="w-full lg:w-96 p-4 lg:p-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
             <PlaylistCard 
               playlist={playlist}

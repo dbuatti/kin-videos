@@ -7,19 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, Zap, BookOpen, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones, Video, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import React, { useState } from 'react';
 import { cn } from "@/lib/utils";
 import SyllabusClipboard from "@/components/SyllabusClipboard";
 import PlaybackSpeedControl from "@/components/PlaybackSpeedControl";
 import { useCourseProgress } from "@/hooks/use-course-progress";
+import { useLastWatched } from "@/hooks/use-last-watched";
 import { Progress } from "@/components/ui/progress";
 
 const Index = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isSyncing, setIsSyncing] = useState(false);
   const { data: courseProgress } = useCourseProgress();
+  const { data: lastWatched } = useLastWatched();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -84,6 +87,37 @@ const Index = () => {
       </header>
 
       <main className="max-w-5xl mx-auto space-y-6 sm:space-y-12">
+        
+        {/* Continue Watching Section */}
+        {lastWatched && (
+          <Card className="border-indigo-600 shadow-xl rounded-2xl sm:rounded-3xl overflow-hidden bg-indigo-600 text-white border-2 transform hover:scale-[1.01] transition-all">
+            <CardContent className="p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-sm">
+                  <PlayCircle className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <Badge variant="secondary" className="bg-indigo-400 text-white border-none mb-2">CONTINUE WATCHING</Badge>
+                  <h2 className="text-xl font-bold line-clamp-1">{lastWatched.title}</h2>
+                  <p className="text-indigo-100 text-sm opacity-80">{lastWatched.category}</p>
+                </div>
+              </div>
+              <div className="w-full md:w-auto flex flex-col items-end gap-2">
+                <div className="text-right mb-1">
+                  <span className="text-2xl font-black">{lastWatched.percentage}%</span>
+                  <span className="text-[10px] uppercase ml-2 opacity-70">Complete</span>
+                </div>
+                <Button 
+                  onClick={() => navigate('/master-player?mode=video')}
+                  className="bg-white text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl px-8"
+                >
+                  Resume Lesson
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Course Progress Overview */}
         <Card className="border-indigo-100 shadow-xl rounded-2xl sm:rounded-3xl overflow-hidden bg-white border-2">
           <CardContent className="p-6 sm:p-8">
