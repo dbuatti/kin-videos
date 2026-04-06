@@ -3,12 +3,13 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw } from "lucide-react";
+import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import React, { useState } from 'react';
+import { cn } from "@/lib/utils";
 
 const Index = () => {
   const { user } = useAuth();
@@ -113,6 +114,21 @@ const Index = () => {
             </Card>
           </Link>
 
+          {/* Bookmarks Card */}
+          <Link to="/bookmarks" className="group">
+            <Card className="border-indigo-100 shadow-md hover:shadow-lg transition-all rounded-2xl bg-white border hover:border-indigo-200">
+              <CardContent className="p-6 flex items-center space-x-4">
+                <div className="bg-amber-50 p-3 rounded-xl">
+                  <Bookmark className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-indigo-900">Quick Bookmarks</h3>
+                  <p className="text-sm text-gray-500">Access external course links and tools.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           {/* User Manual Card */}
           <Link to="/instructions" className="group">
             <Card className="border-indigo-100 shadow-md hover:shadow-lg transition-all rounded-2xl bg-white border hover:border-indigo-200">
@@ -153,5 +169,4 @@ const Index = () => {
   );
 };
 
-import { cn } from "@/lib/utils";
 export default Index;
