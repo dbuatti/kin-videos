@@ -19,21 +19,22 @@ import {
   Search,
   ExternalLink,
   Terminal,
-  Copy
+  Copy,
+  FileText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
+import { cn } from '@/lib/utils';
 
 const Library = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: jobs } = useCrawlerJobs();
   
-  // We'll look at the most recent completed job for the foundations course
   const latestJob = useMemo(() => {
     return jobs?.find(j => j.status === 'completed');
   }, [jobs]);
@@ -51,11 +52,10 @@ const Library = () => {
   };
 
   const inventoryStats = useMemo(() => {
-    if (!lessons || !localFiles) return { total: 0, downloaded: 0, missing: 0 };
+    if (!lessons || !localFiles) return { total: 0, downloaded: 0, missing: 0, processedLessons: [] };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
     
-    // Group lessons by category to get correct numbering
     const grouped = lessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
       if (!acc[category]) acc[category] = [];
@@ -75,7 +75,16 @@ const Library = () => {
 
     sortedCategories.forEach((category, catIdx) => {
       grouped[category].forEach((lesson, lesIdx) => {
-        if (!lesson.video_url) return; // Skip non-video lessons
+        if (!lesson.video_url) {
+          // Still track non-video lessons for the list, but they don't count towards "downloaded"
+          processedLessons.push({
+            ...lesson,
+            isDownloaded: false,
+            category,
+            displayIndex: `${catIdx + 1}.${lesIdx + 1}`
+          });
+          return;
+        }
 
         const expectedFilename = generateLessonFilename(
           catIdx + 1,
@@ -120,6 +129,39 @@ const Library = () => {
     showSuccess("Command copied to clipboard!");
   };
 
+  const copyCourseMap = () => {
+    if (!lessons) {
+      showError("No course data available to copy.");
+      return;
+    }
+
+    const grouped = lessons.reduce((acc, lesson) => {
+      const category = lesson.category || 'Uncategorized';
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(lesson);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      const indexA = MODULE_ORDER.indexOf(a);
+      const indexB = MODULE_ORDER.indexOf(b);
+      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    });
+
+    let mapText = "";
+    sortedCategories.forEach((category) => {
+      mapText += `${category}\n`;
+      grouped[category].forEach((lesson: any) => {
+        const videoText = lesson.video_url ? lesson.video_url : "No Video ID found on page";
+        mapText += `${lesson.title} 🔗 Page: ${lesson.lesson_url} 🎥 Video: ${videoText}\n\n`;
+      });
+      mapText += "\n";
+    });
+
+    navigator.clipboard.writeText(mapText.trim());
+    showSuccess("Course map copied to clipboard!");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <header className="max-w-6xl mx-auto flex items-center justify-between mb-8 border-b pb-4 border-indigo-100">
@@ -137,7 +179,16 @@ const Library = () => {
             Course Inventory
           </h1>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Button 
+            onClick={copyCourseMap} 
+            variant="outline" 
+            size="sm" 
+            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Copy Course Map
+          </Button>
           <Button asChild variant="outline" size="sm" className="text-indigo-600 border-indigo-200">
             <a href="https://gemini.google.com/app/298621e0b01137f0" target="_blank" rel="noopener noreferrer">
               <ExternalLink className="w-4 h-4 mr-2" />
@@ -262,15 +313,22 @@ const Library = () => {
                             </h4>
                           </div>
                           <p className="text-xs text-gray-500 truncate mt-0.5">{lesson.category}</p>
-                          <p className="text-[10px] text-gray-400 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {lesson.expectedFilename}
-                          </p>
+                          {lesson.expectedFilename && (
+                            <p className="text-[10px] text-gray-400 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {lesson.expectedFilename}
+                            </p>
+                          )}
                         </div>
                       </div>
                       
-                      {!lesson.isDownloaded && (
+                      {!lesson.isDownloaded && lesson.video_url && (
                         <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 shrink-0">
                           Missing
+                        </Badge>
+                      )}
+                      {!lesson.video_url && (
+                        <Badge variant="outline" className="text-gray-400 border-gray-200 bg-gray-50 shrink-0">
+                          No Video
                         </Badge>
                       )}
                     </div>
