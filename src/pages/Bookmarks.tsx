@@ -12,11 +12,20 @@ import {
   GraduationCap, 
   FileJson, 
   Sparkles,
-  Globe
+  Globe,
+  Activity
 } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const bookmarks = [
+  {
+    title: "Kinesiology App",
+    url: "https://kinesiology-app.vercel.app/",
+    description: "Access the Kinesiology application.",
+    icon: Activity,
+    color: "text-rose-600",
+    bg: "bg-rose-50"
+  },
   {
     title: "Local Library",
     url: "http://localhost:32110/library",
