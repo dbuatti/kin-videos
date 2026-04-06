@@ -3,7 +3,7 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, Info, ShieldCheck, Zap, BookOpen } from "lucide-react";
+import { LogOut, Info, ShieldCheck, Zap, BookOpen, Bug } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import NewJobForm from "@/components/NewJobForm";
@@ -75,9 +75,13 @@ const Index = () => {
         </div>
       </main>
       
-      <div className="mt-12">
+      <footer className="mt-12 flex flex-col items-center space-y-4">
         <MadeWithDyad />
-      </div>
+        <Link to="/debug" className="text-[10px] text-gray-400 hover:text-indigo-400 flex items-center transition-colors">
+          <Bug className="w-3 h-3 mr-1" />
+          System Debugger
+        </Link>
+      </footer>
     </div>
   );
 };
