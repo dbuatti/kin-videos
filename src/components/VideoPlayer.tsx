@@ -9,7 +9,7 @@ import { useVideoProgress } from '@/hooks/use-video-progress';
 interface VideoPlayerProps {
   videoUrl: string;
   videoId: string;
-  progressKey?: string; // Optional custom key for progress tracking
+  progressKey?: string;
   posterUrl?: string;
   className?: string;
   onEnded?: () => void;
@@ -29,12 +29,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasStarted, setHasStarted] = useState(autoPlay);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   
-  // Use progressKey if provided, otherwise fallback to videoId
   const effectiveKey = progressKey || videoId;
   const { progress, isLoading, saveProgress } = useVideoProgress(effectiveKey);
   const lastSavedTime = useRef<number>(0);
 
-  // Handle autoplay
   useEffect(() => {
     if (autoPlay && videoRef.current) {
       videoRef.current.play().catch(() => {
@@ -44,21 +42,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [videoUrl, autoPlay]);
 
-  // Seek to saved position when metadata is loaded
   const handleLoadedMetadata = () => {
-    if (videoRef.current && progress && progress > 5 && !autoPlay) {
-      if (progress < videoRef.current.duration - 5) {
-        videoRef.current.currentTime = progress;
+    if (videoRef.current) {
+      // Save duration immediately so gallery can show progress bar
+      saveProgress(videoRef.current.currentTime, videoRef.current.duration);
+      
+      if (progress && progress > 5 && !autoPlay) {
+        if (progress < videoRef.current.duration - 5) {
+          videoRef.current.currentTime = progress;
+        }
       }
     }
   };
 
-  // Save progress periodically
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
       const currentTime = videoRef.current.currentTime;
       if (Math.abs(currentTime - lastSavedTime.current) > 5) {
-        saveProgress(currentTime);
+        saveProgress(currentTime, videoRef.current.duration);
         lastSavedTime.current = currentTime;
       }
     }
@@ -72,7 +73,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handlePause = () => {
     setIsPlaying(false);
     if (videoRef.current) {
-      saveProgress(videoRef.current.currentTime);
+      saveProgress(videoRef.current.currentTime, videoRef.current.duration);
     }
   };
 
@@ -91,7 +92,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     e.stopPropagation();
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
-      saveProgress(0);
+      saveProgress(0, videoRef.current.duration);
       videoRef.current.play();
     }
   };

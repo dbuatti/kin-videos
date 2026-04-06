@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import {
   ExternalLink,
   Video,
   Menu,
-  ChevronRight,
   Hash
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -22,6 +21,7 @@ import { MODULE_ORDER } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
+import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
@@ -197,7 +197,7 @@ const VideoGallery = () => {
                       className="aspect-video"
                     />
                     <CardHeader className="p-4">
-                      <div className="flex justify-between items-start gap-2">
+                      <div className="flex justify-between items-start gap-2 mb-2">
                         <CardTitle className="text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
                           {video.title}
                         </CardTitle>
@@ -207,6 +207,9 @@ const VideoGallery = () => {
                           </a>
                         </Button>
                       </div>
+                      
+                      {/* Visual Progress Bar */}
+                      <VideoProgressIndicator videoId={video.id} className="mt-2" />
                     </CardHeader>
                   </Card>
                 ))}

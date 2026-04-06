@@ -4,9 +4,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
 
+export interface VideoProgressData {
+  playback_time: number;
+  duration: number;
+}
+
 /**
  * Hook to manage video/audio playback progress.
- * @param progressKey The unique identifier for the progress (e.g., videoId or videoId + '-audio')
  */
 export const useVideoProgress = (progressKey: string) => {
   const { user } = useAuth();
@@ -15,44 +19,53 @@ export const useVideoProgress = (progressKey: string) => {
   const { data: progress, isLoading } = useQuery({
     queryKey: ['videoProgress', user?.id, progressKey],
     queryFn: async () => {
-      if (!user || !progressKey) return 0;
+      if (!user || !progressKey) return { playback_time: 0, duration: 0 };
       const { data, error } = await supabase
         .from('video_progress')
-        .select('playback_time')
+        .select('playback_time, duration')
         .eq('user_id', user.id)
         .eq('video_id', progressKey)
         .maybeSingle();
       
       if (error) throw error;
-      return data?.playback_time || 0;
+      return { 
+        playback_time: data?.playback_time || 0, 
+        duration: data?.duration || 0 
+      } as VideoProgressData;
     },
     enabled: !!user && !!progressKey,
   });
 
   const saveProgress = useMutation({
-    mutationFn: async (currentTime: number) => {
+    mutationFn: async ({ currentTime, duration }: { currentTime: number, duration?: number }) => {
       if (!user || !progressKey) return;
       
+      const upsertData: any = {
+        user_id: user.id,
+        video_id: progressKey,
+        playback_time: currentTime,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (duration !== undefined && duration > 0) {
+        upsertData.duration = duration;
+      }
+
       const { error } = await supabase
         .from('video_progress')
-        .upsert({
-          user_id: user.id,
-          video_id: progressKey,
-          playback_time: currentTime,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,video_id' });
+        .upsert(upsertData, { onConflict: 'user_id,video_id' });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      // Optimistically update the cache
-      queryClient.setQueryData(['videoProgress', user?.id, progressKey], (old: number) => old);
+      queryClient.invalidateQueries({ queryKey: ['videoProgress', user?.id, progressKey] });
     }
   });
 
   return {
-    progress,
+    progress: progress?.playback_time || 0,
+    duration: progress?.duration || 0,
     isLoading,
-    saveProgress: saveProgress.mutate
+    saveProgress: (currentTime: number, duration?: number) => saveProgress.mutate({ currentTime, duration })
   };
 };
