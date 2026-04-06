@@ -11,7 +11,8 @@ import {
   ArrowRight,
   Sparkles,
   TrendingUp,
-  Zap
+  Zap,
+  Bookmark
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -102,34 +103,49 @@ const Index = () => {
           </div>
         </div>
 
-        {lastWatched ? (
-          <button 
-            onClick={() => navigate(`/master-player?mode=video`)}
-            className="w-full text-left group"
-          >
-            <Card className="border-none rounded-[2rem] bg-white/5 hover:bg-white/10 transition-all border border-white/5 overflow-hidden">
-              <CardContent className="p-6 sm:p-8 flex items-center justify-between">
-                <div className="flex items-center space-x-6 min-w-0">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/20 rounded-2xl flex items-center justify-center shrink-0">
-                    <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary animate-pulse" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Last Watched</p>
-                    <h3 className="text-sm sm:text-xl font-bold text-white truncate group-hover:text-primary transition-colors">
-                      {lastWatched.title}
-                    </h3>
-                    <p className="text-[10px] sm:text-xs text-slate-400 font-medium truncate mt-0.5">{lastWatched.category}</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-primary group-hover:translate-x-2 transition-all shrink-0 ml-4" />
-              </CardContent>
-            </Card>
-          </button>
-        ) : (
-          <div className="p-12 text-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/5">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No recent activity found.</p>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Resume Card */}
+          <div className="lg:col-span-3">
+            {lastWatched ? (
+              <button 
+                onClick={() => navigate(`/master-player?mode=video`)}
+                className="w-full text-left group"
+              >
+                <Card className="border-none rounded-[2rem] bg-white/5 hover:bg-white/10 transition-all border border-white/5 overflow-hidden">
+                  <CardContent className="p-6 sm:p-8 flex items-center justify-between">
+                    <div className="flex items-center space-x-6 min-w-0">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/20 rounded-2xl flex items-center justify-center shrink-0">
+                        <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary animate-pulse" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Last Watched</p>
+                        <h3 className="text-sm sm:text-xl font-bold text-white truncate group-hover:text-primary transition-colors">
+                          {lastWatched.title}
+                        </h3>
+                        <p className="text-[10px] sm:text-xs text-slate-400 font-medium truncate mt-0.5">{lastWatched.category}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-primary group-hover:translate-x-2 transition-all shrink-0 ml-4" />
+                  </CardContent>
+                </Card>
+              </button>
+            ) : (
+              <div className="p-12 text-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/5">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No recent activity found.</p>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Quick Bookmarks Button */}
+          <Link to="/bookmarks" className="group">
+            <Card className="h-full border-none rounded-[2rem] bg-white/5 hover:bg-white/10 transition-all border border-white/5 flex items-center justify-center p-6">
+              <div className="text-center">
+                <Bookmark className="w-6 h-6 text-slate-500 group-hover:text-primary mx-auto mb-2 transition-colors" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Bookmarks</span>
+              </div>
+            </Card>
+          </Link>
+        </div>
       </section>
 
       <footer className="pt-12 opacity-30">

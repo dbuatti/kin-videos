@@ -11,7 +11,8 @@ import {
   LogOut,
   Settings,
   Search,
-  ChevronRight
+  ChevronRight,
+  Bookmark
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { label: 'Player', icon: Zap, path: '/master-player' },
   { label: 'Videos', icon: PlayCircle, path: '/gallery' },
   { label: 'Inventory', icon: Library, path: '/library' },
+  { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
 ];
 
 const AppLayout = () => {
