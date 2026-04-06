@@ -22,6 +22,7 @@ import { useCourseProgress } from "@/hooks/use-course-progress";
 import { Progress } from "@/components/ui/progress";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { cn } from "@/lib/utils";
+import SyllabusClipboard from "@/components/SyllabusClipboard";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -147,6 +148,9 @@ const Index = () => {
           </Link>
         </div>
       </section>
+
+      {/* 3. Master Syllabus Clipboard */}
+      <SyllabusClipboard />
 
       <footer className="pt-12 opacity-30">
         <div className="flex items-center justify-center space-x-2 text-[10px] font-black uppercase tracking-widest text-slate-500">

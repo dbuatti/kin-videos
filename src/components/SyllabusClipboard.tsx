@@ -148,7 +148,7 @@ Cranial Nerve III (Oculomotor) 🔗 Page: https://functional-neuro-health.mykaja
 
 Cranial Nerve IV (Trochlear) 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167779806 🎥 Video: https://embed-ssl.wistia.com/deliveries/e469a668620604adbb0a0c69a192e7af50579078.mp4
 
-Cranial Nerve V (Trigeminal) 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780073 🎥 Video: https://embed-ssl.wistia.com/deliveries/10de3ccab1d8595c4c3e451aea5b91c84cf6213f.mp4
+Cranial Nerve V (Trigeminal) 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780073 🎥 Video: https://embed-ssl.wistia.com/deliveries/10de3ccab10de3ccab1d8595c4c3e451aea5b91c84cf6213f.mp4
 
 Cranial Nerve VI (Abducens) 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780077 🎥 Video: https://embed-ssl.wistia.com/deliveries/e469a668620604adbb0a0c69a192e7af50579078.mp4
 
@@ -210,22 +210,22 @@ const SyllabusClipboard = () => {
   };
 
   return (
-    <div className="bg-indigo-900 rounded-3xl p-8 text-white shadow-xl border border-indigo-700/50">
+    <div className="bg-slate-900/50 backdrop-blur-xl rounded-[2.5rem] p-8 text-white shadow-2xl border border-white/5">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-start space-x-4">
-          <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg">
-            <FileText className="w-8 h-8 text-white" />
+          <div className="bg-primary/20 p-3 rounded-2xl shadow-lg border border-primary/20">
+            <FileText className="w-8 h-8 text-primary" />
           </div>
           <div>
             <h2 className="text-2xl font-black tracking-tight">Master Syllabus</h2>
-            <p className="text-indigo-200 text-sm mt-1 max-w-md">
+            <p className="text-slate-400 text-sm mt-1 max-w-md">
               Copy the complete course structure including all verified page and video links for your records or AI assistants.
             </p>
           </div>
         </div>
         <Button 
           onClick={handleCopy}
-          className="bg-white text-indigo-900 hover:bg-indigo-50 rounded-2xl px-8 py-6 h-auto font-bold shadow-lg transition-all transform hover:scale-105 shrink-0"
+          className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-8 py-6 h-auto font-bold shadow-lg transition-all transform hover:scale-105 shrink-0"
         >
           <Copy className="w-5 h-5 mr-2" />
           Copy to Clipboard
