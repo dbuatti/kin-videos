@@ -22,7 +22,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
 import VideoPlayer from '@/components/VideoPlayer';
-import PlaylistCard from '@/components/PlaylistCard';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
@@ -33,6 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
+import PlaylistCardComponent from '@/components/PlaylistCard';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -138,20 +138,20 @@ const MasterPlayer = () => {
 
   return (
     <div className="h-screen bg-slate-950 text-slate-200 flex flex-col overflow-hidden">
-      <header className="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md shrink-0 z-50">
-        <div className="flex items-center space-x-2 sm:x-4">
+      <header className="p-2 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md shrink-0 z-50">
+        <div className="flex items-center space-x-1 sm:space-x-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-slate-800 text-slate-400 h-9 w-9">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="min-w-0">
-            <h1 className="text-sm sm:text-lg font-bold text-indigo-400 flex items-center truncate">
+          <div className="min-w-0 hidden xs:block">
+            <h1 className="text-xs sm:text-lg font-bold text-indigo-400 flex items-center truncate">
               <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
-              <span className="truncate">{isAudioOnly ? "Audio Stitcher" : "Video Stitcher"}</span>
+              <span className="truncate">{isAudioOnly ? "Audio" : "Video"} Player</span>
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           {!isMobile && (
             <Dialog>
               <DialogTrigger asChild>
@@ -183,10 +183,6 @@ const MasterPlayer = () => {
                     <span className="text-xs text-slate-400">Fullscreen</span>
                     <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">F</kbd>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl col-span-2">
-                    <span className="text-xs text-slate-400">Command Palette</span>
-                    <kbd className="bg-slate-800 px-2 py-1 rounded text-[10px] font-mono">⌘ K</kbd>
-                  </div>
                 </div>
               </DialogContent>
             </Dialog>
@@ -202,17 +198,18 @@ const MasterPlayer = () => {
               {isTheaterMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </Button>
           )}
-          <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800 h-9" />
+          
+          <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800 h-8 sm:h-9" />
           
           {isMobile && (
             <Sheet open={isPlaylistOpen} onOpenChange={setIsPlaylistOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="rounded-xl border-slate-700 bg-slate-900 text-indigo-400 h-9 w-9">
-                  <ListMusic className="h-5 w-5" />
+                <Button variant="outline" size="icon" className="rounded-xl border-slate-700 bg-slate-900 text-indigo-400 h-8 w-8 sm:h-9 sm:w-9">
+                  <ListMusic className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="bottom" className="h-[80vh] p-0 bg-slate-950 border-slate-800">
-                <PlaylistCard 
+              <SheetContent side="bottom" className="h-[80vh] p-0 bg-slate-950 border-slate-800 rounded-t-[2rem]">
+                <PlaylistCardComponent 
                   playlist={playlist}
                   currentIndex={currentIndex}
                   onSelectVideo={selectVideo}
@@ -231,35 +228,35 @@ const MasterPlayer = () => {
               setIsInitialLoad(true);
             }}
             className={cn(
-              "rounded-xl border-slate-700 transition-all h-9",
+              "rounded-xl border-slate-700 transition-all h-8 sm:h-9 px-2 sm:px-3",
               isAudioOnly ? "bg-indigo-600 text-white border-indigo-500" : "bg-slate-900 text-slate-400"
             )}
           >
-            {isAudioOnly ? <Headphones className="w-4 h-4 sm:mr-2" /> : <Video className="w-4 h-4 sm:mr-2" />}
-            <span className="hidden sm:inline">{isAudioOnly ? "Switch to Video" : "Switch to Audio"}</span>
+            {isAudioOnly ? <Headphones className="w-3.5 h-3.5 sm:mr-2" /> : <Video className="w-3.5 h-3.5 sm:mr-2" />}
+            <span className="hidden xs:inline text-[10px] sm:text-xs">{isAudioOnly ? "Video" : "Audio"}</span>
           </Button>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         <div className={cn(
-          "flex-1 flex flex-col p-3 sm:p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto transition-all duration-500",
+          "flex-1 flex flex-col p-2 sm:p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto transition-all duration-500",
           isTheaterMode ? "lg:p-0" : ""
         )}>
           <div className={cn(
-            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-800 bg-slate-900 relative p-4 shrink-0",
+            "w-full transition-all duration-500 rounded-xl sm:rounded-3xl shadow-2xl border border-slate-800 bg-slate-900 relative p-2 sm:p-4 shrink-0",
             isTheaterMode ? "max-w-full aspect-video rounded-none border-none p-0" : "max-w-4xl aspect-video"
           )}>
             {isAudioOnly && (
               <div className="absolute inset-0 z-10 flex flex-col items-center space-y-4 sm:space-y-6 text-center p-4 sm:p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
                 <div className="relative">
-                  <div className="w-24 h-24 sm:w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
-                    <Music className="w-12 h-12 sm:w-20 sm:h-20 text-indigo-500" />
+                  <div className="w-20 h-20 sm:w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
+                    <Music className="w-10 h-10 sm:w-20 sm:h-20 text-indigo-500" />
                   </div>
                 </div>
-                <div className="max-w-md">
-                  <Badge variant="outline" className="mb-2 sm:mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5 text-[10px] sm:text-xs">{currentVideo?.category}</Badge>
-                  <h2 className="text-xl sm:text-3xl font-black text-white mb-1 sm:mb-2 tracking-tight line-clamp-2">{currentVideo?.title}</h2>
+                <div className="max-w-md px-4">
+                  <Badge variant="outline" className="mb-2 sm:mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5 text-[9px] sm:text-xs">{currentVideo?.category}</Badge>
+                  <h2 className="text-lg sm:text-3xl font-black text-white mb-1 sm:mb-2 tracking-tight line-clamp-2">{currentVideo?.title}</h2>
                 </div>
               </div>
             )}
@@ -267,29 +264,28 @@ const MasterPlayer = () => {
               videoUrl={currentVideo?.video_url || ''} 
               videoId={currentVideo?.id || ''} 
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
-              className="w-full h-full"
+              className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
               autoPlay={autoPlay}
             />
           </div>
 
-          <div className="mt-6 sm:mt-8 flex flex-col items-center w-full max-w-2xl shrink-0 pb-8">
-            <div className="flex items-center space-x-4 sm:space-x-6 w-full justify-center mb-6">
+          <div className="mt-4 sm:mt-8 flex flex-col items-center w-full max-w-2xl shrink-0 pb-8 px-2">
+            <div className="flex items-center space-x-4 sm:space-x-6 w-full justify-center mb-4 sm:mb-6">
               <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
                 <SkipBack className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
               <div className="text-center min-w-0 flex-1">
-                <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5 sm:mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
-                <h3 className="text-sm sm:text-lg font-bold text-white truncate">{currentVideo?.title}</h3>
-                <p className="text-[10px] text-indigo-400 font-medium mt-0.5 sm:mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
+                <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase mb-0.5 sm:mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
+                <h3 className="text-xs sm:text-lg font-bold text-white truncate px-2">{currentVideo?.title}</h3>
+                <p className="text-[9px] sm:text-[10px] text-indigo-400 font-medium mt-0.5 sm:mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
                 <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
             </div>
 
-            {/* Prominent Main Progress Bar */}
-            <div className="w-full px-4 sm:px-0">
+            <div className="w-full px-2 sm:px-0">
               <VideoProgressIndicator 
                 videoId={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id} 
                 className="w-full"
@@ -301,7 +297,7 @@ const MasterPlayer = () => {
 
         {!isMobile && !isTheaterMode && (
           <aside className="w-full lg:w-96 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col overflow-hidden">
-            <PlaylistCard 
+            <PlaylistCardComponent 
               playlist={playlist}
               currentIndex={currentIndex}
               onSelectVideo={selectVideo}
@@ -311,7 +307,7 @@ const MasterPlayer = () => {
           </aside>
         )}
       </main>
-      <footer className="p-3 sm:p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
+      <footer className="p-2 sm:p-4 border-t border-slate-800 bg-slate-900/50 shrink-0">
         <MadeWithDyad />
       </footer>
     </div>

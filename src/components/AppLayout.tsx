@@ -31,9 +31,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommandPalette from './CommandPalette';
 
 const NAV_ITEMS = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
-  { label: 'Master Player', icon: Zap, path: '/master-player' },
-  { label: 'Video Gallery', icon: PlayCircle, path: '/gallery' },
+  { label: 'Home', icon: LayoutDashboard, path: '/' },
+  { label: 'Player', icon: Zap, path: '/master-player' },
+  { label: 'Videos', icon: PlayCircle, path: '/gallery' },
   { label: 'Inventory', icon: Library, path: '/library' },
 ];
 
@@ -89,8 +89,8 @@ const AppLayout = () => {
   };
 
   const NavContent = () => (
-    <div className="flex flex-col h-full py-8">
-      <div className="px-8 mb-10">
+    <div className="flex flex-col h-full py-6 sm:py-8">
+      <div className="px-6 sm:px-8 mb-8 sm:mb-10">
         <div className="flex items-center space-x-3">
           <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
             <Zap className="text-white w-5 h-5" />
@@ -99,8 +99,8 @@ const AppLayout = () => {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1.5">
-        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Main Menu</p>
+      <nav className="flex-1 px-4 space-y-1">
+        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Main Menu</p>
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.path}
@@ -113,17 +113,17 @@ const AppLayout = () => {
                 : "text-slate-400 hover:bg-white/5 hover:text-white"
             )}
           >
-            <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-slate-500 group-hover:text-primary")} />
-            <span>{item.label}</span>
+            <item.icon className={cn("w-5 h-5", (location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) ? "text-white" : "text-slate-500 group-hover:text-primary")} />
+            <span>{item.label === 'Home' && !isMobile ? 'Dashboard' : item.label}</span>
             {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
               <ChevronRight className="ml-auto w-4 h-4 opacity-50" />
             )}
           </Link>
         ))}
 
-        <div className="my-8 border-t border-white/5 mx-4" />
+        <div className="my-6 border-t border-white/5 mx-4" />
         
-        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Tools & Utils</p>
+        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Tools & Utils</p>
         {UTILITY_ITEMS.map((item) => (
           <Link
             key={item.path}
@@ -143,7 +143,6 @@ const AppLayout = () => {
       </nav>
 
       <div className="px-4 mt-auto space-y-4">
-        {/* User Profile Summary */}
         <Link 
           to="/settings" 
           onClick={() => setIsOpen(false)}
@@ -193,58 +192,59 @@ const AppLayout = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <CommandPalette />
-        <header className="h-20 bg-background/80 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-40">
-          <div className="flex items-center space-x-3">
+        <header className="h-16 bg-background/80 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-40">
+          <div className="flex items-center space-x-2">
             <div className="bg-primary p-1.5 rounded-lg">
               <Zap className="text-white w-4 h-4" />
             </div>
             <span className="font-black text-white text-sm tracking-tighter">FNH ARCHIVER</span>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-slate-400"
+              className="text-slate-400 h-10 w-10"
               onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
             >
               <Search className="w-5 h-5" />
             </Button>
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white">
+                <Button variant="ghost" size="icon" className="text-white h-10 w-10">
                   <Menu className="w-6 h-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-80 bg-background border-r-white/5">
+              <SheetContent side="left" className="p-0 w-[85%] max-w-xs bg-background border-r-white/5">
                 <NavContent />
               </SheetContent>
             </Sheet>
           </div>
         </header>
         
-        <main className="flex-1 pb-24">
+        <main className="flex-1 pb-20">
           <Outlet />
         </main>
 
-        <nav className="fixed bottom-0 left-0 right-0 h-20 bg-background/80 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-4 z-40 shadow-2xl">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex flex-col items-center justify-center space-y-1.5 flex-1 h-full transition-all relative",
-                location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
-                  ? "text-primary"
-                  : "text-slate-500"
-              )}
-            >
-              <item.icon className="w-6 h-6" />
-              <span className="text-[9px] font-black uppercase tracking-widest">{item.label.split(' ')[0]}</span>
-              {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
-                <div className="absolute bottom-0 w-10 h-1 bg-primary rounded-t-full shadow-[0_0_10px_rgba(0,210,255,0.5)]" />
-              )}
-            </Link>
-          ))}
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-2 z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          {NAV_ITEMS.map((item) => {
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  "flex flex-col items-center justify-center space-y-1 flex-1 h-full transition-all relative",
+                  isActive ? "text-primary" : "text-slate-500"
+                )}
+              >
+                <item.icon className={cn("w-5 h-5 transition-transform", isActive && "scale-110")} />
+                <span className="text-[8px] font-black uppercase tracking-widest">{item.label}</span>
+                {isActive && (
+                  <div className="absolute top-0 w-8 h-0.5 bg-primary rounded-b-full shadow-[0_0_10px_rgba(0,210,255,0.8)]" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     );
