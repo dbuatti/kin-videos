@@ -69,62 +69,62 @@ const AppLayout = () => {
   };
 
   const NavContent = () => (
-    <div className="flex flex-col h-full py-6">
-      <div className="px-6 mb-8">
+    <div className="flex flex-col h-full py-8">
+      <div className="px-8 mb-10">
         <div className="flex items-center space-x-3">
-          <div className="bg-indigo-600 p-1.5 rounded-lg shadow-lg shadow-indigo-500/20">
+          <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
             <Zap className="text-white w-5 h-5" />
           </div>
-          <span className="font-black text-indigo-900 tracking-tight text-lg">FNH Archiver</span>
+          <span className="font-black text-white tracking-tighter text-xl">FNH ARCHIVER</span>
         </div>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
-        <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Main Menu</p>
+      <nav className="flex-1 px-4 space-y-2">
+        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Main Menu</p>
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.path}
             to={item.path}
             onClick={() => setIsOpen(false)}
             className={cn(
-              "flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group",
+              "flex items-center space-x-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group",
               location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
-                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
-                : "text-gray-500 hover:bg-indigo-50 hover:text-indigo-600"
+                ? "bg-primary text-white shadow-xl shadow-primary/20"
+                : "text-slate-400 hover:bg-white/5 hover:text-white"
             )}
           >
-            <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-gray-400 group-hover:text-indigo-500")} />
+            <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-slate-500 group-hover:text-primary")} />
             <span>{item.label}</span>
           </Link>
         ))}
 
-        <div className="my-6 border-t border-gray-100 mx-3" />
+        <div className="my-8 border-t border-white/5 mx-4" />
         
-        <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Tools & Utils</p>
+        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Tools & Utils</p>
         {UTILITY_ITEMS.map((item) => (
           <Link
             key={item.path}
             to={item.path}
             onClick={() => setIsOpen(false)}
             className={cn(
-              "flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all group",
+              "flex items-center space-x-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group",
               location.pathname === item.path
-                ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
-                : "text-gray-500 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-accent text-white shadow-xl shadow-accent/20"
+                : "text-slate-400 hover:bg-white/5 hover:text-white"
             )}
           >
-            <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-gray-400 group-hover:text-slate-600")} />
+            <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-slate-500 group-hover:text-accent")} />
             <span>{item.label}</span>
           </Link>
         ))}
       </nav>
 
-      <div className="px-3 mt-auto space-y-2">
+      <div className="px-4 mt-auto space-y-3">
         <Button 
           onClick={handleSyncCourse} 
           disabled={isSyncing}
           variant="outline" 
-          className="w-full justify-start rounded-xl border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-bold"
+          className="w-full justify-start rounded-2xl border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 font-bold h-12"
         >
           <RefreshCw className={cn("w-4 h-4 mr-3", isSyncing && "animate-spin")} />
           {isSyncing ? "Syncing..." : "Sync Course"}
@@ -132,12 +132,12 @@ const AppLayout = () => {
         <Button 
           onClick={handleLogout} 
           variant="ghost" 
-          className="w-full justify-start rounded-xl text-red-500 hover:bg-red-50 font-bold"
+          className="w-full justify-start rounded-2xl text-red-400 hover:bg-red-400/10 font-bold h-12"
         >
           <LogOut className="w-4 h-4 mr-3" />
           Logout
         </Button>
-        <div className="pt-4">
+        <div className="pt-6">
           <MadeWithDyad />
         </div>
       </div>
@@ -146,46 +146,46 @@ const AppLayout = () => {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-indigo-100 flex items-center justify-between px-4 sticky top-0 z-40">
-          <div className="flex items-center space-x-2">
-            <div className="bg-indigo-600 p-1 rounded-md">
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="h-20 bg-background/80 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-40">
+          <div className="flex items-center space-x-3">
+            <div className="bg-primary p-1.5 rounded-lg">
               <Zap className="text-white w-4 h-4" />
             </div>
-            <span className="font-black text-indigo-900 text-sm">FNH ARCHIVER</span>
+            <span className="font-black text-white text-sm tracking-tighter">FNH ARCHIVER</span>
           </div>
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-indigo-600">
+              <Button variant="ghost" size="icon" className="text-white">
                 <Menu className="w-6 h-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-72 border-r-indigo-100">
+            <SheetContent side="left" className="p-0 w-80 bg-background border-r-white/5">
               <NavContent />
             </SheetContent>
           </Sheet>
         </header>
         
-        <main className="flex-1 pb-20">
+        <main className="flex-1 pb-24">
           <Outlet />
         </main>
 
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-indigo-100 flex items-center justify-around px-2 z-40 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <nav className="fixed bottom-0 left-0 right-0 h-20 bg-background/80 backdrop-blur-2xl border-t border-white/5 flex items-center justify-around px-4 z-40 shadow-2xl">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.path}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center space-y-1 flex-1 h-full transition-all relative",
+                "flex flex-col items-center justify-center space-y-1.5 flex-1 h-full transition-all relative",
                 location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
-                  ? "text-indigo-600"
-                  : "text-gray-400"
+                  ? "text-primary"
+                  : "text-slate-500"
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label.split(' ')[0]}</span>
+              <item.icon className="w-6 h-6" />
+              <span className="text-[9px] font-black uppercase tracking-widest">{item.label.split(' ')[0]}</span>
               {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
-                <div className="absolute bottom-0 w-8 h-1 bg-indigo-600 rounded-t-full" />
+                <div className="absolute bottom-0 w-10 h-1 bg-primary rounded-t-full shadow-[0_0_10px_rgba(0,210,255,0.5)]" />
               )}
             </Link>
           ))}
@@ -195,8 +195,8 @@ const AppLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-64 bg-white border-r border-indigo-100 sticky top-0 h-screen overflow-y-auto hidden lg:block">
+    <div className="min-h-screen bg-background flex">
+      <aside className="w-72 bg-background border-r border-white/5 sticky top-0 h-screen overflow-y-auto hidden lg:block">
         <NavContent />
       </aside>
       <main className="flex-1 overflow-y-auto">

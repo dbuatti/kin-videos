@@ -10,7 +10,8 @@ import {
   Headphones, 
   LayoutGrid,
   ArrowRight,
-  Clock
+  Clock,
+  Sparkles
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,70 +25,82 @@ const Index = () => {
   const { data: lastWatched, isLoading: isLastWatchedLoading } = useLastWatched();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gray-50 flex flex-col">
-      <main className="flex-1 max-w-4xl mx-auto w-full p-4 sm:p-8 flex flex-col justify-center space-y-6">
+    <div className="min-h-screen flex flex-col">
+      <main className="flex-1 max-w-5xl mx-auto w-full p-6 sm:p-12 flex flex-col justify-center space-y-10">
         
-        {/* 1. CONTINUE WATCHING (The "Resume" Button) */}
+        {/* Header Section */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2 text-primary">
+            <Sparkles className="w-5 h-5" />
+            <span className="text-xs font-black uppercase tracking-[0.3em]">Welcome Back</span>
+          </div>
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-white">
+            Foundations <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Archiver</span>
+          </h1>
+        </div>
+
+        {/* 1. CONTINUE WATCHING */}
         {!isLastWatchedLoading && lastWatched ? (
           <button 
             onClick={() => navigate(`/master-player?mode=video`)}
-            className="w-full text-left group"
+            className="w-full text-left group relative"
           >
-            <Card className="border-none shadow-2xl rounded-[2rem] overflow-hidden bg-indigo-600 text-white transform active:scale-95 transition-all duration-200">
-              <CardContent className="p-8 sm:p-10 relative">
-                <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <PlayCircle className="w-32 h-32" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            <Card className="relative border-none shadow-2xl rounded-[2.5rem] overflow-hidden bg-slate-900/80 backdrop-blur-2xl text-white transform active:scale-[0.98] transition-all duration-300">
+              <CardContent className="p-8 sm:p-12 relative">
+                <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <PlayCircle className="w-48 h-48" />
                 </div>
                 
-                <div className="relative z-10 space-y-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
-                      <Clock className="w-6 h-6 text-white" />
+                <div className="relative z-10 space-y-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-primary/20 p-3 rounded-2xl backdrop-blur-md border border-primary/30">
+                        <Clock className="w-6 h-6 text-primary" />
+                      </div>
+                      <Badge className="bg-primary text-white border-none px-4 py-1 font-black tracking-widest text-[10px]">RESUME SESSION</Badge>
                     </div>
-                    <Badge className="bg-indigo-400 text-white border-none px-3 py-1 font-black tracking-widest">RESUME SESSION</Badge>
+                    <span className="text-5xl font-black tracking-tighter text-primary/50">{lastWatched.percentage}%</span>
                   </div>
 
                   <div>
-                    <h2 className="text-2xl sm:text-4xl font-black leading-tight mb-2 line-clamp-1">
+                    <h2 className="text-3xl sm:text-5xl font-black leading-tight mb-3 line-clamp-1 tracking-tighter">
                       {lastWatched.title}
                     </h2>
-                    <p className="text-indigo-100 text-lg font-medium opacity-80">
+                    <p className="text-slate-400 text-lg font-medium">
                       {lastWatched.category}
                     </p>
                   </div>
 
-                  <div className="pt-4">
-                    <div className="flex justify-between items-end mb-3">
-                      <span className="text-4xl font-black">{lastWatched.percentage}%</span>
-                      <div className="flex items-center font-bold text-indigo-200">
-                        Tap to Continue <ArrowRight className="ml-2 w-5 h-5 animate-bounce-x" />
-                      </div>
+                  <div className="space-y-4">
+                    <Progress value={lastWatched.percentage} className="h-3 bg-white/5" />
+                    <div className="flex items-center font-black text-primary text-sm uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                      Jump back in <ArrowRight className="ml-2 w-5 h-5" />
                     </div>
-                    <Progress value={lastWatched.percentage} className="h-4 bg-white/10" />
                   </div>
                 </div>
               </CardContent>
             </Card>
           </button>
         ) : (
-          <div className="h-24 flex items-center justify-center text-gray-400 font-medium italic">
-            {isLastWatchedLoading ? "Loading your progress..." : "No recent activity found."}
+          <div className="h-32 flex items-center justify-center text-slate-500 font-bold uppercase tracking-widest text-xs border-2 border-dashed border-slate-800 rounded-[2.5rem]">
+            {isLastWatchedLoading ? "Synchronizing Progress..." : "No recent activity found."}
           </div>
         )}
 
         {/* 2. PRIMARY MODES GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           
           {/* Master Video Player */}
           <Link to="/master-player?mode=video" className="group">
-            <Card className="h-full border-none shadow-xl rounded-[2rem] overflow-hidden bg-slate-900 text-white transform active:scale-95 transition-all border-2 border-transparent hover:border-indigo-500">
-              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-                <div className="bg-indigo-600 p-6 rounded-[1.5rem] shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-                  <Video className="w-10 h-10" />
+            <Card className="h-full border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-primary/50 hover:bg-slate-900/80">
+              <CardContent className="p-10 flex flex-col items-center text-center space-y-6">
+                <div className="bg-primary p-8 rounded-[2rem] shadow-2xl shadow-primary/20 group-hover:scale-110 transition-transform duration-500">
+                  <Video className="w-12 h-12 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black">Video Player</h3>
-                  <p className="text-indigo-300 font-bold text-sm uppercase tracking-widest mt-1">Full Course</p>
+                  <h3 className="text-3xl font-black tracking-tighter">Video Player</h3>
+                  <p className="text-primary font-black text-xs uppercase tracking-[0.3em] mt-2">Full Experience</p>
                 </div>
               </CardContent>
             </Card>
@@ -95,14 +108,14 @@ const Index = () => {
 
           {/* Master Audio Player */}
           <Link to="/master-player?mode=audio" className="group">
-            <Card className="h-full border-none shadow-xl rounded-[2rem] overflow-hidden bg-indigo-950 text-white transform active:scale-95 transition-all border-2 border-transparent hover:border-emerald-500">
-              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-                <div className="bg-emerald-600 p-6 rounded-[1.5rem] shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
-                  <Headphones className="w-10 h-10" />
+            <Card className="h-full border-none shadow-xl rounded-[2.5rem] overflow-hidden bg-slate-900/50 backdrop-blur-md text-white transform active:scale-95 transition-all border border-white/5 hover:border-accent/50 hover:bg-slate-900/80">
+              <CardContent className="p-10 flex flex-col items-center text-center space-y-6">
+                <div className="bg-accent p-8 rounded-[2rem] shadow-2xl shadow-accent/20 group-hover:scale-110 transition-transform duration-500">
+                  <Headphones className="w-12 h-12 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black">Audio Player</h3>
-                  <p className="text-emerald-300 font-bold text-sm uppercase tracking-widest mt-1">Podcast Mode</p>
+                  <h3 className="text-3xl font-black tracking-tighter">Audio Player</h3>
+                  <p className="text-accent font-black text-xs uppercase tracking-[0.3em] mt-2">Podcast Mode</p>
                 </div>
               </CardContent>
             </Card>
@@ -110,20 +123,20 @@ const Index = () => {
 
         </div>
 
-        {/* 3. BROWSE ALL (Gallery) */}
+        {/* 3. BROWSE ALL */}
         <Link to="/gallery" className="group">
-          <Card className="border-none shadow-lg rounded-[2rem] overflow-hidden bg-white transform active:scale-95 transition-all border-2 border-transparent hover:border-indigo-200">
+          <Card className="border-none shadow-lg rounded-[2.5rem] overflow-hidden bg-white/5 backdrop-blur-md transform active:scale-95 transition-all border border-white/5 hover:border-white/20">
             <CardContent className="p-8 flex items-center justify-between">
-              <div className="flex items-center space-x-6">
-                <div className="bg-indigo-50 p-5 rounded-2xl text-indigo-600">
+              <div className="flex items-center space-x-8">
+                <div className="bg-white/10 p-6 rounded-3xl text-white border border-white/10">
                   <LayoutGrid className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-indigo-900">Individual Videos</h3>
-                  <p className="text-gray-500 font-medium">Browse the full library</p>
+                  <h3 className="text-2xl font-black text-white tracking-tighter">Individual Videos</h3>
+                  <p className="text-slate-400 font-medium">Browse the full library</p>
                 </div>
               </div>
-              <div className="bg-gray-100 p-3 rounded-full text-gray-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+              <div className="bg-white/10 p-4 rounded-full text-white group-hover:bg-primary group-hover:text-white transition-all">
                 <ArrowRight className="w-6 h-6" />
               </div>
             </CardContent>
