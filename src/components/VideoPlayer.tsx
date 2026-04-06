@@ -34,11 +34,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isReady, setIsReady] = useState(false);
   
   const effectiveKey = progressKey || videoId;
-  const { progress, isLoading: isProgressLoading, saveProgress } = useVideoProgress(effectiveKey);
+  const { progress, isLoading: isProgressLoading, saveProgress, incrementWatchCount } = useVideoProgress(effectiveKey);
   const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
 
-  // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!videoRef.current || document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
@@ -68,10 +67,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Enforce speed whenever it changes or the video source changes
   useEffect(() => {
     if (videoRef.current) {
-      console.log(`[VideoPlayer] Applying speed: ${speed}x`);
       videoRef.current.playbackRate = speed;
     }
   }, [speed, videoUrl, effectiveKey]);
@@ -89,18 +86,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      // Re-enforce speed on metadata load
       videoRef.current.playbackRate = speed;
-      
-      // Resume logic: Apply saved progress if it exists and is significant
       if (progress && progress > 5) {
-        // Only resume if we aren't near the very end
         if (progress < videoRef.current.duration - 5) {
           videoRef.current.currentTime = progress;
           lastSavedTime.current = progress;
         }
       }
-      
       setIsReady(true);
     }
   };
@@ -108,7 +100,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying && isReady) {
       const currentTime = videoRef.current.currentTime;
-      // Only save if we've moved at least 5 seconds to avoid constant DB writes
       if (Math.abs(currentTime - lastSavedTime.current) > 5) {
         saveProgress(currentTime, videoRef.current.duration);
         lastSavedTime.current = currentTime;
@@ -120,7 +111,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setHasStarted(true);
     setIsPlaying(true);
     setError(null);
-    // Re-enforce speed on play (some browsers reset it)
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
     }
@@ -131,6 +121,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (videoRef.current && isReady) {
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
     }
+  };
+
+  const handleEnded = () => {
+    incrementWatchCount();
+    if (onEnded) onEnded();
   };
 
   const handleVideoError = (e: any) => {
@@ -189,7 +184,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           onTimeUpdate={handleTimeUpdate}
           onPlay={handlePlay}
           onPause={handlePause}
-          onEnded={onEnded}
+          onEnded={handleEnded}
           onError={handleVideoError}
         />
       )}
