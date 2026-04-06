@@ -4,7 +4,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones } from "lucide-react";
+import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
@@ -79,27 +79,47 @@ const Index = () => {
       <main className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
-          {/* Master Player Card */}
-          <Link to="/master-player" className="group md:col-span-2">
+          {/* Virtual Video Stitcher Card */}
+          <Link to="/master-player?mode=video" className="group">
             <Card className="h-full border-indigo-100 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden bg-slate-900 border-2 hover:border-indigo-500">
               <CardHeader className="p-8 text-white">
                 <div className="flex items-center justify-between mb-4">
                   <div className="bg-indigo-600 p-3 rounded-2xl">
-                    <Zap className="w-8 h-8" />
+                    <Video className="w-8 h-8" />
                   </div>
-                  <Badge className="bg-indigo-500 text-white border-none px-3 py-1">NEW: VIRTUAL STITCHER</Badge>
+                  <Badge className="bg-indigo-500 text-white border-none px-3 py-1">VIDEO MODE</Badge>
                 </div>
-                <CardTitle className="text-3xl font-black">Master Player</CardTitle>
-                <CardDescription className="text-indigo-200 text-lg">
-                  Watch or listen to the entire course back-to-back. No manual stitching required.
+                <CardTitle className="text-2xl font-black">Virtual Video Stitcher</CardTitle>
+                <CardDescription className="text-indigo-200">
+                  Watch the entire course back-to-back with independent video progress tracking.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-8 pt-0 flex items-center space-x-6">
+              <CardContent className="p-8 pt-0">
                 <div className="flex items-center text-indigo-400 font-bold">
-                  <PlayCircle className="w-5 h-5 mr-2" /> Continuous Video
+                  <PlayCircle className="w-5 h-5 mr-2" /> Resume Watching
                 </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Virtual Audio Stitcher Card */}
+          <Link to="/master-player?mode=audio" className="group">
+            <Card className="h-full border-indigo-100 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden bg-indigo-950 border-2 hover:border-indigo-400">
+              <CardHeader className="p-8 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-emerald-600 p-3 rounded-2xl">
+                    <Headphones className="w-8 h-8" />
+                  </div>
+                  <Badge className="bg-emerald-500 text-white border-none px-3 py-1">AUDIO MODE</Badge>
+                </div>
+                <CardTitle className="text-2xl font-black">Virtual Audio Stitcher</CardTitle>
+                <CardDescription className="text-indigo-200">
+                  Listen to the entire course back-to-back with independent audio progress tracking.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-0">
                 <div className="flex items-center text-emerald-400 font-bold">
-                  <Headphones className="w-5 h-5 mr-2" /> Audio-Only Mode
+                  <PlayCircle className="w-5 h-5 mr-2" /> Resume Listening
                 </div>
               </CardContent>
             </Card>
@@ -196,21 +216,6 @@ const Index = () => {
                 <div>
                   <h3 className="font-bold text-indigo-900">User Manual</h3>
                   <p className="text-sm text-gray-500">Learn how to use the archiver effectively.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Debugger Card */}
-          <Link to="/debug" className="group">
-            <Card className="border-indigo-100 shadow-md hover:shadow-lg transition-all rounded-2xl bg-white border hover:border-indigo-200">
-              <CardContent className="p-6 flex items-center space-x-4">
-                <div className="bg-slate-100 p-3 rounded-xl">
-                  <Bug className="w-6 h-6 text-slate-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900">System Debugger</h3>
-                  <p className="text-sm text-gray-500">Inspect raw data and system health.</p>
                 </div>
               </CardContent>
             </Card>

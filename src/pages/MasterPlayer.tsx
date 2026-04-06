@@ -1,23 +1,19 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, 
   SkipForward, 
   SkipBack, 
-  Volume2, 
-  VolumeX, 
-  Play, 
-  Pause,
   ListMusic,
   Headphones,
   Video,
   Zap,
-  Loader2
+  Loader2,
+  Music
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,18 +25,28 @@ import { showSuccess } from '@/utils/toast';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: lessons, isLoading } = useJobLessons();
   
+  // Initialize mode from URL or default to video
+  const initialMode = searchParams.get('mode') === 'audio';
+  const [isAudioOnly, setIsAudioOnly] = useState(initialMode);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isAudioOnly, setIsAudioOnly] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
+
+  // Sync state with URL
+  useEffect(() => {
+    const mode = isAudioOnly ? 'audio' : 'video';
+    if (searchParams.get('mode') !== mode) {
+      setSearchParams({ mode });
+    }
+  }, [isAudioOnly, setSearchParams, searchParams]);
 
   const playlist = useMemo(() => {
     if (!lessons) return [];
     
     const videoOnly = lessons.filter(l => l.video_url);
     
-    // Sort by module order and then by creation date (or title)
     return videoOnly.sort((a, b) => {
       const catA = a.category || 'Uncategorized';
       const catB = b.category || 'Uncategorized';
@@ -102,10 +108,10 @@ const MasterPlayer = () => {
           <div>
             <h1 className="text-lg font-bold text-indigo-400 flex items-center">
               <Zap className="w-4 h-4 mr-2" />
-              Master Player
+              {isAudioOnly ? "Virtual Audio Stitcher" : "Virtual Video Stitcher"}
             </h1>
             <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-              Continuous Playback Mode
+              {isAudioOnly ? "Independent Audio Progress" : "Independent Video Progress"}
             </p>
           </div>
         </div>
@@ -121,7 +127,7 @@ const MasterPlayer = () => {
             )}
           >
             {isAudioOnly ? <Headphones className="w-4 h-4 mr-2" /> : <Video className="w-4 h-4 mr-2" />}
-            {isAudioOnly ? "Audio Only" : "Video Mode"}
+            {isAudioOnly ? "Switch to Video" : "Switch to Audio"}
           </Button>
         </div>
       </header>
@@ -134,26 +140,44 @@ const MasterPlayer = () => {
             isAudioOnly && "flex items-center justify-center"
           )}>
             {isAudioOnly ? (
-              <div className="flex flex-col items-center space-y-6 text-center p-8">
-                <div className="w-32 h-32 bg-indigo-600/20 rounded-full flex items-center justify-center animate-pulse">
-                  <Headphones className="w-16 h-16 text-indigo-500" />
+              <div className="flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/30">
+                <div className="relative">
+                  <div className="w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
+                    <Music className="w-20 h-20 text-indigo-500" />
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 bg-indigo-600 p-2 rounded-lg shadow-lg">
+                    <Headphones className="w-5 h-5 text-white" />
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">{currentVideo?.title}</h2>
-                  <p className="text-indigo-400 font-medium">{currentVideo?.category}</p>
+                
+                <div className="max-w-md">
+                  <Badge variant="outline" className="mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5">
+                    {currentVideo?.category}
+                  </Badge>
+                  <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{currentVideo?.title}</h2>
+                  <p className="text-slate-400 text-sm font-medium">Virtual Audio Stitcher Mode</p>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <div className="h-1 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.3s]" />
-                  <div className="h-2 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.15s]" />
-                  <div className="h-3 w-2 bg-indigo-500 animate-bounce" />
-                  <div className="h-2 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.15s]" />
-                  <div className="h-1 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.3s]" />
+
+                <div className="flex items-center space-x-1 h-8">
+                  {[...Array(12)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="w-1 bg-indigo-500 rounded-full animate-bounce" 
+                      style={{ 
+                        height: `${Math.random() * 100}%`,
+                        animationDuration: `${0.5 + Math.random()}s`,
+                        animationDelay: `${Math.random()}s`
+                      }} 
+                    />
+                  ))}
                 </div>
+
                 <div className="hidden">
-                  {/* Keep video element in DOM but hidden for audio-only mode */}
+                  {/* Use a separate progress key for audio mode */}
                   <VideoPlayer 
                     videoUrl={currentVideo?.video_url || ''} 
                     videoId={currentVideo?.id || ''} 
+                    progressKey={currentVideo ? `${currentVideo.id}-audio` : undefined}
                     onEnded={handleNext}
                     autoPlay={autoPlay}
                   />
@@ -163,6 +187,7 @@ const MasterPlayer = () => {
               <VideoPlayer 
                 videoUrl={currentVideo?.video_url || ''} 
                 videoId={currentVideo?.id || ''} 
+                progressKey={currentVideo?.id} // Standard video ID for video mode
                 className="w-full h-full"
                 onEnded={handleNext}
                 autoPlay={autoPlay}
@@ -183,7 +208,7 @@ const MasterPlayer = () => {
             </Button>
             
             <div className="text-center px-8">
-              <p className="text-xs text-slate-500 font-bold uppercase mb-1">Now Playing</p>
+              <p className="text-xs text-slate-500 font-bold uppercase mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
               <h3 className="text-lg font-bold text-white truncate max-w-xs lg:max-w-md">
                 {currentVideo?.title}
               </h3>

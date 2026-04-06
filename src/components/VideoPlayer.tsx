@@ -9,6 +9,7 @@ import { useVideoProgress } from '@/hooks/use-video-progress';
 interface VideoPlayerProps {
   videoUrl: string;
   videoId: string;
+  progressKey?: string; // Optional custom key for progress tracking
   posterUrl?: string;
   className?: string;
   onEnded?: () => void;
@@ -18,6 +19,7 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
   videoUrl, 
   videoId, 
+  progressKey,
   posterUrl, 
   className, 
   onEnded,
@@ -26,14 +28,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasStarted, setHasStarted] = useState(autoPlay);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
-  const { progress, isLoading, saveProgress } = useVideoProgress(videoId);
+  
+  // Use progressKey if provided, otherwise fallback to videoId
+  const effectiveKey = progressKey || videoId;
+  const { progress, isLoading, saveProgress } = useVideoProgress(effectiveKey);
   const lastSavedTime = useRef<number>(0);
 
   // Handle autoplay
   useEffect(() => {
     if (autoPlay && videoRef.current) {
       videoRef.current.play().catch(() => {
-        // Autoplay might be blocked by browser
         setIsPlaying(false);
         setHasStarted(false);
       });
@@ -43,18 +47,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Seek to saved position when metadata is loaded
   const handleLoadedMetadata = () => {
     if (videoRef.current && progress && progress > 5 && !autoPlay) {
-      // Only seek if the video is long enough and we have progress, and NOT in autoplay mode
       if (progress < videoRef.current.duration - 5) {
         videoRef.current.currentTime = progress;
       }
     }
   };
 
-  // Save progress periodically (every 5 seconds of playback)
+  // Save progress periodically
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
       const currentTime = videoRef.current.currentTime;
-      // Save every 5 seconds to avoid spamming the database
       if (Math.abs(currentTime - lastSavedTime.current) > 5) {
         saveProgress(currentTime);
         lastSavedTime.current = currentTime;
