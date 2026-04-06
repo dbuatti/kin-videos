@@ -131,7 +131,7 @@ const COURSE_STRUCTURE = [
       { title: "Cranial Nerve V (Trigeminal)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780073", video_url: "https://embed-ssl.wistia.com/deliveries/10de3ccab1d8595c4c3e451aea5b91c84cf6213f.mp4" },
       { title: "Cranial Nerve VI (Abducens)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780077", video_url: "https://embed-ssl.wistia.com/deliveries/e469a668620604adbb0a0c69a192e7af50579078.mp4" },
       { title: "Cranial Nerve VII (Facial)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780903", video_url: "https://embed-ssl.wistia.com/deliveries/e80792dddb73e4f494dd7f56a6cb1958e571e5ae.mp4" },
-      { title: "Cranial Nerve VIII (Vestibulo-cochlear)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780911", video_url: "https://embed-ssl.wistia.com/deliveries/465c56ed15ec74012154656cd87ff84d9307a40c.mp4" },
+      { title: "Cranial Nerve VIII (Vestibulo-cochlear)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780911", video_url: "https://embed-ssl.sh/deliveries/465c56ed15ec74012154656cd87ff84d9307a40c.mp4" },
       { title: "Cranial Nerve IX (Glossopharyngeal)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780916", video_url: "https://embed-ssl.wistia.com/deliveries/c951c07cedadced7e1d2291c60a8dc22d90ac90a.mp4" }
     ]
   },
@@ -204,22 +204,15 @@ Deno.serve(async (req: Request) => {
   })
 
   try {
-    const { job_id } = await req.json();
+    const { user_id } = await req.json();
     
-    const { data: jobResult } = await supabaseAdmin
-      .from('crawler_jobs')
-      .select('user_id')
-      .eq('id', job_id)
-      .single()
+    // Clear existing lessons for this user to avoid duplicates
+    await supabaseAdmin.from('lessons').delete().eq('user_id', user_id);
 
-    const user_id = jobResult.user_id;
-
-    // INSTANT POPULATION
     const lessonsToInsert = [];
     for (const module of COURSE_STRUCTURE) {
       for (const lesson of module.lessons) {
         lessonsToInsert.push({
-          job_id: job_id,
           user_id: user_id,
           lesson_url: lesson.url,
           title: lesson.title,
@@ -230,19 +223,10 @@ Deno.serve(async (req: Request) => {
       }
     }
     
-    await supabaseAdmin.from('lessons').insert(lessonsToInsert);
+    const { error } = await supabaseAdmin.from('lessons').insert(lessonsToInsert);
+    if (error) throw error;
 
-    await supabaseAdmin
-      .from('crawler_jobs')
-      .update({ 
-        status: 'completed', 
-        total_lessons: lessonsToInsert.length, 
-        lessons_processed: lessonsToInsert.length,
-        end_time: new Date().toISOString()
-      })
-      .eq('id', job_id)
-
-    return new Response(JSON.stringify({ message: 'Archive complete.' }), {
+    return new Response(JSON.stringify({ message: 'Course data synced successfully.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

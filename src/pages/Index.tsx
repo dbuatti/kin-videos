@@ -3,19 +3,37 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, ShieldCheck, Zap, BookOpen, Bug, Library, PlayCircle, Settings } from "lucide-react";
+import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React, { useState } from 'react';
 
 const Index = () => {
   const { user } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       showError("Failed to log out: " + error.message);
+    }
+  };
+
+  const handleSyncCourse = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-course', {
+        body: { user_id: user.id }
+      });
+      if (error) throw error;
+      showSuccess("Course data synced successfully!");
+    } catch (err: any) {
+      showError("Failed to sync course: " + err.message);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -34,10 +52,16 @@ const Index = () => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <div className="hidden md:flex flex-col items-end mr-2">
-            <span className="text-xs font-bold text-gray-400 uppercase">Authenticated as</span>
-            <span className="text-sm font-medium text-indigo-600">{user?.email}</span>
-          </div>
+          <Button 
+            onClick={handleSyncCourse} 
+            disabled={isSyncing}
+            variant="outline" 
+            size="sm"
+            className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+          >
+            <RefreshCw className={cn("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
+            {isSyncing ? "Syncing..." : "Sync Course Data"}
+          </Button>
           <Button 
             onClick={handleLogout} 
             variant="ghost" 
@@ -129,4 +153,5 @@ const Index = () => {
   );
 };
 
+import { cn } from "@/lib/utils";
 export default Index;

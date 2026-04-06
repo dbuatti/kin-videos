@@ -177,12 +177,16 @@ const Library = () => {
     });
 
     let text = "";
-    sortedCategories.forEach((category) => {
-      text += `[${category}]\n`;
+    sortedCategories.forEach((category, idx) => {
+      text += `## ${category}\n`;
       grouped[category].forEach((lesson: any) => {
-        text += `${lesson.title || 'Untitled'} 🔗 Page: ${lesson.lesson_url} 🎥 Video: ${lesson.video_url || 'No Video'}\n\n`;
+        text += `${lesson.title || 'Untitled'}\n`;
+        text += `🔗 Page: ${lesson.lesson_url}\n`;
+        text += `🎥 Video: ${lesson.video_url || 'No Video ID found on page'}\n\n`;
       });
-      text += "\n";
+      if (idx < sortedCategories.length - 1) {
+        text += "---\n\n";
+      }
     });
     return text.trim();
   }, [lessons]);
