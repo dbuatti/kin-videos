@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import { showSuccess } from '@/utils/toast';
+import { useVideoProgress } from '@/hooks/use-video-progress';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const MasterPlayer = () => {
   const [isAudioOnly, setIsAudioOnly] = useState(initialMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoPlay, setAutoPlay] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Sync state with URL
   useEffect(() => {
@@ -41,6 +43,10 @@ const MasterPlayer = () => {
       setSearchParams({ mode });
     }
   }, [isAudioOnly, setSearchParams, searchParams]);
+
+  // Persistence for the "Master Index" (which lesson the user is on)
+  const masterStateKey = isAudioOnly ? 'master-player-audio-index' : 'master-player-video-index';
+  const { progress: savedIndex, saveProgress: saveMasterIndex, isLoading: isStateLoading } = useVideoProgress(masterStateKey);
 
   const playlist = useMemo(() => {
     if (!lessons) return [];
@@ -62,6 +68,24 @@ const MasterPlayer = () => {
 
     return sorted;
   }, [lessons]);
+
+  // Load saved index on initial load
+  useEffect(() => {
+    if (!isStateLoading && isInitialLoad && playlist.length > 0) {
+      const indexToLoad = Math.floor(savedIndex);
+      if (indexToLoad >= 0 && indexToLoad < playlist.length) {
+        setCurrentIndex(indexToLoad);
+      }
+      setIsInitialLoad(false);
+    }
+  }, [isStateLoading, savedIndex, playlist, isInitialLoad]);
+
+  // Save index whenever it changes
+  useEffect(() => {
+    if (!isInitialLoad && !isStateLoading) {
+      saveMasterIndex(currentIndex);
+    }
+  }, [currentIndex, isInitialLoad, isStateLoading, saveMasterIndex]);
 
   const currentVideo = playlist[currentIndex];
 
@@ -86,7 +110,7 @@ const MasterPlayer = () => {
     setAutoPlay(true);
   };
 
-  if (isLoading) {
+  if (isLoading || (isStateLoading && isInitialLoad)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
@@ -137,7 +161,10 @@ const MasterPlayer = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsAudioOnly(!isAudioOnly)}
+            onClick={() => {
+              setIsAudioOnly(!isAudioOnly);
+              setIsInitialLoad(true); // Trigger reload of the saved index for the new mode
+            }}
             className={cn(
               "rounded-xl border-slate-700 transition-all",
               isAudioOnly ? "bg-indigo-600 text-white border-indigo-500" : "bg-slate-900 text-slate-400"
