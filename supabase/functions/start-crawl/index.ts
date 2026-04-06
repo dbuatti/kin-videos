@@ -101,7 +101,7 @@ const COURSE_STRUCTURE = [
       { title: "Lecture: Sub-Corticol Brain Zones", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167469166" },
       { title: "Locating the Brain Reflex Areas", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2169356729" },
       { title: "Lecture: Mechanoreceptor (Conscious)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239933" },
-      { title: "Demo: Mechanoreceptor (Conscious)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171201710" }
+      { title: "Demo: Mechanoreceptor (Conscious)", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2171201710" }
     ]
   },
   {
