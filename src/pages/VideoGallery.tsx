@@ -13,17 +13,19 @@ import {
   ExternalLink,
   Video,
   Menu,
-  Hash
+  Hash,
+  Download
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MODULE_ORDER } from '@/utils/filenames';
+import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { downloadFile } from '@/utils/download';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -61,12 +63,15 @@ const VideoGallery = () => {
       return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
     });
 
-    return sortedCategories.map(category => ({
+    return sortedCategories.map((category, catIdx) => ({
       category,
       videos: grouped[category].filter(v => 
         v.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         category.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      ).map((v, lesIdx) => ({
+        ...v,
+        expectedFilename: generateLessonFilename(catIdx + 1, lesIdx + 1, category, v.title || 'Untitled')
+      }))
     })).filter(group => group.videos.length > 0);
   }, [lessons, searchQuery]);
 
@@ -201,11 +206,21 @@ const VideoGallery = () => {
                         <CardTitle className="text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
                           {video.title}
                         </CardTitle>
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-300 hover:text-indigo-600 shrink-0">
-                          <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 h-4" />
-                          </a>
-                        </Button>
+                        <div className="flex items-center space-x-1 shrink-0">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-indigo-300 hover:text-indigo-600"
+                            onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
+                          >
+                            <Download className="h-4 h-4" />
+                          </Button>
+                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-300 hover:text-indigo-600">
+                            <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 h-4" />
+                            </a>
+                          </Button>
+                        </div>
                       </div>
                       
                       {/* Visual Progress Bar */}

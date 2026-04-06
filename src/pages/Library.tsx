@@ -30,6 +30,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { downloadFile } from '@/utils/download';
 
 const VIDEO_PATH = "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos";
 
@@ -159,16 +160,6 @@ const Library = () => {
     })).filter(group => group.lessons.length > 0);
   }, [processedData.groups, searchQuery]);
 
-  const triggerDownload = (url: string, filename: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.target = "_blank";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleDownloadModule = async (group: any) => {
     const toDownload = group.lessons.filter((l: any) => !l.isDownloaded);
     if (toDownload.length === 0) {
@@ -176,12 +167,13 @@ const Library = () => {
       return;
     }
 
-    showSuccess(`Starting sequential download for ${toDownload.length} videos in "${group.category}"...`);
+    showSuccess(`Starting direct download for ${toDownload.length} videos in "${group.category}"...`);
     
     for (let i = 0; i < toDownload.length; i++) {
       const lesson = toDownload[i];
-      triggerDownload(lesson.video_url!, lesson.expectedFilename);
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await downloadFile(lesson.video_url!, lesson.expectedFilename);
+      // Small delay to prevent browser from being overwhelmed
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
 
@@ -193,14 +185,13 @@ const Library = () => {
     }
 
     setIsDownloadingAll(true);
-    showSuccess(`Starting bulk download for ${remaining.length} remaining videos...`);
+    showSuccess(`Starting direct bulk download for ${remaining.length} remaining videos...`);
     
     try {
       for (let i = 0; i < remaining.length; i++) {
         const lesson = remaining[i];
-        triggerDownload(lesson.video_url!, lesson.expectedFilename);
-        // Slightly longer delay for bulk downloads to prevent browser blocking
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await downloadFile(lesson.video_url!, lesson.expectedFilename);
+        await new Promise(resolve => setTimeout(resolve, 1200));
       }
       showSuccess("All remaining downloads triggered!");
     } catch (err) {
@@ -399,10 +390,13 @@ const Library = () => {
                             </p>
                           </div>
                         </div>
-                        <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-indigo-300 hover:text-indigo-600">
-                          <a href={lesson.video_url} download={lesson.expectedFilename} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 h-4" />
-                          </a>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-indigo-300 hover:text-indigo-600"
+                          onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}
+                        >
+                          <Download className="h-4 w-4" />
                         </Button>
                       </div>
                     ))}

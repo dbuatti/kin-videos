@@ -12,6 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
+import { downloadFile } from '@/utils/download';
 
 interface LessonListDialogProps {
   isOpen: boolean;
@@ -75,18 +76,12 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChang
       return;
     }
 
-    showSuccess(`Starting sequential download for '${category}' (${completedVideos.length} videos).`);
+    showSuccess(`Starting direct sequential download for '${category}' (${completedVideos.length} videos).`);
     
     for (let i = 0; i < completedVideos.length; i++) {
       const lesson = completedVideos[i];
-      const link = document.createElement('a');
-      link.href = lesson.video_url!;
-      link.download = lesson.filename;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await downloadFile(lesson.video_url!, lesson.filename);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
 
@@ -138,10 +133,13 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChang
                             <div className="flex items-center space-x-2 mt-1">{getLessonStatusBadge(lesson.status)}</div>
                           </div>
                           {lesson.video_url && lesson.status === 'completed' ? (
-                            <Button asChild variant="secondary" size="sm" className="rounded-lg text-indigo-600">
-                              <a href={lesson.video_url} download={lesson.filename} target="_blank" rel="noopener noreferrer">
-                                <Download className="w-4 h-4" />
-                              </a>
+                            <Button 
+                              variant="secondary" 
+                              size="sm" 
+                              className="rounded-lg text-indigo-600"
+                              onClick={() => downloadFile(lesson.video_url!, lesson.filename)}
+                            >
+                              <Download className="w-4 h-4" />
                             </Button>
                           ) : (
                             <Button variant="secondary" size="sm" disabled className="rounded-lg text-gray-400"><Download className="w-4 h-4" /></Button>
