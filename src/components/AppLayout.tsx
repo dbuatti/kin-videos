@@ -1,24 +1,28 @@
 "use client";
 
-import React from 'react';
-import { Link, useLocation, Outlet } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   PlayCircle, 
   Library, 
   Zap, 
-  Settings, 
   Bookmark,
   Scissors,
   Terminal,
   Menu,
-  X
+  RefreshCw,
+  LogOut,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { MadeWithDyad } from './made-with-dyad';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/integrations/supabase/auth-context';
+import { showSuccess, showError } from '@/utils/toast';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -31,15 +35,41 @@ const UTILITY_ITEMS = [
   { label: 'Stitcher', icon: Scissors, path: '/stitcher' },
   { label: 'Scraper', icon: Terminal, path: '/scraper' },
   { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
+  { label: 'Manual', icon: BookOpen, path: '/instructions' },
 ];
 
 const AppLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [isOpen, setIsOpen] = React.useState(false);
+  const { user } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  const NavContent = ({ className }: { className?: string }) => (
-    <div className={cn("flex flex-col h-full py-6", className)}>
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) showError(error.message);
+    else navigate('/login');
+  };
+
+  const handleSyncCourse = async () => {
+    if (!user) return;
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-course', {
+        body: { user_id: user.id }
+      });
+      if (error) throw error;
+      showSuccess("Course data synced!");
+    } catch (err: any) {
+      showError(err.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const NavContent = () => (
+    <div className="flex flex-col h-full py-6">
       <div className="px-6 mb-8">
         <div className="flex items-center space-x-3">
           <div className="bg-indigo-600 p-1.5 rounded-lg shadow-lg shadow-indigo-500/20">
@@ -89,8 +119,27 @@ const AppLayout = () => {
         ))}
       </nav>
 
-      <div className="px-6 mt-auto">
-        <MadeWithDyad />
+      <div className="px-3 mt-auto space-y-2">
+        <Button 
+          onClick={handleSyncCourse} 
+          disabled={isSyncing}
+          variant="outline" 
+          className="w-full justify-start rounded-xl border-indigo-100 text-indigo-600 hover:bg-indigo-50 font-bold"
+        >
+          <RefreshCw className={cn("w-4 h-4 mr-3", isSyncing && "animate-spin")} />
+          {isSyncing ? "Syncing..." : "Sync Course"}
+        </Button>
+        <Button 
+          onClick={handleLogout} 
+          variant="ghost" 
+          className="w-full justify-start rounded-xl text-red-500 hover:bg-red-50 font-bold"
+        >
+          <LogOut className="w-4 h-4 mr-3" />
+          Logout
+        </Button>
+        <div className="pt-4">
+          <MadeWithDyad />
+        </div>
       </div>
     </div>
   );
@@ -127,7 +176,7 @@ const AppLayout = () => {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex flex-col items-center justify-center space-y-1 flex-1 h-full transition-all",
+                "flex flex-col items-center justify-center space-y-1 flex-1 h-full transition-all relative",
                 location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
                   ? "text-indigo-600"
                   : "text-gray-400"
@@ -135,7 +184,7 @@ const AppLayout = () => {
             >
               <item.icon className="w-5 h-5" />
               <span className="text-[10px] font-bold uppercase tracking-tighter">{item.label.split(' ')[0]}</span>
-              {location.pathname === item.path && (
+              {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
                 <div className="absolute bottom-0 w-8 h-1 bg-indigo-600 rounded-t-full" />
               )}
             </Link>
