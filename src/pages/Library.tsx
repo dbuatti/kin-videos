@@ -34,7 +34,6 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const Library = () => {
   const navigate = useNavigate();
@@ -57,6 +56,11 @@ const Library = () => {
     await refetchLessons();
     setIsRefreshing(false);
     showSuccess("Lessons refreshed.");
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    showSuccess(`${label} copied to clipboard!`);
   };
 
   const processedData = useMemo(() => {
@@ -130,6 +134,38 @@ const Library = () => {
     return { groups, stats: { total, downloaded } };
   }, [lessons, localFiles]);
 
+  const courseMapText = useMemo(() => {
+    if (!lessons) return "";
+    const validLessons = lessons.filter(l => l.title && l.title !== 'Untitled');
+    
+    const grouped = validLessons.reduce((acc, lesson) => {
+      const category = lesson.category || 'Uncategorized';
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(lesson);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      const indexA = MODULE_ORDER.indexOf(a);
+      const indexB = MODULE_ORDER.indexOf(b);
+      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    });
+
+    let text = "";
+    sortedCategories.forEach((category, idx) => {
+      text += `## ${category}\n`;
+      grouped[category].forEach((lesson: any) => {
+        text += `${lesson.title}\n`;
+        text += `🔗 Page: ${lesson.lesson_url}\n`;
+        text += `🎥 Video: ${lesson.video_url || 'No Video ID found on page'}\n\n`;
+      });
+      if (idx < sortedCategories.length - 1) {
+        text += "---\n\n";
+      }
+    });
+    return text.trim();
+  }, [lessons]);
+
   const filteredGroups = useMemo(() => {
     if (!searchQuery) return processedData.groups;
     
@@ -160,7 +196,6 @@ const Library = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      // Small delay to prevent browser from blocking multiple downloads
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
@@ -193,6 +228,27 @@ const Library = () => {
             <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
             Refresh
           </Button>
+          
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 rounded-xl">
+                <MapIcon className="w-4 h-4 mr-2" />
+                View Course Map
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl h-[80vh] flex flex-col rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>Course Map (Raw Format)</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="flex-1 bg-slate-950 p-4 rounded-xl font-mono text-[10px] text-slate-300">
+                <pre className="whitespace-pre-wrap">{courseMapText}</pre>
+              </ScrollArea>
+              <Button onClick={() => copyToClipboard(courseMapText, "Course Map")} className="mt-4 bg-indigo-600 rounded-xl">
+                <Copy className="w-4 h-4 mr-2" /> Copy Map
+              </Button>
+            </DialogContent>
+          </Dialog>
+
           <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 rounded-xl">
             <Link to="/gallery">
               <PlayCircle className="w-4 h-4 mr-2" />
