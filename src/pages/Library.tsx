@@ -20,7 +20,8 @@ import {
   PlayCircle,
   Download,
   Map as MapIcon,
-  Bug
+  Bug,
+  RefreshCw
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,20 +32,30 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const Library = () => {
   const navigate = useNavigate();
-  const { data: lessons, isLoading: lessonsLoading } = useJobLessons();
+  const { user } = useAuth();
+  const { data: lessons, isLoading: lessonsLoading, refetch: refetchLessons } = useJobLessons();
   const { data: localFiles, syncInventory, isSyncing } = useLocalInventory();
   
   const [pasteValue, setPasteValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleSync = () => {
     const lines = pasteValue.split('\n');
     syncInventory(lines);
     setPasteValue('');
+  };
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await refetchLessons();
+    setIsRefreshing(false);
+    showSuccess("Lessons refreshed.");
   };
 
   const inventoryStats = useMemo(() => {
@@ -53,7 +64,10 @@ const Library = () => {
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
     const logs: string[] = [];
     
-    const grouped = lessons.reduce((acc, lesson) => {
+    // Filter out "junk" lessons (no title or no video)
+    const validLessons = lessons.filter(l => l.title && l.video_url);
+
+    const grouped = validLessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
       if (!acc[category]) acc[category] = [];
       acc[category].push(lesson);
@@ -72,28 +86,18 @@ const Library = () => {
 
     sortedCategories.forEach((category, catIdx) => {
       grouped[category].forEach((lesson, lesIdx) => {
-        if (!lesson.video_url) {
-          processedLessons.push({
-            ...lesson,
-            isDownloaded: false,
-            category,
-            displayIndex: `${catIdx + 1}.${lesIdx + 1}`
-          });
-          return;
-        }
-
         const expectedFilename = generateLessonFilename(
           catIdx + 1,
           lesIdx + 1,
           category,
-          lesson.title || 'Untitled'
+          lesson.title
         );
 
         const isDownloaded = localFileNames.has(expectedFilename.toLowerCase());
         
         // Fuzzy matching fallback
         let fuzzyMatch = false;
-        if (!isDownloaded && lesson.title) {
+        if (!isDownloaded) {
           const cleanTitle = lesson.title.toLowerCase();
           for (const localName of localFileNames) {
             if (localName.includes(cleanTitle)) {
@@ -109,7 +113,7 @@ const Library = () => {
         if (finalMatch) downloaded++;
 
         if (!finalMatch) {
-          logs.push(`MISSING: "${expectedFilename}" (Title: ${lesson.title})`);
+          logs.push(`MISSING: "${expectedFilename}"`);
         }
 
         processedLessons.push({
@@ -139,7 +143,7 @@ const Library = () => {
   }, [inventoryStats.processedLessons, searchQuery]);
 
   const handleDownloadMissing = async () => {
-    const missingVideos = inventoryStats.processedLessons.filter(l => !l.isDownloaded && l.video_url);
+    const missingVideos = inventoryStats.processedLessons.filter(l => !l.isDownloaded);
     if (missingVideos.length === 0) {
       showSuccess("All videos are already downloaded!");
       return;
@@ -156,14 +160,15 @@ const Library = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1200));
     }
   };
 
   const courseMapText = useMemo(() => {
     if (!lessons) return "";
-
-    const grouped = lessons.reduce((acc, lesson) => {
+    const validLessons = lessons.filter(l => l.title);
+    
+    const grouped = validLessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
       if (!acc[category]) acc[category] = [];
       acc[category].push(lesson);
@@ -180,7 +185,7 @@ const Library = () => {
     sortedCategories.forEach((category, idx) => {
       text += `## ${category}\n`;
       grouped[category].forEach((lesson: any) => {
-        text += `${lesson.title || 'Untitled'}\n`;
+        text += `${lesson.title}\n`;
         text += `🔗 Page: ${lesson.lesson_url}\n`;
         text += `🎥 Video: ${lesson.video_url || 'No Video ID found on page'}\n\n`;
       });
@@ -221,6 +226,16 @@ const Library = () => {
           </h1>
         </div>
         <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="text-indigo-600 border-indigo-200"
+          >
+            <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
+            Refresh
+          </Button>
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200">
@@ -330,7 +345,7 @@ const Library = () => {
             <CardContent className="p-0">
               <ScrollArea className="h-[200px] w-full p-3">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Unmatched Lessons ({debugLogs.length})</p>
+                  <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Unmatched Videos ({debugLogs.length})</p>
                   {debugLogs.length > 0 ? (
                     debugLogs.map((log, i) => (
                       <div key={i} className="text-[9px] font-mono text-red-800 border-b border-red-100 pb-1">
@@ -338,7 +353,7 @@ const Library = () => {
                       </div>
                     ))
                   ) : (
-                    <p className="text-[10px] text-gray-400 italic">No unmatched lessons found.</p>
+                    <p className="text-[10px] text-gray-400 italic">No unmatched videos found.</p>
                   )}
                 </div>
               </ScrollArea>
@@ -386,25 +401,23 @@ const Library = () => {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        {!lesson.isDownloaded && lesson.video_url && (
+                        {!lesson.isDownloaded && (
                           <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 shrink-0">
                             Missing
                           </Badge>
                         )}
-                        {lesson.video_url && (
-                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-400 hover:text-indigo-600">
-                            <a href={lesson.video_url} download={lesson.expectedFilename} target="_blank" rel="noopener noreferrer">
-                              <Download className="h-5 w-5" />
-                            </a>
-                          </Button>
-                        )}
+                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-400 hover:text-indigo-600">
+                          <a href={lesson.video_url} download={lesson.expectedFilename} target="_blank" rel="noopener noreferrer">
+                            <Download className="h-5 w-5" />
+                          </a>
+                        </Button>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="p-20 text-center">
                     <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No lessons found matching your search.</p>
+                    <p className="text-gray-500">No valid video lessons found. Try clicking "Sync Course Data" on the home page.</p>
                   </div>
                 )}
               </div>
