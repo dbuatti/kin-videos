@@ -36,6 +36,7 @@ export const useCrawlerJobs = () => {
     queryFn: () => fetchCrawlerJobs(userId!),
     enabled: !!userId,
     // Poll every 3 seconds if there are pending or running jobs
+    // In TanStack Query v5, the callback receives the query object
     refetchInterval: (query) => (query.state.data?.needsPolling ? 3000 : false),
   });
   
