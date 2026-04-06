@@ -3,7 +3,8 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
@@ -78,6 +79,32 @@ const Index = () => {
       <main className="max-w-5xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           
+          {/* Master Player Card */}
+          <Link to="/master-player" className="group md:col-span-2">
+            <Card className="h-full border-indigo-100 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden bg-slate-900 border-2 hover:border-indigo-500">
+              <CardHeader className="p-8 text-white">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="bg-indigo-600 p-3 rounded-2xl">
+                    <Zap className="w-8 h-8" />
+                  </div>
+                  <Badge className="bg-indigo-500 text-white border-none px-3 py-1">NEW: VIRTUAL STITCHER</Badge>
+                </div>
+                <CardTitle className="text-3xl font-black">Master Player</CardTitle>
+                <CardDescription className="text-indigo-200 text-lg">
+                  Watch or listen to the entire course back-to-back. No manual stitching required.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-0 flex items-center space-x-6">
+                <div className="flex items-center text-indigo-400 font-bold">
+                  <PlayCircle className="w-5 h-5 mr-2" /> Continuous Video
+                </div>
+                <div className="flex items-center text-emerald-400 font-bold">
+                  <Headphones className="w-5 h-5 mr-2" /> Audio-Only Mode
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
           {/* Video Gallery Card */}
           <Link to="/gallery" className="group">
             <Card className="h-full border-indigo-100 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden bg-white border-2 hover:border-indigo-300">

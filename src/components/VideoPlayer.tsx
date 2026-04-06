@@ -11,19 +11,39 @@ interface VideoPlayerProps {
   videoId: string;
   posterUrl?: string;
   className?: string;
+  onEnded?: () => void;
+  autoPlay?: boolean;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl, className }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  videoUrl, 
+  videoId, 
+  posterUrl, 
+  className, 
+  onEnded,
+  autoPlay = false
+}) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [hasStarted, setHasStarted] = useState(autoPlay);
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
   const { progress, isLoading, saveProgress } = useVideoProgress(videoId);
   const lastSavedTime = useRef<number>(0);
 
+  // Handle autoplay
+  useEffect(() => {
+    if (autoPlay && videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Autoplay might be blocked by browser
+        setIsPlaying(false);
+        setHasStarted(false);
+      });
+    }
+  }, [videoUrl, autoPlay]);
+
   // Seek to saved position when metadata is loaded
   const handleLoadedMetadata = () => {
-    if (videoRef.current && progress && progress > 5) {
-      // Only seek if the video is long enough and we have progress
+    if (videoRef.current && progress && progress > 5 && !autoPlay) {
+      // Only seek if the video is long enough and we have progress, and NOT in autoplay mode
       if (progress < videoRef.current.duration - 5) {
         videoRef.current.currentTime = progress;
       }
@@ -92,12 +112,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
         src={videoUrl}
         className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
         controls
-        preload="metadata"
+        preload="auto"
         poster={posterUrl}
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onPlay={handlePlay}
         onPause={handlePause}
+        onEnded={onEnded}
       />
       
       {(!hasStarted || (!isPlaying && hasStarted)) && (

@@ -15,6 +15,7 @@ import VideoGallery from "./pages/VideoGallery";
 import Bookmarks from "./pages/Bookmarks";
 import Scraper from "./pages/Scraper";
 import Stitcher from "./pages/Stitcher";
+import MasterPlayer from "./pages/MasterPlayer";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/bookmarks" element={<Bookmarks />} />
               <Route path="/scraper" element={<Scraper />} />
               <Route path="/stitcher" element={<Stitcher />} />
+              <Route path="/master-player" element={<MasterPlayer />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

@@ -1,0 +1,271 @@
+"use client";
+
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useJobLessons } from '@/hooks/use-job-lessons';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { 
+  ArrowLeft, 
+  SkipForward, 
+  SkipBack, 
+  Volume2, 
+  VolumeX, 
+  Play, 
+  Pause,
+  ListMusic,
+  Headphones,
+  Video,
+  Zap,
+  Loader2
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { MODULE_ORDER } from '@/utils/filenames';
+import VideoPlayer from '@/components/VideoPlayer';
+import { MadeWithDyad } from '@/components/made-with-dyad';
+import { cn } from '@/lib/utils';
+import { showSuccess } from '@/utils/toast';
+
+const MasterPlayer = () => {
+  const navigate = useNavigate();
+  const { data: lessons, isLoading } = useJobLessons();
+  
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
+
+  const playlist = useMemo(() => {
+    if (!lessons) return [];
+    
+    const videoOnly = lessons.filter(l => l.video_url);
+    
+    // Sort by module order and then by creation date (or title)
+    return videoOnly.sort((a, b) => {
+      const catA = a.category || 'Uncategorized';
+      const catB = b.category || 'Uncategorized';
+      const indexA = MODULE_ORDER.indexOf(catA);
+      const indexB = MODULE_ORDER.indexOf(catB);
+      
+      if (indexA !== indexB) {
+        return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+      }
+      
+      return (a.title || '').localeCompare(b.title || '');
+    });
+  }, [lessons]);
+
+  const currentVideo = playlist[currentIndex];
+
+  const handleNext = () => {
+    if (currentIndex < playlist.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setAutoPlay(true);
+    } else {
+      showSuccess("You've reached the end of the course!");
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      setAutoPlay(true);
+    }
+  };
+
+  const selectVideo = (index: number) => {
+    setCurrentIndex(index);
+    setAutoPlay(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
+      {/* Header */}
+      <header className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex items-center space-x-4">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/')}
+            className="rounded-full hover:bg-slate-800 text-slate-400"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </Button>
+          <div>
+            <h1 className="text-lg font-bold text-indigo-400 flex items-center">
+              <Zap className="w-4 h-4 mr-2" />
+              Master Player
+            </h1>
+            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+              Continuous Playback Mode
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAudioOnly(!isAudioOnly)}
+            className={cn(
+              "rounded-xl border-slate-700 transition-all",
+              isAudioOnly ? "bg-indigo-600 text-white border-indigo-500" : "bg-slate-900 text-slate-400"
+            )}
+          >
+            {isAudioOnly ? <Headphones className="w-4 h-4 mr-2" /> : <Video className="w-4 h-4 mr-2" />}
+            {isAudioOnly ? "Audio Only" : "Video Mode"}
+          </Button>
+        </div>
+      </header>
+
+      <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Player Section */}
+        <div className="flex-1 flex flex-col p-4 lg:p-8 justify-center items-center bg-black/40">
+          <div className={cn(
+            "w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative",
+            isAudioOnly && "flex items-center justify-center"
+          )}>
+            {isAudioOnly ? (
+              <div className="flex flex-col items-center space-y-6 text-center p-8">
+                <div className="w-32 h-32 bg-indigo-600/20 rounded-full flex items-center justify-center animate-pulse">
+                  <Headphones className="w-16 h-16 text-indigo-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-2">{currentVideo?.title}</h2>
+                  <p className="text-indigo-400 font-medium">{currentVideo?.category}</p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="h-1 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.3s]" />
+                  <div className="h-2 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.15s]" />
+                  <div className="h-3 w-2 bg-indigo-500 animate-bounce" />
+                  <div className="h-2 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.15s]" />
+                  <div className="h-1 w-2 bg-indigo-500 animate-bounce [animation-delay:-0.3s]" />
+                </div>
+                <div className="hidden">
+                  {/* Keep video element in DOM but hidden for audio-only mode */}
+                  <VideoPlayer 
+                    videoUrl={currentVideo?.video_url || ''} 
+                    videoId={currentVideo?.id || ''} 
+                    onEnded={handleNext}
+                    autoPlay={autoPlay}
+                  />
+                </div>
+              </div>
+            ) : (
+              <VideoPlayer 
+                videoUrl={currentVideo?.video_url || ''} 
+                videoId={currentVideo?.id || ''} 
+                className="w-full h-full"
+                onEnded={handleNext}
+                autoPlay={autoPlay}
+              />
+            )}
+          </div>
+
+          {/* Controls */}
+          <div className="mt-8 flex items-center space-x-6">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handlePrevious}
+              disabled={currentIndex === 0}
+              className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400"
+            >
+              <SkipBack className="w-6 h-6" />
+            </Button>
+            
+            <div className="text-center px-8">
+              <p className="text-xs text-slate-500 font-bold uppercase mb-1">Now Playing</p>
+              <h3 className="text-lg font-bold text-white truncate max-w-xs lg:max-w-md">
+                {currentVideo?.title}
+              </h3>
+              <p className="text-[10px] text-indigo-400 font-medium mt-1">
+                Lesson {currentIndex + 1} of {playlist.length}
+              </p>
+            </div>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleNext}
+              disabled={currentIndex === playlist.length - 1}
+              className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400"
+            >
+              <SkipForward className="w-6 h-6" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Playlist Sidebar */}
+        <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
+          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+            <h2 className="font-bold flex items-center text-sm">
+              <ListMusic className="w-4 h-4 mr-2 text-indigo-400" />
+              Course Playlist
+            </h2>
+            <Badge variant="outline" className="border-slate-700 text-slate-500">
+              {playlist.length} Items
+            </Badge>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {playlist.map((video, index) => (
+                <button
+                  key={video.id}
+                  onClick={() => selectVideo(index)}
+                  className={cn(
+                    "w-full text-left p-3 rounded-xl transition-all group flex items-start space-x-3",
+                    currentIndex === index 
+                      ? "bg-indigo-600/20 border border-indigo-500/30" 
+                      : "hover:bg-slate-800/50 border border-transparent"
+                  )}
+                >
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs",
+                    currentIndex === index ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-500"
+                  )}>
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={cn(
+                      "text-xs font-bold truncate",
+                      currentIndex === index ? "text-white" : "text-slate-300 group-hover:text-white"
+                    )}>
+                      {video.title}
+                    </p>
+                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                      {video.category}
+                    </p>
+                  </div>
+                  {currentIndex === index && (
+                    <div className="ml-auto">
+                      <div className="flex space-x-0.5 items-end h-3">
+                        <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.8s]" />
+                        <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.6s]" />
+                        <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:1s]" />
+                      </div>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </aside>
+      </main>
+
+      <footer className="p-4 border-t border-slate-800 bg-slate-900/50">
+        <MadeWithDyad />
+      </footer>
+    </div>
+  );
+};
+
+export default MasterPlayer;
