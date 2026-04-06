@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Instructions from "./pages/Instructions";
 import Debug from "./pages/Debug";
 import Library from "./pages/Library";
+import VideoGallery from "./pages/VideoGallery";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/instructions" element={<Instructions />} />
               <Route path="/debug" element={<Debug />} />
               <Route path="/library" element={<Library />} />
+              <Route path="/gallery" element={<VideoGallery />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

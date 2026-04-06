@@ -3,7 +3,7 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, Info, ShieldCheck, Zap, BookOpen, Bug, Library } from "lucide-react";
+import { LogOut, Info, ShieldCheck, Zap, BookOpen, Bug, Library, PlayCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError } from "@/utils/toast";
 import NewJobForm from "@/components/NewJobForm";
@@ -33,6 +33,12 @@ const Index = () => {
           </h1>
         </div>
         <div className="flex items-center space-x-2 sm:space-x-4">
+          <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:bg-indigo-50">
+            <Link to="/gallery">
+              <PlayCircle className="w-4 h-4 mr-2" />
+              Gallery
+            </Link>
+          </Button>
           <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:bg-indigo-50">
             <Link to="/library">
               <Library className="w-4 h-4 mr-2" />

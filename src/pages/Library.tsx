@@ -20,7 +20,9 @@ import {
   ExternalLink,
   Terminal,
   Copy,
-  FileText
+  FileText,
+  PlayCircle,
+  ChevronRight
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,6 +31,7 @@ import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 const Library = () => {
   const navigate = useNavigate();
@@ -76,7 +79,6 @@ const Library = () => {
     sortedCategories.forEach((category, catIdx) => {
       grouped[category].forEach((lesson, lesIdx) => {
         if (!lesson.video_url) {
-          // Still track non-video lessons for the list, but they don't count towards "downloaded"
           processedLessons.push({
             ...lesson,
             isDownloaded: false,
@@ -123,10 +125,9 @@ const Library = () => {
     );
   }, [inventoryStats.processedLessons, searchQuery]);
 
-  const copyTerminalCommand = () => {
-    const cmd = `find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos" -maxdepth 2 | pbcopy`;
-    navigator.clipboard.writeText(cmd);
-    showSuccess("Command copied to clipboard!");
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    showSuccess(`${label} copied to clipboard!`);
   };
 
   const copyCourseMap = () => {
@@ -162,6 +163,21 @@ const Library = () => {
     showSuccess("Course map copied to clipboard!");
   };
 
+  const commands = [
+    {
+      label: "Combined List (Clean)",
+      cmd: `(find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH" -maxdepth 1 -not -path '*/.*'; echo ""; echo "--- VIDEOS SUBFOLDER ---"; find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos" -maxdepth 1 -not -path '*/.*') | pbcopy`
+    },
+    {
+      label: "Tree View (Structure)",
+      cmd: `cd "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH" && find . -not -path '*/.*' -maxdepth 2`
+    },
+    {
+      label: "Videos Only",
+      cmd: `find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos" -maxdepth 2 | pbcopy`
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <header className="max-w-6xl mx-auto flex items-center justify-between mb-8 border-b pb-4 border-indigo-100">
@@ -180,6 +196,12 @@ const Library = () => {
           </h1>
         </div>
         <div className="flex items-center space-x-2">
+          <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+            <Link to="/gallery">
+              <PlayCircle className="w-4 h-4 mr-2" />
+              Video Gallery
+            </Link>
+          </Button>
           <Button 
             onClick={copyCourseMap} 
             variant="outline" 
@@ -189,49 +211,59 @@ const Library = () => {
             <FileText className="w-4 h-4 mr-2" />
             Copy Course Map
           </Button>
-          <Button asChild variant="outline" size="sm" className="text-indigo-600 border-indigo-200">
-            <a href="https://gemini.google.com/app/298621e0b01137f0" target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Gemini Notes
-            </a>
-          </Button>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Column: Sync & Stats */}
+        {/* Left Column: Sync & Commands */}
         <div className="space-y-6">
           <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
             <CardHeader className="bg-indigo-600 text-white">
               <CardTitle className="text-lg flex items-center">
-                <RefreshCw className="w-5 h-5 mr-2" />
-                Sync Local Files
+                <Terminal className="w-5 h-5 mr-2" />
+                Command Center
               </CardTitle>
               <CardDescription className="text-indigo-100">
-                Paste your Terminal output here to update your inventory.
+                Quick access to Terminal sync commands.
               </CardDescription>
             </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {commands.map((c, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">{c.label}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 text-indigo-400 hover:text-indigo-600"
+                      onClick={() => copyToClipboard(c.cmd, c.label)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <div className="bg-slate-900 p-2 rounded border border-slate-800 text-[10px] font-mono text-slate-400 truncate">
+                    {c.cmd}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
+            <CardHeader className="bg-white border-b border-indigo-50">
+              <CardTitle className="text-lg flex items-center text-indigo-900">
+                <RefreshCw className="w-5 h-5 mr-2 text-indigo-600" />
+                Sync Inventory
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-6 space-y-4">
-              <div className="bg-slate-900 p-3 rounded-lg text-xs font-mono text-slate-300 relative group">
-                <p className="pr-8 truncate">find ".../FNH/Videos" -maxdepth 2 | pbcopy</p>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute right-1 top-1 h-7 w-7 text-slate-500 hover:text-white"
-                  onClick={copyTerminalCommand}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              
               <Textarea 
                 placeholder="Paste Terminal output here..."
-                className="min-h-[150px] font-mono text-xs border-indigo-100 focus-visible:ring-indigo-500"
+                className="min-h-[120px] font-mono text-xs border-indigo-100 focus-visible:ring-indigo-500"
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
               />
-              
               <Button 
                 onClick={handleSync}
                 disabled={isSyncing || !pasteValue.trim()}
@@ -257,18 +289,11 @@ const Library = () => {
                   <p className="text-3xl font-black text-amber-700">{inventoryStats.missing}</p>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Overall Completion</span>
-                  <span>{Math.round((inventoryStats.downloaded / inventoryStats.total) * 100) || 0}%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                  <div 
-                    className="bg-indigo-600 h-full transition-all duration-500" 
-                    style={{ width: `${(inventoryStats.downloaded / inventoryStats.total) * 100}%` }}
-                  />
-                </div>
+              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="bg-indigo-600 h-full transition-all duration-500" 
+                  style={{ width: `${(inventoryStats.downloaded / inventoryStats.total) * 100}%` }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -276,16 +301,14 @@ const Library = () => {
 
         {/* Right Column: Lesson List */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center space-x-4 mb-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input 
-                placeholder="Search lessons or modules..." 
-                className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input 
+              placeholder="Search lessons or modules..." 
+              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
           <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
@@ -313,24 +336,23 @@ const Library = () => {
                             </h4>
                           </div>
                           <p className="text-xs text-gray-500 truncate mt-0.5">{lesson.category}</p>
-                          {lesson.expectedFilename && (
-                            <p className="text-[10px] text-gray-400 font-mono mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {lesson.expectedFilename}
-                            </p>
-                          )}
                         </div>
                       </div>
                       
-                      {!lesson.isDownloaded && lesson.video_url && (
-                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 shrink-0">
-                          Missing
-                        </Badge>
-                      )}
-                      {!lesson.video_url && (
-                        <Badge variant="outline" className="text-gray-400 border-gray-200 bg-gray-50 shrink-0">
-                          No Video
-                        </Badge>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {!lesson.isDownloaded && lesson.video_url && (
+                          <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 shrink-0">
+                            Missing
+                          </Badge>
+                        )}
+                        {lesson.video_url && (
+                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-400 hover:text-indigo-600">
+                            <Link to={`/gallery?search=${encodeURIComponent(lesson.title || '')}`}>
+                              <PlayCircle className="h-5 w-5" />
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (
