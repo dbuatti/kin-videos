@@ -204,7 +204,7 @@ const MasterPlayer = () => {
           isTheaterMode ? "lg:p-0" : ""
         )}>
           <div className={cn(
-            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative p-1 shrink-0",
+            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative p-4 shrink-0",
             isTheaterMode ? "max-w-full aspect-video rounded-none border-none p-0" : "max-w-5xl aspect-video"
           )}>
             {isAudioOnly && (
@@ -224,7 +224,7 @@ const MasterPlayer = () => {
               videoUrl={currentVideo?.video_url || ''} 
               videoId={currentVideo?.id || ''} 
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
-              className="w-full h-full rounded-xl sm:rounded-2xl overflow-hidden"
+              className="w-full h-full overflow-hidden"
               onEnded={handleVideoEnded}
               autoPlay={autoPlay}
             />

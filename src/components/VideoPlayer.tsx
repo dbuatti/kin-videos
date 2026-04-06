@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from 'react';
-import { PlayCircle, RotateCcw, Loader2, AlertCircle, Maximize } from 'lucide-react';
+import { PlayCircle, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVideoProgress } from '@/hooks/use-video-progress';
@@ -154,7 +154,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }
 
   return (
-    <div ref={containerRef} className={cn("relative group overflow-hidden bg-slate-900", className)}>
+    <div ref={containerRef} className={cn("relative group bg-slate-900", className)}>
       {error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
