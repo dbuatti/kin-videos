@@ -68,8 +68,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Enforce speed whenever it changes or the video source changes
   useEffect(() => {
     if (videoRef.current) {
+      console.log(`[VideoPlayer] Applying speed: ${speed}x`);
       videoRef.current.playbackRate = speed;
     }
   }, [speed, videoUrl, effectiveKey]);
@@ -87,6 +89,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
+      // Re-enforce speed on metadata load
       videoRef.current.playbackRate = speed;
       
       // Resume logic: Apply saved progress if it exists and is significant
@@ -117,6 +120,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setHasStarted(true);
     setIsPlaying(true);
     setError(null);
+    // Re-enforce speed on play (some browsers reset it)
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
   };
 
   const handlePause = () => {

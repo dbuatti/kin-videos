@@ -31,7 +31,8 @@ export const usePlaybackSpeed = () => {
     mutationFn: async (newSpeed: number) => {
       if (!user) return;
       
-      // Use upsert to ensure the record exists
+      console.log(`[Speed] Saving speed preference: ${newSpeed}x`);
+      
       const { error } = await supabase
         .from('profiles')
         .upsert({ 
@@ -47,7 +48,7 @@ export const usePlaybackSpeed = () => {
       showSuccess(`Playback speed set to ${newSpeed}x`);
     },
     onError: (error: any) => {
-      console.error("[PlaybackSpeed] Save error:", error);
+      console.error("[Speed] Save error:", error);
       showError("Failed to save playback speed preference.");
     }
   });
