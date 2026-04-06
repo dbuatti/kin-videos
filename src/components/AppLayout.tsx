@@ -200,16 +200,26 @@ const AppLayout = () => {
             </div>
             <span className="font-black text-white text-sm tracking-tighter">FNH ARCHIVER</span>
           </div>
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white">
-                <Menu className="w-6 h-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-80 bg-background border-r-white/5">
-              <NavContent />
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="text-slate-400"
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            >
+              <Search className="w-5 h-5" />
+            </Button>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-white">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-80 bg-background border-r-white/5">
+                <NavContent />
+              </SheetContent>
+            </Sheet>
+          </div>
         </header>
         
         <main className="flex-1 pb-24">
@@ -247,6 +257,17 @@ const AppLayout = () => {
         <NavContent />
       </aside>
       <main className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-8 pt-8 flex justify-end">
+          <Button 
+            variant="outline" 
+            className="bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl h-10 px-4 font-bold text-xs"
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            Search or Jump to...
+            <kbd className="ml-4 bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono">⌘ K</kbd>
+          </Button>
+        </div>
         <Outlet />
       </main>
     </div>
