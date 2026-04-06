@@ -15,6 +15,7 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl, className }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [savedTime, setSavedTime] = useState<number>(0);
   const storageKey = `video-progress-${videoId}`;
 
@@ -45,11 +46,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
 
   const handlePlay = () => {
     setHasStarted(true);
+    setIsPlaying(true);
+  };
+
+  const handlePause = () => {
+    setIsPlaying(false);
+  };
+
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+      } else {
+        videoRef.current.pause();
+      }
+    }
   };
 
   const resetProgress = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent togglePlay from firing
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
       localStorage.removeItem(storageKey);
@@ -59,7 +75,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
   };
 
   return (
-    <div className={cn("relative group overflow-hidden bg-slate-900", className)}>
+    <div 
+      className={cn("relative group overflow-hidden bg-slate-900 cursor-pointer", className)}
+      onClick={togglePlay}
+    >
       <video
         ref={videoRef}
         src={videoUrl}
@@ -70,13 +89,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
         onPlay={handlePlay}
+        onPause={handlePause}
       />
       
-      {!hasStarted && (
+      {(!hasStarted || (!isPlaying && hasStarted)) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 transition-opacity group-hover:bg-black/10">
           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
           
-          {savedTime > 5 && (
+          {!hasStarted && savedTime > 5 && (
             <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-auto">
               <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
                 RESUMING AT {Math.floor(savedTime / 60)}:{(Math.floor(savedTime % 60)).toString().padStart(2, '0')}
