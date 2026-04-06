@@ -13,7 +13,8 @@ import {
   Menu,
   RefreshCw,
   LogOut,
-  BookOpen
+  BookOpen,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ const UTILITY_ITEMS = [
   { label: 'Scraper', icon: Terminal, path: '/scraper' },
   { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
   { label: 'Manual', icon: BookOpen, path: '/instructions' },
+  { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
 const AppLayout = () => {

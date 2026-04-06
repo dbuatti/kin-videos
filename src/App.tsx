@@ -16,6 +16,7 @@ import Bookmarks from "./pages/Bookmarks";
 import Scraper from "./pages/Scraper";
 import Stitcher from "./pages/Stitcher";
 import MasterPlayer from "./pages/MasterPlayer";
+import Settings from "./pages/Settings";
 import AppLayout from "./components/AppLayout";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/scraper" element={<Scraper />} />
                 <Route path="/stitcher" element={<Stitcher />} />
                 <Route path="/master-player" element={<MasterPlayer />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>
 
