@@ -200,7 +200,14 @@ const COURSE_STRUCTURE = [
 ];
 
 function simulateLessonDiscovery(baseUrl: string, userId: string, jobId: string) {
-  const courseBaseUrl = baseUrl.split('/categories')[0]; 
+  // Normalize the URL: Remove query parameters (like ?page=1) and trailing slashes
+  const normalizedBase = baseUrl.split('?')[0].replace(/\/$/, '');
+  
+  // If the URL contains /categories, we want the product root
+  const courseBaseUrl = normalizedBase.includes('/categories') 
+    ? normalizedBase.split('/categories')[0] 
+    : normalizedBase;
+
   const lessonsToInsert = [];
 
   for (const module of COURSE_STRUCTURE) {
