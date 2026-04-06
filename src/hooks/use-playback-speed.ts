@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 
 export const usePlaybackSpeed = () => {
   const { user } = useAuth();
@@ -24,23 +24,31 @@ export const usePlaybackSpeed = () => {
       return data?.playback_speed || 1.0;
     },
     enabled: !!user,
-    staleTime: Infinity, // Speed doesn't change unless user changes it
+    staleTime: Infinity,
   });
 
   const updateSpeed = useMutation({
     mutationFn: async (newSpeed: number) => {
       if (!user) return;
       
+      // Use upsert to ensure the record exists
       const { error } = await supabase
         .from('profiles')
-        .update({ playback_speed: newSpeed })
-        .eq('id', user.id);
+        .upsert({ 
+          id: user.id, 
+          playback_speed: newSpeed,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
       
       if (error) throw error;
     },
     onSuccess: (_, newSpeed) => {
       queryClient.setQueryData(['playbackSpeed', user?.id], newSpeed);
       showSuccess(`Playback speed set to ${newSpeed}x`);
+    },
+    onError: (error: any) => {
+      console.error("[PlaybackSpeed] Save error:", error);
+      showError("Failed to save playback speed preference.");
     }
   });
 
