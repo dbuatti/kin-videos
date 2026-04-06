@@ -75,6 +75,7 @@ const MasterPlayer = () => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
       const indexToLoad = Math.floor(savedIndex);
       if (indexToLoad >= 0 && indexToLoad < playlist.length) {
+        console.log(`[MasterPlayer] Resuming course at lesson index: ${indexToLoad} (${playlist[indexToLoad].title})`);
         setCurrentIndex(indexToLoad);
       }
       setIsInitialLoad(false);
@@ -84,6 +85,7 @@ const MasterPlayer = () => {
   // Save index whenever it changes
   useEffect(() => {
     if (!isInitialLoad && !isStateLoading) {
+      console.log(`[MasterPlayer] Saving current lesson index: ${currentIndex}`);
       saveMasterIndex(currentIndex);
     }
   }, [currentIndex, isInitialLoad, isStateLoading, saveMasterIndex]);
@@ -92,6 +94,7 @@ const MasterPlayer = () => {
 
   const handleNext = () => {
     if (currentIndex < playlist.length - 1) {
+      console.log(`[MasterPlayer] Moving to next lesson: ${currentIndex + 1}`);
       setCurrentIndex(prev => prev + 1);
       setAutoPlay(true);
     } else {
@@ -101,12 +104,14 @@ const MasterPlayer = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
+      console.log(`[MasterPlayer] Moving to previous lesson: ${currentIndex - 1}`);
       setCurrentIndex(prev => prev - 1);
       setAutoPlay(true);
     }
   };
 
   const selectVideo = (index: number) => {
+    console.log(`[MasterPlayer] Manually selected lesson index: ${index}`);
     setCurrentIndex(index);
     setAutoPlay(true);
   };
@@ -164,6 +169,7 @@ const MasterPlayer = () => {
             variant="outline"
             size="sm"
             onClick={() => {
+              console.log(`[MasterPlayer] Switching mode to: ${!isAudioOnly ? 'Audio' : 'Video'}`);
               setIsAudioOnly(!isAudioOnly);
               setIsInitialLoad(true); // Trigger reload of the saved index for the new mode
             }}

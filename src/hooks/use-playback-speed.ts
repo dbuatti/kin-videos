@@ -13,14 +13,23 @@ export const usePlaybackSpeed = () => {
     queryKey: ['playbackSpeed', user?.id],
     queryFn: async () => {
       if (!user) return 1.0;
+      
+      console.log(`[Persistence] Fetching global playback speed...`);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('playback_speed')
         .eq('id', user.id)
         .maybeSingle();
       
-      if (error) throw error;
-      return data?.playback_speed || 1.0;
+      if (error) {
+        console.error(`[Persistence] Error fetching playback speed:`, error);
+        throw error;
+      }
+      
+      const result = data?.playback_speed || 1.0;
+      console.log(`[Persistence] Loaded global playback speed: ${result}x`);
+      return result;
     },
     enabled: !!user,
   });
@@ -28,12 +37,18 @@ export const usePlaybackSpeed = () => {
   const updateSpeed = useMutation({
     mutationFn: async (newSpeed: number) => {
       if (!user) return;
+      
+      console.log(`[Persistence] Saving global playback speed: ${newSpeed}x`);
+      
       const { error } = await supabase
         .from('profiles')
         .update({ playback_speed: newSpeed })
         .eq('id', user.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error(`[Persistence] Error saving playback speed:`, error);
+        throw error;
+      }
     },
     onSuccess: (_, newSpeed) => {
       queryClient.setQueryData(['playbackSpeed', user?.id], newSpeed);

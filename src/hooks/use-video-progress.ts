@@ -20,6 +20,9 @@ export const useVideoProgress = (progressKey: string) => {
     queryKey: ['videoProgress', user?.id, progressKey],
     queryFn: async () => {
       if (!user || !progressKey) return { playback_time: 0, duration: 0 };
+      
+      console.log(`[Persistence] Fetching progress for key: ${progressKey}`);
+      
       const { data, error } = await supabase
         .from('video_progress')
         .select('playback_time, duration')
@@ -27,11 +30,18 @@ export const useVideoProgress = (progressKey: string) => {
         .eq('video_id', progressKey)
         .maybeSingle();
       
-      if (error) throw error;
-      return { 
+      if (error) {
+        console.error(`[Persistence] Error fetching progress for ${progressKey}:`, error);
+        throw error;
+      }
+      
+      const result = { 
         playback_time: data?.playback_time || 0, 
         duration: data?.duration || 0 
-      } as VideoProgressData;
+      };
+      
+      console.log(`[Persistence] Loaded progress for ${progressKey}: ${result.playback_time}s / ${result.duration}s`);
+      return result as VideoProgressData;
     },
     enabled: !!user && !!progressKey,
   });
@@ -51,11 +61,16 @@ export const useVideoProgress = (progressKey: string) => {
         upsertData.duration = duration;
       }
 
+      console.log(`[Persistence] Saving progress for ${progressKey}: ${currentTime}s`);
+
       const { error } = await supabase
         .from('video_progress')
         .upsert(upsertData, { onConflict: 'user_id,video_id' });
 
-      if (error) throw error;
+      if (error) {
+        console.error(`[Persistence] Error saving progress for ${progressKey}:`, error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['videoProgress', user?.id, progressKey] });

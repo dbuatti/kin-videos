@@ -39,24 +39,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Apply global playback speed whenever it changes or video loads
   useEffect(() => {
     if (videoRef.current) {
+      console.log(`[VideoPlayer] Applying playback speed: ${speed}x to ${effectiveKey}`);
       videoRef.current.playbackRate = speed;
     }
-  }, [speed, videoUrl]);
+  }, [speed, videoUrl, effectiveKey]);
 
   useEffect(() => {
     setError(null);
     
     if (autoPlay && videoRef.current) {
+      console.log(`[VideoPlayer] Auto-playing ${effectiveKey}`);
       videoRef.current.play().catch((err) => {
         console.warn("[VideoPlayer] Auto-play blocked or failed:", err);
         setIsPlaying(false);
         setHasStarted(false);
       });
     }
-  }, [videoUrl, autoPlay]);
+  }, [videoUrl, autoPlay, effectiveKey]);
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
+      console.log(`[VideoPlayer] Metadata loaded for ${effectiveKey}. Duration: ${videoRef.current.duration}s`);
+      
       // Apply speed again on metadata load to be safe
       videoRef.current.playbackRate = speed;
       
@@ -65,6 +69,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       
       if (progress && progress > 5 && !autoPlay) {
         if (progress < videoRef.current.duration - 5) {
+          console.log(`[VideoPlayer] Resuming ${effectiveKey} at ${progress}s`);
           videoRef.current.currentTime = progress;
         }
       }
@@ -74,6 +79,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
       const currentTime = videoRef.current.currentTime;
+      // Save every 5 seconds
       if (Math.abs(currentTime - lastSavedTime.current) > 5) {
         saveProgress(currentTime, videoRef.current.duration);
         lastSavedTime.current = currentTime;
@@ -82,12 +88,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handlePlay = () => {
+    console.log(`[VideoPlayer] Play started for ${effectiveKey}`);
     setHasStarted(true);
     setIsPlaying(true);
     setError(null);
   };
 
   const handlePause = () => {
+    console.log(`[VideoPlayer] Play paused for ${effectiveKey}`);
     setIsPlaying(false);
     if (videoRef.current) {
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
@@ -98,7 +106,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const videoElement = e.target as HTMLVideoElement;
     const errorCode = videoElement.error?.code;
     const errorMessage = videoElement.error?.message;
-    console.error(`[VideoPlayer] Video Error: Code ${errorCode}, Message: ${errorMessage}`);
+    console.error(`[VideoPlayer] Video Error for ${effectiveKey}: Code ${errorCode}, Message: ${errorMessage}`);
     
     let userMessage = "Failed to load video.";
     if (errorCode === 1) userMessage = "Video loading aborted.";
@@ -127,6 +135,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     e.preventDefault();
     e.stopPropagation();
     if (videoRef.current) {
+      console.log(`[VideoPlayer] Resetting progress for ${effectiveKey}`);
       videoRef.current.currentTime = 0;
       saveProgress(0, videoRef.current.duration);
       videoRef.current.play();
