@@ -14,7 +14,8 @@ import {
   Video,
   Menu,
   Hash,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,8 @@ import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { downloadFile } from '@/utils/download';
+import LessonSkeleton from '@/components/LessonSkeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -108,10 +111,18 @@ const VideoGallery = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input 
               placeholder="Search videos..." 
-              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 text-sm"
+              className="pl-10 pr-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
           
           <Sheet>
@@ -169,9 +180,7 @@ const VideoGallery = () => {
 
       <main className="max-w-7xl mx-auto space-y-10 sm:space-y-12">
         {isLoading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-          </div>
+          <LessonSkeleton />
         ) : groupedVideos.length > 0 ? (
           groupedVideos.map((group) => (
             <section 
@@ -207,19 +216,34 @@ const VideoGallery = () => {
                           {video.title}
                         </CardTitle>
                         <div className="flex items-center space-x-1 shrink-0">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600"
-                            onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
-                          >
-                            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </Button>
-                          <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600">
-                            <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                            </a>
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600"
+                                  onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
+                                >
+                                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Download Video</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600">
+                                  <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                  </a>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Open Original Page</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </div>
                       

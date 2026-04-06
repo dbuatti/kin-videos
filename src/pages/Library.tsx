@@ -21,7 +21,8 @@ import {
   RefreshCw,
   FolderDown,
   Command,
-  CloudDownload
+  CloudDownload,
+  X
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { downloadFile } from '@/utils/download';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const VIDEO_PATH = "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos";
 
@@ -219,16 +221,23 @@ const Library = () => {
           </h1>
         </div>
         <div className="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className="text-indigo-600 border-indigo-200 rounded-xl h-8 sm:h-9 text-[10px] sm:text-xs shrink-0"
-          >
-            <RefreshCw className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2", isRefreshing && "animate-spin")} />
-            Refresh
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="text-indigo-600 border-indigo-200 rounded-xl h-8 sm:h-9 text-[10px] sm:text-xs shrink-0"
+                >
+                  <RefreshCw className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2", isRefreshing && "animate-spin")} />
+                  Refresh
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh Lesson Data</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Button 
             onClick={handleDownloadRemaining}
@@ -337,10 +346,18 @@ const Library = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input 
               placeholder="Search lessons or modules..." 
-              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 sm:h-11 text-sm"
+              className="pl-10 pr-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 sm:h-11 text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -391,14 +408,21 @@ const Library = () => {
                               </p>
                             </div>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600 shrink-0"
-                            onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}
-                          >
-                            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600 shrink-0"
+                                  onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}
+                                >
+                                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Download Video</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                         
                         <div className="pl-6 sm:pl-7 pr-8 sm:pr-10">

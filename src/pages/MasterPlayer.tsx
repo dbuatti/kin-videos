@@ -17,7 +17,8 @@ import {
   Maximize2,
   Minimize2,
   Keyboard,
-  Info
+  Info,
+  Share2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
@@ -33,6 +34,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import PlaylistCardComponent from '@/components/PlaylistCard';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -122,6 +124,13 @@ const MasterPlayer = () => {
     }
   };
 
+  const handleCopyLink = () => {
+    if (currentVideo) {
+      navigator.clipboard.writeText(currentVideo.lesson_url);
+      showSuccess("Original lesson link copied!");
+    }
+  };
+
   const selectVideo = (index: number) => {
     setCurrentIndex(index);
     setAutoPlay(true);
@@ -152,6 +161,17 @@ const MasterPlayer = () => {
         </div>
 
         <div className="flex items-center space-x-1 sm:space-x-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={handleCopyLink} className="text-slate-400 hover:text-white">
+                  <Share2 className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy Lesson Link</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {!isMobile && (
             <Dialog>
               <DialogTrigger asChild>
@@ -189,14 +209,21 @@ const MasterPlayer = () => {
           )}
 
           {!isMobile && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsTheaterMode(!isTheaterMode)}
-              className="text-slate-400 hover:text-white"
-            >
-              {isTheaterMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsTheaterMode(!isTheaterMode)}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    {isTheaterMode ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{isTheaterMode ? "Exit Theater Mode" : "Theater Mode"}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           
           <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800 h-8 sm:h-9" />
@@ -220,21 +247,28 @@ const MasterPlayer = () => {
             </Sheet>
           )}
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setIsAudioOnly(!isAudioOnly);
-              setIsInitialLoad(true);
-            }}
-            className={cn(
-              "rounded-xl border-slate-700 transition-all h-8 sm:h-9 px-2 sm:px-3",
-              isAudioOnly ? "bg-indigo-600 text-white border-indigo-500" : "bg-slate-900 text-slate-400"
-            )}
-          >
-            {isAudioOnly ? <Headphones className="w-3.5 h-3.5 sm:mr-2" /> : <Video className="w-3.5 h-3.5 sm:mr-2" />}
-            <span className="hidden xs:inline text-[10px] sm:text-xs">{isAudioOnly ? "Video" : "Audio"}</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsAudioOnly(!isAudioOnly);
+                    setIsInitialLoad(true);
+                  }}
+                  className={cn(
+                    "rounded-xl border-slate-700 transition-all h-8 sm:h-9 px-2 sm:px-3",
+                    isAudioOnly ? "bg-indigo-600 text-white border-indigo-500" : "bg-slate-900 text-slate-400"
+                  )}
+                >
+                  {isAudioOnly ? <Headphones className="w-3.5 h-3.5 sm:mr-2" /> : <Video className="w-3.5 h-3.5 sm:mr-2" />}
+                  <span className="hidden xs:inline text-[10px] sm:text-xs">{isAudioOnly ? "Video" : "Audio"}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Switch to {isAudioOnly ? "Video" : "Audio"} Mode</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </header>
 
