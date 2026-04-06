@@ -12,7 +12,8 @@ import {
   Video,
   Zap,
   Loader2,
-  Music
+  Music,
+  ListMusic
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
@@ -23,9 +24,12 @@ import { cn } from '@/lib/utils';
 import { showSuccess } from '@/utils/toast';
 import { useVideoProgress } from '@/hooks/use-video-progress';
 import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lessons, isLoading } = useJobLessons();
   
@@ -34,6 +38,7 @@ const MasterPlayer = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoPlay, setAutoPlay] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
 
   useEffect(() => {
     const mode = isAudioOnly ? 'audio' : 'video';
@@ -64,7 +69,6 @@ const MasterPlayer = () => {
     });
   }, [lessons]);
 
-  // Load saved index once
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
       const indexToLoad = Math.floor(savedIndex);
@@ -75,7 +79,6 @@ const MasterPlayer = () => {
     }
   }, [isStateLoading, savedIndex, playlist, isInitialLoad]);
 
-  // Save index only when it actually changes
   const lastSavedIndex = useRef<number>(-1);
   useEffect(() => {
     if (!isInitialLoad && currentIndex !== lastSavedIndex.current) {
@@ -105,6 +108,7 @@ const MasterPlayer = () => {
   const selectVideo = (index: number) => {
     setCurrentIndex(index);
     setAutoPlay(true);
+    if (isMobile) setIsPlaylistOpen(false);
   };
 
   if (isLoading || (isStateLoading && isInitialLoad)) {
@@ -128,24 +132,50 @@ const MasterPlayer = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
-      <header className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-slate-800 text-slate-400">
-            <ArrowLeft className="w-6 h-6" />
+      <header className="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex items-center space-x-2 sm:x-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-slate-800 text-slate-400 h-9 w-9">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="text-lg font-bold text-indigo-400 flex items-center">
-              <Zap className="w-4 h-4 mr-2" />
-              {isAudioOnly ? "Virtual Audio Stitcher" : "Virtual Video Stitcher"}
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-lg font-bold text-indigo-400 flex items-center truncate">
+              <Zap className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
+              <span className="truncate">{isAudioOnly ? "Audio Stitcher" : "Video Stitcher"}</span>
             </h1>
-            <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-              {isAudioOnly ? "Independent Audio Progress" : "Independent Video Progress"}
+            <p className="hidden sm:block text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+              Independent Progress Tracking
             </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800" />
+        <div className="flex items-center space-x-2">
+          <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800 h-9" />
+          
+          {isMobile && (
+            <Sheet open={isPlaylistOpen} onOpenChange={setIsPlaylistOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="rounded-xl border-slate-700 bg-slate-900 text-indigo-400 h-9 w-9">
+                  <ListMusic className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[80vh] p-0 bg-slate-950 border-slate-800">
+                <SheetHeader className="p-4 border-b border-slate-800">
+                  <SheetTitle className="text-slate-200 flex items-center">
+                    <ListMusic className="w-5 h-5 mr-2 text-indigo-400" />
+                    Course Playlist
+                  </SheetTitle>
+                </SheetHeader>
+                <PlaylistCard 
+                  playlist={playlist}
+                  currentIndex={currentIndex}
+                  onSelectVideo={selectVideo}
+                  isAudioOnly={isAudioOnly}
+                  className="h-full rounded-none border-none bg-transparent"
+                />
+              </SheetContent>
+            </Sheet>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -154,37 +184,37 @@ const MasterPlayer = () => {
               setIsInitialLoad(true);
             }}
             className={cn(
-              "rounded-xl border-slate-700 transition-all",
+              "rounded-xl border-slate-700 transition-all h-9",
               isAudioOnly ? "bg-indigo-600 text-white border-indigo-500" : "bg-slate-900 text-slate-400"
             )}
           >
-            {isAudioOnly ? <Headphones className="w-4 h-4 mr-2" /> : <Video className="w-4 h-4 mr-2" />}
-            {isAudioOnly ? "Switch to Video" : "Switch to Audio"}
+            {isAudioOnly ? <Headphones className="w-4 h-4 sm:mr-2" /> : <Video className="w-4 h-4 sm:mr-2" />}
+            <span className="hidden sm:inline">{isAudioOnly ? "Switch to Video" : "Switch to Audio"}</span>
           </Button>
         </div>
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        <div className="flex-1 flex flex-col p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto">
-          <div className="w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative">
+        <div className="flex-1 flex flex-col p-3 sm:p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto">
+          <div className="w-full max-w-5xl aspect-video rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative">
             {isAudioOnly && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
+              <div className="absolute inset-0 z-10 flex flex-col items-center space-y-4 sm:space-y-6 text-center p-4 sm:p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
                 <div className="relative">
-                  <div className="w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
-                    <Music className="w-20 h-20 text-indigo-500" />
+                  <div className="w-24 h-24 sm:w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
+                    <Music className="w-12 h-12 sm:w-20 sm:h-20 text-indigo-500" />
                   </div>
-                  <div className="absolute -bottom-2 -right-2 bg-indigo-600 p-2 rounded-lg shadow-lg">
-                    <Headphones className="w-5 h-5 text-white" />
+                  <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-indigo-600 p-1.5 sm:p-2 rounded-lg shadow-lg">
+                    <Headphones className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                 </div>
                 <div className="max-w-md">
-                  <Badge variant="outline" className="mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5">{currentVideo?.category}</Badge>
-                  <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{currentVideo?.title}</h2>
-                  <p className="text-slate-400 text-sm font-medium">Virtual Audio Stitcher Mode</p>
+                  <Badge variant="outline" className="mb-2 sm:mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5 text-[10px] sm:text-xs">{currentVideo?.category}</Badge>
+                  <h2 className="text-xl sm:text-3xl font-black text-white mb-1 sm:mb-2 tracking-tight line-clamp-2">{currentVideo?.title}</h2>
+                  <p className="text-slate-400 text-[10px] sm:text-sm font-medium">Virtual Audio Stitcher Mode</p>
                 </div>
-                <div className="flex items-center space-x-1 h-8">
-                  {[...Array(12)].map((_, i) => (
-                    <div key={i} className="w-1 bg-indigo-500 rounded-full animate-bounce" style={{ height: `${Math.random() * 100}%`, animationDuration: `${0.5 + Math.random()}s`, animationDelay: `${Math.random()}s` }} />
+                <div className="flex items-center space-x-1 h-6 sm:h-8">
+                  {[...Array(isMobile ? 8 : 12)].map((_, i) => (
+                    <div key={i} className="w-1 bg-indigo-500 rounded-full animate-bounce" style={{ height: `${30 + Math.random() * 70}%`, animationDuration: `${0.5 + Math.random()}s`, animationDelay: `${Math.random()}s` }} />
                   ))}
                 </div>
               </div>
@@ -199,33 +229,34 @@ const MasterPlayer = () => {
             />
           </div>
 
-          <div className="mt-8 flex items-center space-x-6 pb-12">
-            <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400">
-              <SkipBack className="w-6 h-6" />
+          <div className="mt-6 sm:mt-8 flex items-center space-x-4 sm:space-x-6 pb-8 sm:pb-12 w-full max-w-md justify-center">
+            <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
+              <SkipBack className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
-            <div className="text-center px-8">
-              <p className="text-xs text-slate-500 font-bold uppercase mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
-              <h3 className="text-lg font-bold text-white truncate max-w-xs lg:max-w-md">{currentVideo?.title}</h3>
-              <p className="text-[10px] text-indigo-400 font-medium mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
+            <div className="text-center min-w-0 flex-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5 sm:mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
+              <h3 className="text-sm sm:text-lg font-bold text-white truncate">{currentVideo?.title}</h3>
+              <p className="text-[10px] text-indigo-400 font-medium mt-0.5 sm:mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400">
-              <SkipForward className="w-6 h-6" />
+            <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
+              <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
           </div>
         </div>
 
-        {/* Playlist Sidebar - Now using the contained PlaylistCard component */}
-        <aside className="w-full lg:w-96 p-4 lg:p-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
-          <PlaylistCard 
-            playlist={playlist}
-            currentIndex={currentIndex}
-            onSelectVideo={selectVideo}
-            isAudioOnly={isAudioOnly}
-            className="h-[400px] lg:h-full lg:rounded-none lg:border-none"
-          />
-        </aside>
+        {!isMobile && (
+          <aside className="w-full lg:w-96 p-4 lg:p-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
+            <PlaylistCard 
+              playlist={playlist}
+              currentIndex={currentIndex}
+              onSelectVideo={selectVideo}
+              isAudioOnly={isAudioOnly}
+              className="h-full lg:rounded-none lg:border-none"
+            />
+          </aside>
+        )}
       </main>
-      <footer className="p-4 border-t border-slate-800 bg-slate-900/50">
+      <footer className="p-3 sm:p-4 border-t border-slate-800 bg-slate-900/50">
         <MadeWithDyad />
       </footer>
     </div>
