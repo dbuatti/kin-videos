@@ -20,8 +20,10 @@ import {
   PlayCircle,
   Download,
   Map as MapIcon,
-  Bug,
-  RefreshCw
+  RefreshCw,
+  FolderDown,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,7 +34,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { supabase } from '@/integrations/supabase/client';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const Library = () => {
   const navigate = useNavigate();
@@ -42,7 +44,6 @@ const Library = () => {
   
   const [pasteValue, setPasteValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleSync = () => {
@@ -58,14 +59,13 @@ const Library = () => {
     showSuccess("Lessons refreshed.");
   };
 
-  const inventoryStats = useMemo(() => {
-    if (!lessons || !localFiles) return { total: 0, downloaded: 0, missing: 0, processedLessons: [] };
+  const processedData = useMemo(() => {
+    if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 } };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
-    const logs: string[] = [];
     
-    // Filter out "junk" lessons (no title or no video)
-    const validLessons = lessons.filter(l => l.title && l.video_url);
+    // STRICT FILTER: Only lessons with titles and video URLs
+    const validLessons = lessons.filter(l => l.title && l.title !== 'Untitled' && l.video_url);
 
     const grouped = validLessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
@@ -82,10 +82,9 @@ const Library = () => {
 
     let total = 0;
     let downloaded = 0;
-    const processedLessons: any[] = [];
 
-    sortedCategories.forEach((category, catIdx) => {
-      grouped[category].forEach((lesson, lesIdx) => {
+    const groups = sortedCategories.map((category, catIdx) => {
+      const categoryLessons = grouped[category].map((lesson, lesIdx) => {
         const expectedFilename = generateLessonFilename(
           catIdx + 1,
           lesIdx + 1,
@@ -108,51 +107,52 @@ const Library = () => {
         }
 
         const finalMatch = isDownloaded || fuzzyMatch;
-
         total++;
         if (finalMatch) downloaded++;
 
-        if (!finalMatch) {
-          logs.push(`MISSING: "${expectedFilename}"`);
-        }
-
-        processedLessons.push({
+        return {
           ...lesson,
           expectedFilename,
           isDownloaded: finalMatch,
-          category,
           displayIndex: `${catIdx + 1}.${lesIdx + 1}`
-        });
+        };
       });
+
+      return {
+        category,
+        categoryNumber: catIdx + 1,
+        lessons: categoryLessons,
+        downloadedCount: categoryLessons.filter(l => l.isDownloaded).length,
+        totalCount: categoryLessons.length
+      };
     });
 
-    setDebugLogs(logs);
-    return { 
-      total, 
-      downloaded, 
-      missing: total - downloaded,
-      processedLessons 
-    };
+    return { groups, stats: { total, downloaded } };
   }, [lessons, localFiles]);
 
-  const filteredLessons = useMemo(() => {
-    return inventoryStats.processedLessons.filter(l => 
-      l.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.category?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [inventoryStats.processedLessons, searchQuery]);
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return processedData.groups;
+    
+    return processedData.groups.map(group => ({
+      ...group,
+      lessons: group.lessons.filter(l => 
+        l.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })).filter(group => group.lessons.length > 0);
+  }, [processedData.groups, searchQuery]);
 
-  const handleDownloadMissing = async () => {
-    const missingVideos = inventoryStats.processedLessons.filter(l => !l.isDownloaded);
-    if (missingVideos.length === 0) {
-      showSuccess("All videos are already downloaded!");
+  const handleDownloadModule = async (group: any) => {
+    const toDownload = group.lessons.filter((l: any) => !l.isDownloaded);
+    if (toDownload.length === 0) {
+      showSuccess("All videos in this module are already downloaded!");
       return;
     }
 
-    showSuccess(`Starting download for ${missingVideos.length} missing videos...`);
+    showSuccess(`Starting sequential download for ${toDownload.length} videos in "${group.category}"...`);
     
-    for (let i = 0; i < missingVideos.length; i++) {
-      const lesson = missingVideos[i];
+    for (let i = 0; i < toDownload.length; i++) {
+      const lesson = toDownload[i];
       const link = document.createElement('a');
       link.href = lesson.video_url!;
       link.download = lesson.expectedFilename;
@@ -160,57 +160,14 @@ const Library = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      // Small delay to prevent browser from blocking multiple downloads
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
-
-  const courseMapText = useMemo(() => {
-    if (!lessons) return "";
-    const validLessons = lessons.filter(l => l.title);
-    
-    const grouped = validLessons.reduce((acc, lesson) => {
-      const category = lesson.category || 'Uncategorized';
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(lesson);
-      return acc;
-    }, {} as Record<string, any[]>);
-
-    const sortedCategories = Object.keys(grouped).sort((a, b) => {
-      const indexA = MODULE_ORDER.indexOf(a);
-      const indexB = MODULE_ORDER.indexOf(b);
-      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
-    });
-
-    let text = "";
-    sortedCategories.forEach((category, idx) => {
-      text += `## ${category}\n`;
-      grouped[category].forEach((lesson: any) => {
-        text += `${lesson.title}\n`;
-        text += `🔗 Page: ${lesson.lesson_url}\n`;
-        text += `🎥 Video: ${lesson.video_url || 'No Video ID found on page'}\n\n`;
-      });
-      if (idx < sortedCategories.length - 1) {
-        text += "---\n\n";
-      }
-    });
-    return text.trim();
-  }, [lessons]);
-
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    showSuccess(`${label} copied to clipboard!`);
-  };
-
-  const commands = [
-    {
-      label: "Combined List (Clean)",
-      cmd: `(find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH" -maxdepth 1 -not -path '*/.*'; echo ""; echo "--- VIDEOS SUBFOLDER ---"; find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos" -maxdepth 1 -not -path '*/.*') | pbcopy`
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      <header className="max-w-6xl mx-auto flex items-center justify-between mb-8 border-b pb-4 border-indigo-100">
+      <header className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b pb-4 border-indigo-100">
         <div className="flex items-center space-x-3">
           <Button 
             variant="ghost" 
@@ -231,31 +188,12 @@ const Library = () => {
             size="sm" 
             onClick={handleManualRefresh}
             disabled={isRefreshing}
-            className="text-indigo-600 border-indigo-200"
+            className="text-indigo-600 border-indigo-200 rounded-xl"
           >
             <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
             Refresh
           </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200">
-                <MapIcon className="w-4 h-4 mr-2" />
-                View Course Map
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Course Map (Raw Format)</DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="flex-1 bg-slate-950 p-4 rounded-xl font-mono text-[10px] text-slate-300">
-                <pre className="whitespace-pre-wrap">{courseMapText}</pre>
-              </ScrollArea>
-              <Button onClick={() => copyToClipboard(courseMapText, "Course Map")} className="mt-4 bg-indigo-600">
-                <Copy className="w-4 h-4 mr-2" /> Copy Map
-              </Button>
-            </DialogContent>
-          </Dialog>
-          <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+          <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 rounded-xl">
             <Link to="/gallery">
               <PlayCircle className="w-4 h-4 mr-2" />
               Gallery
@@ -266,163 +204,134 @@ const Library = () => {
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
+        {/* Sidebar Controls */}
         <div className="space-y-6">
           <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
-            <CardHeader className="bg-indigo-600 text-white">
-              <CardTitle className="text-lg flex items-center">
-                <Terminal className="w-5 h-5 mr-2" />
-                Sync Terminal
+            <CardHeader className="bg-indigo-600 text-white py-4">
+              <CardTitle className="text-md flex items-center">
+                <Terminal className="w-4 h-4 mr-2" />
+                Sync Local Files
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              {commands.map((c, i) => (
-                <div key={i} className="space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">{c.label}</span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6 text-indigo-400 hover:text-indigo-600"
-                      onClick={() => copyToClipboard(c.cmd, c.label)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="bg-slate-900 p-2 rounded border border-slate-800 text-[10px] font-mono text-slate-400 truncate">
-                    {c.cmd}
-                  </div>
-                </div>
-              ))}
+            <CardContent className="p-4 space-y-4">
+              <p className="text-xs text-gray-500">Paste your terminal file list here to update your download progress.</p>
               <Textarea 
-                placeholder="Paste Terminal output here..."
-                className="min-h-[100px] font-mono text-[10px] border-indigo-100 mt-4"
+                placeholder="Paste 'find' output here..."
+                className="min-h-[120px] font-mono text-[10px] border-indigo-100 rounded-xl"
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
               />
               <Button 
                 onClick={handleSync}
                 disabled={isSyncing || !pasteValue.trim()}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 rounded-xl mt-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 rounded-xl"
               >
-                {isSyncing ? "Syncing..." : "Update Inventory"}
+                {isSyncing ? "Syncing..." : "Update Progress"}
               </Button>
             </CardContent>
           </Card>
 
           <Card className="border-indigo-100 shadow-lg rounded-2xl">
-            <CardHeader>
-              <CardTitle className="text-lg">Download Progress</CardTitle>
+            <CardHeader className="py-4">
+              <CardTitle className="text-md">Overall Progress</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-green-50 rounded-xl border border-green-100 text-center">
-                  <p className="text-xs text-green-600 font-bold uppercase tracking-wider">Downloaded</p>
-                  <p className="text-3xl font-black text-green-700">{inventoryStats.downloaded}</p>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-3xl font-black text-indigo-600">{processedData.stats.downloaded}</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase">Downloaded</p>
                 </div>
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 text-center">
-                  <p className="text-xs text-amber-600 font-bold uppercase tracking-wider">Missing</p>
-                  <p className="text-3xl font-black text-amber-700">{inventoryStats.missing}</p>
+                <div className="text-right">
+                  <p className="text-3xl font-black text-amber-500">{processedData.stats.total - processedData.stats.downloaded}</p>
+                  <p className="text-[10px] text-gray-400 font-bold uppercase">Remaining</p>
                 </div>
               </div>
-              <Button 
-                onClick={handleDownloadMissing}
-                disabled={inventoryStats.missing === 0}
-                className="w-full bg-amber-600 hover:bg-amber-700 rounded-xl"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download All Missing
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-red-100 shadow-lg rounded-2xl overflow-hidden bg-red-50/30">
-            <CardHeader className="bg-red-600 text-white py-3">
-              <CardTitle className="text-sm flex items-center">
-                <Bug className="w-4 h-4 mr-2" />
-                Sync Debugger
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[200px] w-full p-3">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Unmatched Videos ({debugLogs.length})</p>
-                  {debugLogs.length > 0 ? (
-                    debugLogs.map((log, i) => (
-                      <div key={i} className="text-[9px] font-mono text-red-800 border-b border-red-100 pb-1">
-                        {log}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-[10px] text-gray-400 italic">No unmatched videos found.</p>
-                  )}
-                </div>
-              </ScrollArea>
+              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-indigo-600 h-full transition-all duration-500" 
+                  style={{ width: `${(processedData.stats.downloaded / processedData.stats.total) * 100}%` }}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Main Content: Grouped Modules */}
         <div className="lg:col-span-2 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input 
               placeholder="Search lessons or modules..." 
-              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500"
+              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
-            <ScrollArea className="h-[600px]">
-              <div className="divide-y divide-indigo-50">
-                {filteredLessons.length > 0 ? (
-                  filteredLessons.map((lesson) => (
-                    <div key={lesson.id} className="p-4 hover:bg-indigo-50/30 transition-colors flex items-center justify-between group">
-                      <div className="flex items-start space-x-4 min-w-0">
-                        <div className="mt-1">
-                          {lesson.isDownloaded ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <Circle className="w-5 h-5 text-gray-300" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-tighter">{lesson.displayIndex}</span>
-                            <h4 className={cn(
-                              "font-bold text-sm truncate",
-                              lesson.isDownloaded ? "text-gray-700" : "text-indigo-900"
-                            )}>
-                              {lesson.title}
-                            </h4>
-                          </div>
-                          <p className="text-xs text-gray-500 truncate mt-0.5">{lesson.category}</p>
-                        </div>
+          <div className="space-y-4">
+            {filteredGroups.length > 0 ? (
+              filteredGroups.map((group) => (
+                <Card key={group.category} className="border-indigo-100 shadow-sm rounded-2xl overflow-hidden bg-white">
+                  <div className="p-4 flex items-center justify-between bg-indigo-50/50 border-b border-indigo-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-indigo-600 text-white w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm">
+                        {group.categoryNumber}
                       </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        {!lesson.isDownloaded && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 shrink-0">
-                            Missing
-                          </Badge>
-                        )}
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-400 hover:text-indigo-600">
+                      <div>
+                        <h3 className="font-bold text-indigo-900 text-sm">{group.category}</h3>
+                        <p className="text-[10px] text-indigo-400 font-medium">
+                          {group.downloadedCount} / {group.totalCount} Videos Downloaded
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => handleDownloadModule(group)}
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-lg border-indigo-200 text-indigo-600 hover:bg-indigo-100 h-8 text-xs"
+                      disabled={group.downloadedCount === group.totalCount}
+                    >
+                      <FolderDown className="w-3.5 h-3.5 mr-1.5" />
+                      Download Module
+                    </Button>
+                  </div>
+                  
+                  <div className="divide-y divide-indigo-50">
+                    {group.lessons.map((lesson: any) => (
+                      <div key={lesson.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-center space-x-3 min-w-0">
+                          {lesson.isDownloaded ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-300 shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className={cn(
+                              "text-xs font-medium truncate",
+                              lesson.isDownloaded ? "text-gray-500" : "text-gray-900"
+                            )}>
+                              <span className="text-indigo-400 mr-2">{lesson.displayIndex}</span>
+                              {lesson.title}
+                            </p>
+                          </div>
+                        </div>
+                        <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-indigo-300 hover:text-indigo-600">
                           <a href={lesson.video_url} download={lesson.expectedFilename} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-5 w-5" />
+                            <Download className="h-4 h-4" />
                           </a>
                         </Button>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-20 text-center">
-                    <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No valid video lessons found. Try clicking "Sync Course Data" on the home page.</p>
+                    ))}
                   </div>
-                )}
+                </Card>
+              ))
+            ) : (
+              <div className="p-20 text-center bg-white rounded-3xl border border-dashed border-indigo-200">
+                <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No matching lessons found.</p>
               </div>
-            </ScrollArea>
-          </Card>
+            )}
+          </div>
         </div>
       </main>
 
