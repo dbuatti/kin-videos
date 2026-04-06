@@ -36,38 +36,37 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
 
-  // Apply global playback speed whenever it changes or video loads
+  // Apply global playback speed
   useEffect(() => {
     if (videoRef.current && hasStarted) {
       videoRef.current.playbackRate = speed;
     }
-  }, [speed, hasStarted, videoUrl]);
-
-  useEffect(() => {
-    setError(null);
-  }, [videoUrl]);
+  }, [speed, hasStarted]);
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
+      console.log(`[VideoPlayer] Metadata loaded for ${effectiveKey}. Duration: ${videoRef.current.duration}s`);
       videoRef.current.playbackRate = speed;
       
-      // Save duration immediately
-      saveProgress(videoRef.current.currentTime, videoRef.current.duration);
-      
-      // Resume from saved progress if it's significant
+      // Resume from saved progress
       if (progress && progress > 5) {
         if (progress < videoRef.current.duration - 5) {
+          console.log(`[VideoPlayer] Resuming ${effectiveKey} at ${progress}s`);
           videoRef.current.currentTime = progress;
+          lastSavedTime.current = progress;
         }
       }
+      
+      saveProgress(videoRef.current.currentTime, videoRef.current.duration);
     }
   };
 
   const handleTimeUpdate = () => {
     if (videoRef.current && isPlaying) {
       const currentTime = videoRef.current.currentTime;
-      // Save every 5 seconds to avoid database spam
-      if (Math.abs(currentTime - lastSavedTime.current) > 5) {
+      // Save every 10 seconds to be efficient but reliable
+      if (Math.abs(currentTime - lastSavedTime.current) > 10) {
+        console.log(`[VideoPlayer] Saving progress for ${effectiveKey}: ${currentTime}s`);
         saveProgress(currentTime, videoRef.current.duration);
         lastSavedTime.current = currentTime;
       }
@@ -75,11 +74,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handlePlay = () => {
+    console.log(`[VideoPlayer] Play started for ${effectiveKey}`);
     setIsPlaying(true);
     setError(null);
   };
 
   const handlePause = () => {
+    console.log(`[VideoPlayer] Play paused for ${effectiveKey}`);
     setIsPlaying(false);
     if (videoRef.current) {
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
@@ -88,15 +89,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleVideoError = (e: any) => {
     const videoElement = e.target as HTMLVideoElement;
-    const errorCode = videoElement.error?.code;
-    console.error(`[VideoPlayer] Error for ${effectiveKey}: Code ${errorCode}`);
-    
-    let userMessage = "Failed to load video.";
-    if (errorCode === 2) userMessage = "Network error while loading video.";
-    if (errorCode === 3) userMessage = "Video decoding failed.";
-    if (errorCode === 4) userMessage = "Video format not supported or URL invalid.";
-    
-    setError(userMessage);
+    console.error(`[VideoPlayer] Error for ${effectiveKey}:`, videoElement.error);
+    setError("Failed to load video. Please check your connection.");
   };
 
   const startPlayback = (e?: React.MouseEvent) => {
@@ -116,7 +110,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       saveProgress(0, videoRef.current.duration);
       videoRef.current.play();
     } else {
-      // If video isn't mounted yet, we just start it and it will handle the 0 start
       setHasStarted(true);
       setIsPlaying(true);
     }
@@ -135,16 +128,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <h3 className="text-white font-bold mb-2">Playback Error</h3>
           <p className="text-slate-400 text-sm mb-4">{error}</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-4 border-slate-700 text-slate-300"
-            onClick={() => window.location.reload()}
-          >
-            Reload Page
-          </Button>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Reload</Button>
         </div>
       ) : hasStarted ? (
         <video
@@ -169,12 +154,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           {posterUrl && (
             <img 
               src={posterUrl} 
-              alt="Video thumbnail" 
+              alt="Thumbnail" 
               className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
             />
           )}
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
-          
           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110 z-30" />
           
           {progress > 5 && (

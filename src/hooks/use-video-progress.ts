@@ -40,7 +40,7 @@ export const useVideoProgress = (progressKey: string) => {
       } as VideoProgressData;
     },
     enabled: !!user && !!progressKey,
-    staleTime: 30000, // Consider data fresh for 30 seconds to reduce refetches
+    staleTime: 30000,
   });
 
   const saveMutation = useMutation({
@@ -67,16 +67,18 @@ export const useVideoProgress = (progressKey: string) => {
         throw error;
       }
     },
-    onSuccess: () => {
-      // Update the cache directly instead of invalidating to avoid re-triggering effects
+    onSuccess: (_, variables) => {
+      // Correctly update the cache with the NEW values from the mutation
       queryClient.setQueryData(['videoProgress', user?.id, progressKey], (old: any) => {
-        if (!old) return old;
-        return { ...old, playback_time: progress?.playback_time };
+        return { 
+          ...old, 
+          playback_time: variables.currentTime,
+          duration: variables.duration || old?.duration || 0
+        };
       });
     }
   });
 
-  // Memoize the save function so it doesn't trigger useEffects in parent components
   const saveProgress = useCallback((currentTime: number, duration?: number) => {
     saveMutation.mutate({ currentTime, duration });
   }, [saveMutation.mutate]);
