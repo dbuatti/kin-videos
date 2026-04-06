@@ -6,7 +6,7 @@ import { useAuth } from '@/integrations/supabase/auth-context';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { useLocalInventory } from '@/hooks/use-local-inventory';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
@@ -19,13 +19,13 @@ import {
   PlayCircle,
   Download,
   RefreshCw,
-  FolderDown,
-  Command,
   CloudDownload,
-  X
+  X,
+  Command
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { showSuccess, showError } from '@/utils/toast';
@@ -61,23 +61,18 @@ const Library = () => {
     showSuccess("Lessons refreshed.");
   };
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    showSuccess(`${label} copied to clipboard!`);
-  };
-
   const copyTerminalCommand = (recursive: boolean) => {
     const cmd = recursive 
       ? `find "${VIDEO_PATH}" -type f | pbcopy`
       : `find "${VIDEO_PATH}" -maxdepth 1 -type f | pbcopy`;
-    copyToClipboard(cmd, recursive ? "Subfolders Command" : "Folder Command");
+    navigator.clipboard.writeText(cmd);
+    showSuccess("Command copied to clipboard!");
   };
 
   const processedData = useMemo(() => {
     if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 }, remainingLessons: [] };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
-    
     const validLessons = lessons.filter(l => l.title && l.title !== 'Untitled' && l.video_url);
 
     const grouped = validLessons.reduce((acc, lesson) => {
@@ -99,53 +94,17 @@ const Library = () => {
 
     const groups = sortedCategories.map((category, catIdx) => {
       const categoryLessons = grouped[category].map((lesson, lesIdx) => {
-        const expectedFilename = generateLessonFilename(
-          catIdx + 1,
-          lesIdx + 1,
-          category,
-          lesson.title
-        );
-
+        const expectedFilename = generateLessonFilename(catIdx + 1, lesIdx + 1, category, lesson.title);
         const isDownloaded = localFileNames.has(expectedFilename.toLowerCase());
         
-        let fuzzyMatch = false;
-        if (!isDownloaded) {
-          const cleanTitle = lesson.title.toLowerCase();
-          for (const localName of localFileNames) {
-            if (localName.includes(cleanTitle)) {
-              fuzzyMatch = true;
-              break;
-            }
-          }
-        }
-
-        const finalMatch = isDownloaded || fuzzyMatch;
         total++;
-        if (finalMatch) {
-          downloaded++;
-        } else {
-          remainingLessons.push({
-            ...lesson,
-            expectedFilename,
-            displayIndex: `${catIdx + 1}.${lesIdx + 1}`
-          });
-        }
+        if (isDownloaded) downloaded++;
+        else remainingLessons.push({ ...lesson, expectedFilename, displayIndex: `${catIdx + 1}.${lesIdx + 1}` });
 
-        return {
-          ...lesson,
-          expectedFilename,
-          isDownloaded: finalMatch,
-          displayIndex: `${catIdx + 1}.${lesIdx + 1}`
-        };
+        return { ...lesson, expectedFilename, isDownloaded, displayIndex: `${catIdx + 1}.${lesIdx + 1}` };
       });
 
-      return {
-        category,
-        categoryNumber: catIdx + 1,
-        lessons: categoryLessons,
-        downloadedCount: categoryLessons.filter(l => l.isDownloaded).length,
-        totalCount: categoryLessons.length
-      };
+      return { category, categoryNumber: catIdx + 1, lessons: categoryLessons, downloadedCount: categoryLessons.filter(l => l.isDownloaded).length, totalCount: categoryLessons.length };
     });
 
     return { groups, stats: { total, downloaded }, remainingLessons };
@@ -153,297 +112,146 @@ const Library = () => {
 
   const filteredGroups = useMemo(() => {
     if (!searchQuery) return processedData.groups;
-    
     return processedData.groups.map(group => ({
       ...group,
-      lessons: group.lessons.filter(l => 
-        l.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        group.category.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      lessons: group.lessons.filter(l => l.title?.toLowerCase().includes(searchQuery.toLowerCase()) || group.category.toLowerCase().includes(searchQuery.toLowerCase()))
     })).filter(group => group.lessons.length > 0);
   }, [processedData.groups, searchQuery]);
 
-  const handleDownloadModule = async (group: any) => {
-    const toDownload = group.lessons.filter((l: any) => !l.isDownloaded);
-    if (toDownload.length === 0) {
-      showSuccess("All videos in this module are already downloaded!");
-      return;
-    }
-
-    showSuccess(`Starting direct download for ${toDownload.length} videos in "${group.category}"...`);
-    
-    for (let i = 0; i < toDownload.length; i++) {
-      const lesson = toDownload[i];
-      await downloadFile(lesson.video_url!, lesson.expectedFilename);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  };
-
-  const handleDownloadRemaining = async () => {
-    const remaining = processedData.remainingLessons;
-    if (remaining.length === 0) {
-      showSuccess("No remaining videos to download!");
-      return;
-    }
-
-    setIsDownloadingAll(true);
-    showSuccess(`Starting direct bulk download for ${remaining.length} remaining videos...`);
-    
-    try {
-      for (let i = 0; i < remaining.length; i++) {
-        const lesson = remaining[i];
-        await downloadFile(lesson.video_url!, lesson.expectedFilename);
-        await new Promise(resolve => setTimeout(resolve, 1200));
-      }
-      showSuccess("All remaining downloads triggered!");
-    } catch (err) {
-      showError("Bulk download interrupted.");
-    } finally {
-      setIsDownloadingAll(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-8">
-      <header className="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8 gap-4 border-b pb-4 border-indigo-100">
-        <div className="flex items-center space-x-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/')}
-            className="rounded-full hover:bg-indigo-50 text-indigo-600 h-9 w-9"
-          >
+    <div className="min-h-screen bg-background p-6 sm:p-12 max-w-6xl mx-auto w-full">
+      <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-white/5 text-slate-400">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
-            <LibraryIcon className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-indigo-600" />
-            Inventory
-          </h1>
+          <div>
+            <h1 className="text-3xl font-black text-white tracking-tight flex items-center">
+              <LibraryIcon className="w-6 h-6 mr-3 text-primary" />
+              Inventory
+            </h1>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Local File Sync</p>
+          </div>
         </div>
-        <div className="flex items-center space-x-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleManualRefresh}
-                  disabled={isRefreshing}
-                  className="text-indigo-600 border-indigo-200 rounded-xl h-8 sm:h-9 text-[10px] sm:text-xs shrink-0"
-                >
-                  <RefreshCw className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2", isRefreshing && "animate-spin")} />
-                  Refresh
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Refresh Lesson Data</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <Button 
-            onClick={handleDownloadRemaining}
-            disabled={isDownloadingAll || processedData.remainingLessons.length === 0}
-            variant="outline" 
-            size="sm" 
-            className="text-amber-600 border-amber-200 hover:bg-amber-50 rounded-xl h-8 sm:h-9 text-[10px] sm:text-xs shrink-0"
-          >
-            <CloudDownload className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2", isDownloadingAll && "animate-bounce")} />
-            {isDownloadingAll ? "..." : `Remaining (${processedData.remainingLessons.length})`}
+        <div className="flex items-center space-x-3">
+          <Button variant="outline" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="border-white/5 bg-white/5 text-slate-400 rounded-xl h-10">
+            <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
+            Refresh
           </Button>
-
-          <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-8 sm:h-9 text-[10px] sm:text-xs shrink-0">
+          <Button asChild className="bg-primary hover:bg-primary/90 rounded-xl h-10 font-bold">
             <Link to="/gallery">
-              <PlayCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+              <PlayCircle className="w-4 h-4 mr-2" />
               Gallery
             </Link>
           </Button>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        
-        <div className="space-y-6 order-2 lg:order-1">
-          <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
-            <CardHeader className="bg-indigo-600 text-white py-3 sm:py-4">
-              <CardTitle className="text-sm sm:text-md flex items-center">
-                <Terminal className="w-4 h-4 mr-2" />
-                Sync Local Files
+      <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="space-y-6">
+          <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+            <CardHeader className="border-b border-white/5">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center">
+                <Terminal className="w-4 h-4 mr-2" /> Sync Local
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 space-y-4">
+            <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-1 gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="justify-start text-[10px] sm:text-xs font-mono border-indigo-100 text-indigo-600 hover:bg-indigo-50 h-8 sm:h-9"
-                  onClick={() => copyTerminalCommand(false)}
-                >
-                  <Command className="w-3 h-3 mr-2" />
-                  Copy Folder Cmd
+                <Button variant="ghost" size="sm" className="justify-start text-[10px] font-mono text-slate-400 hover:bg-white/5" onClick={() => copyTerminalCommand(false)}>
+                  <Command className="w-3 h-3 mr-2" /> Copy Folder Cmd
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="justify-start text-[10px] sm:text-xs font-mono border-indigo-100 text-indigo-600 hover:bg-indigo-50 h-8 sm:h-9"
-                  onClick={() => copyTerminalCommand(true)}
-                >
-                  <Command className="w-3 h-3 mr-2" />
-                  Copy Subfolders Cmd
+                <Button variant="ghost" size="sm" className="justify-start text-[10px] font-mono text-slate-400 hover:bg-white/5" onClick={() => copyTerminalCommand(true)}>
+                  <Command className="w-3 h-3 mr-2" /> Copy Subfolders Cmd
                 </Button>
               </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center text-[9px] sm:text-xs uppercase">
-                  <span className="bg-white px-2 text-gray-400">Then Paste Below</span>
-                </div>
-              </div>
-
               <Textarea 
                 placeholder="Paste terminal output here..."
-                className="min-h-[100px] sm:min-h-[120px] font-mono text-[9px] sm:text-[10px] border-indigo-100 rounded-xl"
+                className="min-h-[150px] font-mono text-[10px] bg-white/5 border-white/5 rounded-xl focus-visible:ring-primary"
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
               />
-              <Button 
-                onClick={handleSync}
-                disabled={isSyncing || !pasteValue.trim()}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 rounded-xl h-10 sm:h-11 text-sm font-bold"
-              >
+              <Button onClick={handleSync} disabled={isSyncing || !pasteValue.trim()} className="w-full bg-primary hover:bg-primary/90 rounded-xl h-12 font-bold">
                 {isSyncing ? "Syncing..." : "Update Progress"}
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="border-indigo-100 shadow-lg rounded-2xl">
-            <CardHeader className="py-3 sm:py-4">
-              <CardTitle className="text-sm sm:text-md">Overall Progress</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem]">
+            <CardContent className="p-8 space-y-6">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-2xl sm:text-3xl font-black text-indigo-600">{processedData.stats.downloaded}</p>
-                  <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase">Downloaded</p>
+                  <p className="text-4xl font-black text-primary">{processedData.stats.downloaded}</p>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Downloaded</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl sm:text-3xl font-black text-amber-500">{processedData.stats.total - processedData.stats.downloaded}</p>
-                  <p className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase">Remaining</p>
+                  <p className="text-4xl font-black text-slate-700">{processedData.stats.total}</p>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total</p>
                 </div>
               </div>
-              <div className="w-full bg-gray-100 h-1.5 sm:h-2 rounded-full overflow-hidden">
-                <div 
-                  className="bg-indigo-600 h-full transition-all duration-500" 
-                  style={{ width: `${(processedData.stats.downloaded / processedData.stats.total) * 100}%` }}
-                />
-              </div>
+              <Progress value={(processedData.stats.downloaded / processedData.stats.total) * 100} className="h-2 bg-white/5" />
             </CardContent>
           </Card>
         </div>
 
-        <div className="lg:col-span-2 space-y-4 order-1 lg:order-2">
+        <div className="lg:col-span-2 space-y-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input 
-              placeholder="Search lessons or modules..." 
-              className="pl-10 pr-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 sm:h-11 text-sm"
+              placeholder="Search lessons..." 
+              className="pl-11 pr-11 rounded-2xl border-white/5 bg-white/5 h-12 text-sm focus-visible:ring-primary"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
           </div>
 
-          <div className="space-y-4">
-            {filteredGroups.length > 0 ? (
-              filteredGroups.map((group) => (
-                <Card key={group.category} className="border-indigo-100 shadow-sm rounded-2xl overflow-hidden bg-white">
-                  <div className="p-3 sm:p-4 flex items-center justify-between bg-indigo-50/50 border-b border-indigo-100">
-                    <div className="flex items-center space-x-3 min-w-0">
-                      <div className="bg-indigo-600 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
-                        {group.categoryNumber}
+          <div className="space-y-6">
+            {filteredGroups.map((group) => (
+              <Card key={group.category} className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                <div className="p-6 flex items-center justify-between border-b border-white/5">
+                  <div className="flex items-center space-x-4">
+                    <div className="bg-primary/20 text-primary w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm border border-primary/20">
+                      {group.categoryNumber}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-sm">{group.category}</h3>
+                      <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
+                        {group.downloadedCount} / {group.totalCount} Ready
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {group.lessons.map((lesson: any) => (
+                    <div key={lesson.id} className="p-4 flex flex-col space-y-3 hover:bg-white/5 transition-colors group">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 min-w-0">
+                          {lesson.isDownloaded ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-slate-700 shrink-0" />
+                          )}
+                          <p className={cn("text-xs font-bold truncate", lesson.isDownloaded ? "text-slate-400" : "text-white")}>
+                            <span className="text-primary/50 mr-2">{lesson.displayIndex}</span>
+                            {lesson.title}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-white" onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}>
+                          <Download className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-indigo-900 text-xs sm:text-sm truncate">{group.category}</h3>
-                        <p className="text-[9px] sm:text-[10px] text-indigo-400 font-medium">
-                          {group.downloadedCount} / {group.totalCount} Ready
-                        </p>
+                      <div className="pl-7 pr-8">
+                        <VideoProgressIndicator videoId={lesson.id} />
                       </div>
                     </div>
-                    <Button 
-                      onClick={() => handleDownloadModule(group)}
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-lg border-indigo-200 text-indigo-600 hover:bg-indigo-100 h-7 sm:h-8 text-[10px] sm:text-xs shrink-0 ml-2"
-                      disabled={group.downloadedCount === group.totalCount}
-                    >
-                      <FolderDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 sm:mr-1.5" />
-                      <span className="hidden xs:inline">Download</span>
-                    </Button>
-                  </div>
-                  
-                  <div className="divide-y divide-indigo-50">
-                    {group.lessons.map((lesson: any) => (
-                      <div key={lesson.id} className="p-2.5 sm:p-3 flex flex-col space-y-2 hover:bg-gray-50 transition-colors group">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                            {lesson.isDownloaded ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500 shrink-0" />
-                            ) : (
-                              <Circle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-300 shrink-0" />
-                            )}
-                            <div className="min-w-0">
-                              <p className={cn(
-                                "text-[11px] sm:text-xs font-medium truncate",
-                                lesson.isDownloaded ? "text-gray-500" : "text-gray-900"
-                              )}>
-                                <span className="text-indigo-400 mr-1.5 sm:mr-2">{lesson.displayIndex}</span>
-                                {lesson.title}
-                              </p>
-                            </div>
-                          </div>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600 shrink-0"
-                                  onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}
-                                >
-                                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Download Video</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                        
-                        <div className="pl-6 sm:pl-7 pr-8 sm:pr-10">
-                          <VideoProgressIndicator videoId={lesson.id} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <div className="p-12 sm:p-20 text-center bg-white rounded-3xl border border-dashed border-indigo-200">
-                <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-gray-300 mx-auto mb-4" />
-                <p className="text-sm text-gray-500">No matching lessons found.</p>
-              </div>
-            )}
+                  ))}
+                </div>
+              </Card>
+            ))}
           </div>
         </div>
       </main>
 
-      <footer className="mt-12">
+      <footer className="mt-24 opacity-30">
         <MadeWithDyad />
       </footer>
     </div>

@@ -13,7 +13,7 @@
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 199 89% 48%;
+    --primary: 224.3 76.3% 48%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 3.7% 15.9%;
@@ -30,18 +30,9 @@
 
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 199 89% 48%;
+    --ring: 224.3 76.3% 48%;
 
     --radius: 1.25rem;
-
-    --sidebar-background: 240 10% 3.9%;
-    --sidebar-foreground: 240 5% 64.9%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 199 89% 48%;
   }
 }
 
@@ -53,8 +44,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     background-image: 
-      radial-gradient(at 0% 0%, hsla(263, 70%, 50%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(199, 89%, 48%, 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(263, 70%, 50%, 0.1) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(224, 76%, 48%, 0.1) 0px, transparent 50%),
       radial-gradient(at 50% 100%, hsla(240, 10%, 10%, 0.2) 0px, transparent 50%);
     background-attachment: fixed;
   }
@@ -64,26 +55,13 @@
   @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl;
 }
 
-.neon-glow {
-  box-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
-}
-
 .animate-in-fade {
   animation: fadeIn 0.5s ease-out forwards;
-}
-
-.animate-in-slide-up {
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Custom Scrollbar */
