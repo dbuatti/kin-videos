@@ -31,6 +31,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasStarted, setHasStarted] = useState(autoPlay);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   
   const effectiveKey = progressKey || videoId;
   const { progress, isLoading: isProgressLoading, saveProgress } = useVideoProgress(effectiveKey);
@@ -75,6 +76,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   useEffect(() => {
     setError(null);
+    setIsReady(false);
     if (autoPlay && videoRef.current) {
       videoRef.current.play().catch(() => {
         setIsPlaying(false);
@@ -86,19 +88,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
-      saveProgress(videoRef.current.currentTime, videoRef.current.duration);
       
-      if (progress && progress > 5 && !autoPlay) {
+      // Resume logic: Apply saved progress if it exists and is significant
+      if (progress && progress > 5) {
+        // Only resume if we aren't near the very end
         if (progress < videoRef.current.duration - 5) {
           videoRef.current.currentTime = progress;
+          lastSavedTime.current = progress;
         }
       }
+      
+      setIsReady(true);
     }
   };
 
   const handleTimeUpdate = () => {
-    if (videoRef.current && isPlaying) {
+    if (videoRef.current && isPlaying && isReady) {
       const currentTime = videoRef.current.currentTime;
+      // Only save if we've moved at least 5 seconds to avoid constant DB writes
       if (Math.abs(currentTime - lastSavedTime.current) > 5) {
         saveProgress(currentTime, videoRef.current.duration);
         lastSavedTime.current = currentTime;
@@ -114,7 +121,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handlePause = () => {
     setIsPlaying(false);
-    if (videoRef.current) {
+    if (videoRef.current && isReady) {
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
     }
   };
@@ -140,6 +147,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     e.stopPropagation();
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
+      lastSavedTime.current = 0;
       saveProgress(0, videoRef.current.duration);
       videoRef.current.play();
     }
