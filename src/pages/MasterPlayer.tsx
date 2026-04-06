@@ -29,83 +29,67 @@ import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 const MasterPlayer = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: lessons, isLoading, error: lessonsError } = useJobLessons();
+  const { data: lessons, isLoading } = useJobLessons();
   
-  // Initialize mode from URL or default to video
   const initialMode = searchParams.get('mode') === 'audio';
   const [isAudioOnly, setIsAudioOnly] = useState(initialMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoPlay, setAutoPlay] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Sync state with URL
   useEffect(() => {
     const mode = isAudioOnly ? 'audio' : 'video';
     if (searchParams.get('mode') !== mode) {
       setSearchParams({ mode });
     }
-  }, [isAudioOnly, setSearchParams, searchParams]);
+  }, [isAudioOnly, setSearchParams]);
 
-  // Persistence for the "Master Index" (which lesson the user is on)
   const masterStateKey = isAudioOnly ? 'master-player-audio-index' : 'master-player-video-index';
   const { progress: savedIndex, saveProgress: saveMasterIndex, isLoading: isStateLoading } = useVideoProgress(masterStateKey);
 
   const playlist = useMemo(() => {
     if (!lessons) return [];
-    
     const videoOnly = lessons.filter(l => l.video_url);
     
-    // Sort strictly by the verified lesson order provided in the curriculum
-    const sorted = videoOnly.sort((a, b) => {
+    return videoOnly.sort((a, b) => {
       const indexA = VERIFIED_LESSON_ORDER.indexOf(a.lesson_url);
       const indexB = VERIFIED_LESSON_ORDER.indexOf(b.lesson_url);
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       
-      // If both are in the verified list, sort by their position there
-      if (indexA !== -1 && indexB !== -1) {
-        return indexA - indexB;
-      }
-      
-      // Fallback to category order if URL not found in verified list
       const catA = a.category || 'Uncategorized';
       const catB = b.category || 'Uncategorized';
       const catIndexA = MODULE_ORDER.indexOf(catA);
       const catIndexB = MODULE_ORDER.indexOf(catB);
-      
-      if (catIndexA !== catIndexB) {
-        return (catIndexA === -1 ? Infinity : catIndexA) - (catIndexB === -1 ? Infinity : catIndexB);
-      }
+      if (catIndexA !== catIndexB) return (catIndexA === -1 ? Infinity : catIndexA) - (catIndexB === -1 ? Infinity : catIndexB);
       
       return (a.title || '').localeCompare(b.title || '');
     });
-
-    return sorted;
   }, [lessons]);
 
-  // Load saved index on initial load
+  // Load saved index once
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
       const indexToLoad = Math.floor(savedIndex);
       if (indexToLoad >= 0 && indexToLoad < playlist.length) {
-        console.log(`[MasterPlayer] Resuming course at lesson index: ${indexToLoad} (${playlist[indexToLoad].title})`);
         setCurrentIndex(indexToLoad);
       }
       setIsInitialLoad(false);
     }
   }, [isStateLoading, savedIndex, playlist, isInitialLoad]);
 
-  // Save index whenever it changes
+  // Save index only when it actually changes
+  const lastSavedIndex = useRef<number>(-1);
   useEffect(() => {
-    if (!isInitialLoad && !isStateLoading) {
-      console.log(`[MasterPlayer] Saving current lesson index: ${currentIndex}`);
+    if (!isInitialLoad && currentIndex !== lastSavedIndex.current) {
       saveMasterIndex(currentIndex);
+      lastSavedIndex.current = currentIndex;
     }
-  }, [currentIndex, isInitialLoad, isStateLoading, saveMasterIndex]);
+  }, [currentIndex, isInitialLoad, saveMasterIndex]);
 
   const currentVideo = playlist[currentIndex];
 
   const handleNext = () => {
     if (currentIndex < playlist.length - 1) {
-      console.log(`[MasterPlayer] Moving to next lesson: ${currentIndex + 1}`);
       setCurrentIndex(prev => prev + 1);
       setAutoPlay(true);
     } else {
@@ -115,14 +99,12 @@ const MasterPlayer = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      console.log(`[MasterPlayer] Moving to previous lesson: ${currentIndex - 1}`);
       setCurrentIndex(prev => prev - 1);
       setAutoPlay(true);
     }
   };
 
   const selectVideo = (index: number) => {
-    console.log(`[MasterPlayer] Manually selected lesson index: ${index}`);
     setCurrentIndex(index);
     setAutoPlay(true);
   };
@@ -140,27 +122,17 @@ const MasterPlayer = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-slate-400 p-8">
         <Video className="w-16 h-16 mb-4 opacity-20" />
         <h2 className="text-xl font-bold text-white mb-2">No Videos Found</h2>
-        <p className="text-center max-w-md mb-6">
-          We couldn't find any lessons with video content. Please make sure your course data is synced.
-        </p>
-        <Button onClick={() => navigate('/')} variant="outline" className="border-slate-700">
-          Return to Dashboard
-        </Button>
+        <p className="text-center max-w-md mb-6">Make sure your course data is synced.</p>
+        <Button onClick={() => navigate('/')} variant="outline" className="border-slate-700">Return to Dashboard</Button>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 flex flex-col">
-      {/* Header */}
       <header className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/')}
-            className="rounded-full hover:bg-slate-800 text-slate-400"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-slate-800 text-slate-400">
             <ArrowLeft className="w-6 h-6" />
           </Button>
           <div>
@@ -180,9 +152,8 @@ const MasterPlayer = () => {
             variant="outline"
             size="sm"
             onClick={() => {
-              console.log(`[MasterPlayer] Switching mode to: ${!isAudioOnly ? 'Audio' : 'Video'}`);
               setIsAudioOnly(!isAudioOnly);
-              setIsInitialLoad(true); // Trigger reload of the saved index for the new mode
+              setIsInitialLoad(true);
             }}
             className={cn(
               "rounded-xl border-slate-700 transition-all",
@@ -196,12 +167,8 @@ const MasterPlayer = () => {
       </header>
 
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Player Section */}
         <div className="flex-1 flex flex-col p-4 lg:p-8 justify-start items-center bg-black/40 overflow-y-auto">
-          <div className={cn(
-            "w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative"
-          )}>
-            {/* Audio Mode Overlay */}
+          <div className="w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative">
             {isAudioOnly && (
               <div className="absolute inset-0 z-10 flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
                 <div className="relative">
@@ -212,32 +179,18 @@ const MasterPlayer = () => {
                     <Headphones className="w-5 h-5 text-white" />
                   </div>
                 </div>
-                
                 <div className="max-w-md">
-                  <Badge variant="outline" className="mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5">
-                    {currentVideo?.category}
-                  </Badge>
+                  <Badge variant="outline" className="mb-4 border-indigo-500/30 text-indigo-400 bg-indigo-500/5">{currentVideo?.category}</Badge>
                   <h2 className="text-3xl font-black text-white mb-2 tracking-tight">{currentVideo?.title}</h2>
                   <p className="text-slate-400 text-sm font-medium">Virtual Audio Stitcher Mode</p>
                 </div>
-
                 <div className="flex items-center space-x-1 h-8">
                   {[...Array(12)].map((_, i) => (
-                    <div 
-                      key={i} 
-                      className="w-1 bg-indigo-500 rounded-full animate-bounce" 
-                      style={{ 
-                        height: `${Math.random() * 100}%`,
-                        animationDuration: `${0.5 + Math.random()}s`,
-                        animationDelay: `${Math.random()}s`
-                      }} 
-                    />
+                    <div key={i} className="w-1 bg-indigo-500 rounded-full animate-bounce" style={{ height: `${Math.random() * 100}%`, animationDuration: `${0.5 + Math.random()}s`, animationDelay: `${Math.random()}s` }} />
                   ))}
                 </div>
               </div>
             )}
-
-            {/* The actual player - always rendered to maintain state and playback */}
             <VideoPlayer 
               videoUrl={currentVideo?.video_url || ''} 
               videoId={currentVideo?.id || ''} 
@@ -248,50 +201,28 @@ const MasterPlayer = () => {
             />
           </div>
 
-          {/* Controls */}
           <div className="mt-8 flex items-center space-x-6 pb-12">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-              className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400"
-            >
+            <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400">
               <SkipBack className="w-6 h-6" />
             </Button>
-            
             <div className="text-center px-8">
               <p className="text-xs text-slate-500 font-bold uppercase mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
-              <h3 className="text-lg font-bold text-white truncate max-w-xs lg:max-w-md">
-                {currentVideo?.title}
-              </h3>
-              <p className="text-[10px] text-indigo-400 font-medium mt-1">
-                Lesson {currentIndex + 1} of {playlist.length}
-              </p>
+              <h3 className="text-lg font-bold text-white truncate max-w-xs lg:max-w-md">{currentVideo?.title}</h3>
+              <p className="text-[10px] text-indigo-400 font-medium mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
             </div>
-
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleNext}
-              disabled={currentIndex === playlist.length - 1}
-              className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400"
-            >
+            <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-12 w-12 rounded-full hover:bg-slate-800 text-slate-400">
               <SkipForward className="w-6 h-6" />
             </Button>
           </div>
         </div>
 
-        {/* Playlist Sidebar */}
         <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
           <div className="p-4 border-b border-slate-800 flex items-center justify-between">
             <h2 className="font-bold flex items-center text-sm">
               <ListMusic className="w-4 h-4 mr-2 text-indigo-400" />
               Course Playlist
             </h2>
-            <Badge variant="outline" className="border-slate-700 text-slate-500">
-              {playlist.length} Items
-            </Badge>
+            <Badge variant="outline" className="border-slate-700 text-slate-500">{playlist.length} Items</Badge>
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
@@ -301,28 +232,16 @@ const MasterPlayer = () => {
                   onClick={() => selectVideo(index)}
                   className={cn(
                     "w-full text-left p-3 rounded-xl transition-all group flex flex-col space-y-2",
-                    currentIndex === index 
-                      ? "bg-indigo-600/20 border border-indigo-500/30" 
-                      : "hover:bg-slate-800/50 border border-transparent"
+                    currentIndex === index ? "bg-indigo-600/20 border border-indigo-500/30" : "hover:bg-slate-800/50 border border-transparent"
                   )}
                 >
                   <div className="flex items-start space-x-3 w-full">
-                    <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs",
-                      currentIndex === index ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-500"
-                    )}>
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs", currentIndex === index ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-500")}>
                       {index + 1}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className={cn(
-                        "text-xs font-bold truncate",
-                        currentIndex === index ? "text-white" : "text-slate-300 group-hover:text-white"
-                      )}>
-                        {video.title}
-                      </p>
-                      <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                        {video.category}
-                      </p>
+                      <p className={cn("text-xs font-bold truncate", currentIndex === index ? "text-white" : "text-slate-300 group-hover:text-white")}>{video.title}</p>
+                      <p className="text-[10px] text-slate-500 truncate mt-0.5">{video.category}</p>
                     </div>
                     {currentIndex === index && (
                       <div className="ml-auto">
@@ -334,19 +253,13 @@ const MasterPlayer = () => {
                       </div>
                     )}
                   </div>
-                  
-                  {/* Watch Progress in Sidebar */}
-                  <VideoProgressIndicator 
-                    videoId={isAudioOnly ? `${video.id}-audio` : video.id} 
-                    className="w-full px-1" 
-                  />
+                  <VideoProgressIndicator videoId={isAudioOnly ? `${video.id}-audio` : video.id} className="w-full px-1" />
                 </button>
               ))}
             </div>
           </ScrollArea>
         </aside>
       </main>
-
       <footer className="p-4 border-t border-slate-800 bg-slate-900/50">
         <MadeWithDyad />
       </footer>

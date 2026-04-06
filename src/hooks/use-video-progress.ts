@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
@@ -21,8 +22,6 @@ export const useVideoProgress = (progressKey: string) => {
     queryFn: async () => {
       if (!user || !progressKey) return { playback_time: 0, duration: 0 };
       
-      console.log(`[Persistence] Fetching progress for key: ${progressKey}`);
-      
       const { data, error } = await supabase
         .from('video_progress')
         .select('playback_time, duration')
@@ -35,18 +34,16 @@ export const useVideoProgress = (progressKey: string) => {
         throw error;
       }
       
-      const result = { 
+      return { 
         playback_time: data?.playback_time || 0, 
         duration: data?.duration || 0 
-      };
-      
-      console.log(`[Persistence] Loaded progress for ${progressKey}: ${result.playback_time}s / ${result.duration}s`);
-      return result as VideoProgressData;
+      } as VideoProgressData;
     },
     enabled: !!user && !!progressKey,
+    staleTime: 30000, // Consider data fresh for 30 seconds to reduce refetches
   });
 
-  const saveProgress = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async ({ currentTime, duration }: { currentTime: number, duration?: number }) => {
       if (!user || !progressKey) return;
       
@@ -61,8 +58,6 @@ export const useVideoProgress = (progressKey: string) => {
         upsertData.duration = duration;
       }
 
-      console.log(`[Persistence] Saving progress for ${progressKey}: ${currentTime}s`);
-
       const { error } = await supabase
         .from('video_progress')
         .upsert(upsertData, { onConflict: 'user_id,video_id' });
@@ -73,14 +68,23 @@ export const useVideoProgress = (progressKey: string) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['videoProgress', user?.id, progressKey] });
+      // Update the cache directly instead of invalidating to avoid re-triggering effects
+      queryClient.setQueryData(['videoProgress', user?.id, progressKey], (old: any) => {
+        if (!old) return old;
+        return { ...old, playback_time: progress?.playback_time };
+      });
     }
   });
+
+  // Memoize the save function so it doesn't trigger useEffects in parent components
+  const saveProgress = useCallback((currentTime: number, duration?: number) => {
+    saveMutation.mutate({ currentTime, duration });
+  }, [saveMutation.mutate]);
 
   return {
     progress: progress?.playback_time || 0,
     duration: progress?.duration || 0,
     isLoading,
-    saveProgress: (currentTime: number, duration?: number) => saveProgress.mutate({ currentTime, duration })
+    saveProgress
   };
 };
