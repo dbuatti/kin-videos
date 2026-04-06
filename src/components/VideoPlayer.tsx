@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from 'react';
-import { PlayCircle, RotateCcw } from 'lucide-react';
+import { PlayCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useVideoProgress } from '@/hooks/use-video-progress';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -16,31 +17,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasStarted, setHasStarted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [savedTime, setSavedTime] = useState<number>(0);
-  const storageKey = `video-progress-${videoId}`;
+  const { progress, isLoading, saveProgress } = useVideoProgress(videoId);
+  const lastSavedTime = useRef<number>(0);
 
-  // Load saved progress on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      setSavedTime(parseFloat(saved));
-    }
-  }, [storageKey]);
-
+  // Seek to saved position when metadata is loaded
   const handleLoadedMetadata = () => {
-    if (videoRef.current && savedTime > 0) {
-      // Only seek if the video is long enough
-      if (savedTime < videoRef.current.duration - 2) {
-        videoRef.current.currentTime = savedTime;
+    if (videoRef.current && progress && progress > 5) {
+      // Only seek if the video is long enough and we have progress
+      if (progress < videoRef.current.duration - 5) {
+        videoRef.current.currentTime = progress;
       }
     }
   };
 
+  // Save progress periodically (every 5 seconds of playback)
   const handleTimeUpdate = () => {
-    if (videoRef.current) {
+    if (videoRef.current && isPlaying) {
       const currentTime = videoRef.current.currentTime;
-      // Save progress every time it updates
-      localStorage.setItem(storageKey, currentTime.toString());
+      // Save every 5 seconds to avoid spamming the database
+      if (Math.abs(currentTime - lastSavedTime.current) > 5) {
+        saveProgress(currentTime);
+        lastSavedTime.current = currentTime;
+      }
     }
   };
 
@@ -51,6 +49,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
 
   const handlePause = () => {
     setIsPlaying(false);
+    if (videoRef.current) {
+      saveProgress(videoRef.current.currentTime);
+    }
   };
 
   const togglePlay = () => {
@@ -65,14 +66,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
 
   const resetProgress = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation(); // Prevent togglePlay from firing
+    e.stopPropagation();
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
-      localStorage.removeItem(storageKey);
-      setSavedTime(0);
+      saveProgress(0);
       videoRef.current.play();
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className={cn("flex items-center justify-center bg-slate-900", className)}>
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -96,10 +104,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ videoUrl, videoId, posterUrl,
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 transition-opacity group-hover:bg-black/10">
           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
           
-          {!hasStarted && savedTime > 5 && (
+          {!hasStarted && progress && progress > 5 && (
             <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-auto">
               <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
-                RESUMING AT {Math.floor(savedTime / 60)}:{(Math.floor(savedTime % 60)).toString().padStart(2, '0')}
+                RESUMING AT {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')}
               </div>
               <Button 
                 variant="secondary" 
