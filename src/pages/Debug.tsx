@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/integrations/supabase/auth-context';
-import { useCrawlerJobs } from '@/hooks/use-crawler-jobs';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +14,10 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 const Debug = () => {
   const navigate = useNavigate();
   const { user, session, isLoading: authLoading } = useAuth();
-  const { data: jobs, isLoading: jobsLoading, refetch: refetchJobs } = useCrawlerJobs();
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const { data: lessons, isLoading: lessonsLoading, refetch: refetchLessons } = useJobLessons(selectedJobId);
+  const { data: lessons, isLoading: lessonsLoading, refetch: refetchLessons } = useJobLessons();
 
   const handleRefresh = () => {
-    refetchJobs();
-    if (selectedJobId) refetchLessons();
+    refetchLessons();
   };
 
   return (
@@ -80,16 +76,10 @@ const Debug = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="grid grid-cols-1 gap-4 text-xs">
                 <div className="p-3 bg-slate-950 rounded border border-slate-800">
-                  <p className="text-slate-500 mb-1">Total Jobs</p>
-                  <p className="text-xl font-bold">{jobs?.length || 0}</p>
-                </div>
-                <div className="p-3 bg-slate-950 rounded border border-slate-800">
-                  <p className="text-slate-500 mb-1">Active Jobs</p>
-                  <p className="text-xl font-bold text-amber-400">
-                    {jobs?.filter(j => j.status === 'running' || j.status === 'pending').length || 0}
-                  </p>
+                  <p className="text-slate-500 mb-1">Total Lessons</p>
+                  <p className="text-xl font-bold">{lessons?.length || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -104,37 +94,15 @@ const Debug = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Tabs defaultValue="jobs" className="w-full">
+            <Tabs defaultValue="lessons" className="w-full">
               <TabsList className="w-full justify-start bg-slate-950 rounded-none border-b border-slate-800 p-0 h-10">
-                <TabsTrigger value="jobs" className="rounded-none data-[state=active]:bg-slate-900 data-[state=active]:text-indigo-400 px-6">Jobs Table</TabsTrigger>
                 <TabsTrigger value="lessons" className="rounded-none data-[state=active]:bg-slate-900 data-[state=active]:text-indigo-400 px-6">Lessons Table</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="jobs" className="m-0">
+              <TabsContent value="lessons" className="m-0">
                 <ScrollArea className="h-[400px] w-full p-4 bg-slate-950">
                   <pre className="text-[10px] leading-relaxed">
-                    {jobsLoading ? 'Loading jobs...' : JSON.stringify(jobs, null, 2)}
-                  </pre>
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="lessons" className="m-0">
-                <div className="p-4 border-b border-slate-800 bg-slate-900 flex items-center space-x-4">
-                  <select 
-                    className="bg-slate-950 border border-slate-700 text-xs p-1 rounded outline-none"
-                    onChange={(e) => setSelectedJobId(e.target.value)}
-                    value={selectedJobId || ''}
-                  >
-                    <option value="">Select a Job ID to inspect lessons</option>
-                    {jobs?.map(job => (
-                      <option key={job.id} value={job.id}>{job.id.slice(0,8)}... ({job.target_url.slice(0,30)}...)</option>
-                    ))}
-                  </select>
-                  {lessonsLoading && <RefreshCw className="w-3 h-3 animate-spin text-slate-500" />}
-                </div>
-                <ScrollArea className="h-[330px] w-full p-4 bg-slate-950">
-                  <pre className="text-[10px] leading-relaxed">
-                    {!selectedJobId ? '// Select a job above' : (lessonsLoading ? 'Loading lessons...' : JSON.stringify(lessons, null, 2))}
+                    {lessonsLoading ? 'Loading lessons...' : JSON.stringify(lessons, null, 2)}
                   </pre>
                 </ScrollArea>
               </TabsContent>

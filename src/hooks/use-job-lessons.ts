@@ -3,11 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Lesson } from '@/types/supabase';
 import { useAuth } from '@/integrations/supabase/auth-context';
 
-const fetchJobLessons = async (jobId: string, userId: string): Promise<Lesson[]> => {
+const fetchAllLessons = async (userId: string): Promise<Lesson[]> => {
   const { data, error } = await supabase
     .from('lessons')
     .select('*')
-    .eq('job_id', jobId)
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
 
@@ -16,13 +15,13 @@ const fetchJobLessons = async (jobId: string, userId: string): Promise<Lesson[]>
   return data as Lesson[];
 };
 
-export const useJobLessons = (jobId: string | null) => {
+export const useJobLessons = () => {
   const { user } = useAuth();
   const userId = user?.id;
 
   return useQuery<Lesson[], Error>({
-    queryKey: ['jobLessons', jobId],
-    queryFn: () => fetchJobLessons(jobId!, userId!),
-    enabled: !!jobId && !!userId,
+    queryKey: ['allLessons', userId],
+    queryFn: () => fetchAllLessons(userId!),
+    enabled: !!userId,
   });
 };

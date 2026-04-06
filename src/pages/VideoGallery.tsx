@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useCrawlerJobs } from '@/hooks/use-crawler-jobs';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,9 +26,7 @@ const VideoGallery = () => {
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
   
-  const { data: jobs } = useCrawlerJobs();
-  const latestJob = useMemo(() => jobs?.find(j => j.status === 'completed'), [jobs]);
-  const { data: lessons, isLoading } = useJobLessons(latestJob?.id || null);
+  const { data: lessons, isLoading } = useJobLessons();
   
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -60,7 +57,7 @@ const VideoGallery = () => {
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => navigate('/library')}
+            onClick={() => navigate('/')}
             className="rounded-full hover:bg-indigo-50 text-indigo-600"
           >
             <ArrowLeft className="w-6 h-6" />

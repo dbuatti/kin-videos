@@ -14,8 +14,6 @@ import { cn } from '@/lib/utils';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 
 interface LessonListDialogProps {
-  jobId: string | null;
-  jobTargetUrl: string;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -64,8 +62,8 @@ const processLessons = (lessons: Lesson[]): Record<string, (Lesson & { displayIn
   return numberedLessons;
 };
 
-const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl, isOpen, onOpenChange }) => {
-  const { data: lessons, isLoading, isError } = useJobLessons(jobId);
+const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChange }) => {
+  const { data: lessons, isLoading, isError } = useJobLessons();
   const numberedGroupedLessons = lessons ? processLessons(lessons) : {};
   const categories = Object.keys(numberedGroupedLessons);
   const [defaultOpenCategory] = categories;
@@ -98,7 +96,7 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-indigo-700">Course Modules & Lessons</DialogTitle>
           <DialogDescription className="text-gray-600">
-            Lessons for: <a href={jobTargetUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:underline">{jobTargetUrl}</a>
+            Browse all available course content.
           </DialogDescription>
         </DialogHeader>
 

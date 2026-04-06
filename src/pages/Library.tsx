@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/integrations/supabase/auth-context';
-import { useCrawlerJobs } from '@/hooks/use-crawler-jobs';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { useLocalInventory } from '@/hooks/use-local-inventory';
 import { Button } from '@/components/ui/button';
@@ -12,14 +11,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, 
   Library as LibraryIcon, 
-  RefreshCw, 
   CheckCircle2, 
   Circle, 
   AlertCircle,
   Search,
   Terminal,
   Copy,
-  FileText,
   PlayCircle,
   Download,
   Map as MapIcon,
@@ -37,14 +34,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 
 const Library = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { data: jobs } = useCrawlerJobs();
-  
-  const latestJob = useMemo(() => {
-    return jobs?.find(j => j.status === 'completed');
-  }, [jobs]);
-
-  const { data: lessons, isLoading: lessonsLoading } = useJobLessons(latestJob?.id || null);
+  const { data: lessons, isLoading: lessonsLoading } = useJobLessons();
   const { data: localFiles, syncInventory, isSyncing } = useLocalInventory();
   
   const [pasteValue, setPasteValue] = useState('');
@@ -101,7 +91,7 @@ const Library = () => {
 
         const isDownloaded = localFileNames.has(expectedFilename.toLowerCase());
         
-        // Fuzzy matching fallback: check if the title exists in any local filename
+        // Fuzzy matching fallback
         let fuzzyMatch = false;
         if (!isDownloaded && lesson.title) {
           const cleanTitle = lesson.title.toLowerCase();
@@ -326,7 +316,6 @@ const Library = () => {
             </CardContent>
           </Card>
 
-          {/* Sync Debugger Section */}
           <Card className="border-red-100 shadow-lg rounded-2xl overflow-hidden bg-red-50/30">
             <CardHeader className="bg-red-600 text-white py-3">
               <CardTitle className="text-sm flex items-center">
