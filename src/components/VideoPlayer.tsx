@@ -38,6 +38,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
 
+  // Ruthless Speed Enforcement: Monitor 'ratechange'
+  // If anything tries to change the speed away from our setting, force it back.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const enforceSpeed = () => {
+      if (video.playbackRate !== speed) {
+        console.log(`[Speed] Ruthlessly enforcing ${speed}x (was ${video.playbackRate}x)`);
+        video.playbackRate = speed;
+      }
+    };
+
+    video.addEventListener('ratechange', enforceSpeed);
+    video.addEventListener('play', enforceSpeed);
+    video.addEventListener('playing', enforceSpeed);
+    
+    // Initial enforcement
+    video.playbackRate = speed;
+
+    return () => {
+      video.removeEventListener('ratechange', enforceSpeed);
+      video.removeEventListener('play', enforceSpeed);
+      video.removeEventListener('playing', enforceSpeed);
+    };
+  }, [speed, videoUrl, isReady]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!videoRef.current || document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
@@ -66,12 +93,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = speed;
-    }
-  }, [speed, videoUrl, effectiveKey]);
 
   useEffect(() => {
     setError(null);
@@ -158,7 +179,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   if (isProgressLoading) {
     return (
       <div className={cn("flex items-center justify-center bg-slate-900", className)}>
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Syncing State...</p>
+        </div>
       </div>
     );
   }
