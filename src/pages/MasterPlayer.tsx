@@ -29,6 +29,7 @@ import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -203,8 +204,8 @@ const MasterPlayer = () => {
           isTheaterMode ? "lg:p-0" : ""
         )}>
           <div className={cn(
-            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative",
-            isTheaterMode ? "max-w-full aspect-video rounded-none border-none" : "max-w-5xl aspect-video"
+            "w-full transition-all duration-500 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative p-1",
+            isTheaterMode ? "max-w-full aspect-video rounded-none border-none p-0" : "max-w-5xl aspect-video"
           )}>
             {isAudioOnly && (
               <div className="absolute inset-0 z-10 flex flex-col items-center space-y-4 sm:space-y-6 text-center p-4 sm:p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
@@ -223,24 +224,35 @@ const MasterPlayer = () => {
               videoUrl={currentVideo?.video_url || ''} 
               videoId={currentVideo?.id || ''} 
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
-              className="w-full h-full"
+              className="w-full h-full rounded-xl sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
               autoPlay={autoPlay}
             />
           </div>
 
-          <div className="mt-6 sm:mt-8 flex items-center space-x-4 sm:space-x-6 pb-8 sm:pb-12 w-full max-w-md justify-center">
-            <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
-              <SkipBack className="w-5 h-5 sm:w-6 sm:h-6" />
-            </Button>
-            <div className="text-center min-w-0 flex-1">
-              <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5 sm:mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
-              <h3 className="text-sm sm:text-lg font-bold text-white truncate">{currentVideo?.title}</h3>
-              <p className="text-[10px] text-indigo-400 font-medium mt-0.5 sm:mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
+          <div className="mt-6 sm:mt-8 flex flex-col items-center w-full max-w-2xl">
+            <div className="flex items-center space-x-4 sm:space-x-6 w-full justify-center mb-6">
+              <Button variant="ghost" size="icon" onClick={handlePrevious} disabled={currentIndex === 0} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
+                <SkipBack className="w-5 h-5 sm:w-6 sm:h-6" />
+              </Button>
+              <div className="text-center min-w-0 flex-1">
+                <p className="text-[10px] text-slate-500 font-bold uppercase mb-0.5 sm:mb-1">Now {isAudioOnly ? 'Listening' : 'Watching'}</p>
+                <h3 className="text-sm sm:text-lg font-bold text-white truncate">{currentVideo?.title}</h3>
+                <p className="text-[10px] text-indigo-400 font-medium mt-0.5 sm:mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
+              </div>
+              <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
+                <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
-              <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
-            </Button>
+
+            {/* Prominent Main Progress Bar */}
+            <div className="w-full px-4 sm:px-0">
+              <VideoProgressIndicator 
+                videoId={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id} 
+                className="w-full"
+                showText={true}
+              />
+            </div>
           </div>
         </div>
 

@@ -4,13 +4,19 @@ import React from 'react';
 import { useVideoProgress } from '@/hooks/use-video-progress';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface VideoProgressIndicatorProps {
   videoId: string;
   className?: string;
+  showText?: boolean;
 }
 
-const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({ videoId, className }) => {
+const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({ 
+  videoId, 
+  className,
+  showText = true
+}) => {
   const { progress, duration, isLoading } = useVideoProgress(videoId);
 
   if (isLoading || !duration || duration === 0) return null;
@@ -20,13 +26,24 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({ videoId
 
   return (
     <div className={className}>
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
-          {isCompleted ? "Completed" : `${percentage}% Watched`}
-        </span>
-        {isCompleted && <CheckCircle2 className="w-3 h-3 text-green-500" />}
-      </div>
-      <Progress value={percentage} className="h-1 bg-indigo-100" />
+      {showText && (
+        <div className="flex justify-between items-center mb-1.5">
+          <span className={cn(
+            "text-[10px] font-black uppercase tracking-widest",
+            isCompleted ? "text-emerald-400" : "text-indigo-400"
+          )}>
+            {isCompleted ? "Completed" : `${percentage}% Watched`}
+          </span>
+          {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+        </div>
+      )}
+      <Progress 
+        value={percentage} 
+        className={cn(
+          "h-2 rounded-full transition-all",
+          isCompleted ? "bg-emerald-950/30" : "bg-indigo-950/30"
+        )} 
+      />
     </div>
   );
 };
