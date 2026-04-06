@@ -83,32 +83,32 @@ const VideoGallery = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b pb-4 border-indigo-100">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-8">
+      <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8 gap-4 border-b pb-4 border-indigo-100">
         <div className="flex items-center space-x-3">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigate('/')}
-            className="rounded-full hover:bg-indigo-50 text-indigo-600"
+            className="rounded-full hover:bg-indigo-50 text-indigo-600 h-9 w-9"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="flex flex-col">
-            <h1 className="text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
-              <Video className="w-6 h-6 mr-2 text-indigo-600" />
-              Foundations Video Library
+            <h1 className="text-xl sm:text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
+              <Video className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-indigo-600" />
+              Video Library
             </h1>
-            <p className="text-xs text-indigo-400 font-medium ml-8">Functional Neuro Approach</p>
+            <p className="text-[10px] text-indigo-400 font-medium ml-7 sm:ml-8">Functional Neuro Approach</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 flex-1 max-w-md">
+        <div className="flex items-center space-x-2 flex-1 max-w-md w-full">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input 
               placeholder="Search videos..." 
-              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white"
+              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 text-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -116,11 +116,11 @@ const VideoGallery = () => {
           
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-xl border-indigo-100 text-indigo-600">
+              <Button variant="outline" size="icon" className="rounded-xl border-indigo-100 text-indigo-600 h-10 w-10 shrink-0">
                 <Menu className="h-4 w-4" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="right" className="w-[85%] sm:w-[400px]">
               <SheetHeader>
                 <SheetTitle className="text-indigo-900 flex items-center">
                   <Hash className="w-5 h-5 mr-2" />
@@ -146,7 +146,7 @@ const VideoGallery = () => {
             </SheetContent>
           </Sheet>
 
-          <div className="flex border border-indigo-100 rounded-xl overflow-hidden bg-white">
+          <div className="hidden sm:flex border border-indigo-100 rounded-xl overflow-hidden bg-white">
             <Button 
               variant="ghost" 
               size="icon" 
@@ -167,7 +167,7 @@ const VideoGallery = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto space-y-12">
+      <main className="max-w-7xl mx-auto space-y-10 sm:space-y-12">
         {isLoading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -177,20 +177,20 @@ const VideoGallery = () => {
             <section 
               key={group.category} 
               id={`section-${group.category.replace(/\s+/g, '-').toLowerCase()}`}
-              className="space-y-6 scroll-mt-24"
+              className="space-y-4 sm:space-y-6 scroll-mt-24"
             >
               <div className="flex items-center space-x-2">
-                <div className="h-8 w-1 bg-indigo-600 rounded-full" />
-                <h2 className="text-xl font-black text-indigo-900 tracking-tight uppercase text-sm">
+                <div className="h-6 sm:h-8 w-1 bg-indigo-600 rounded-full" />
+                <h2 className="text-xs sm:text-sm font-black text-indigo-900 tracking-tight uppercase">
                   {group.category}
                 </h2>
-                <Badge variant="outline" className="ml-2 bg-white text-indigo-400 border-indigo-100">
+                <Badge variant="outline" className="ml-2 bg-white text-indigo-400 border-indigo-100 text-[9px] sm:text-[10px]">
                   {group.videos.length} Videos
                 </Badge>
               </div>
 
               <div className={cn(
-                "grid gap-6",
+                "grid gap-4 sm:gap-6",
                 viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
               )}>
                 {group.videos.map((video) => (
@@ -201,30 +201,29 @@ const VideoGallery = () => {
                       posterUrl={getThumbnailUrl(video.video_url)}
                       className="aspect-video"
                     />
-                    <CardHeader className="p-4">
+                    <CardHeader className="p-3 sm:p-4">
                       <div className="flex justify-between items-start gap-2 mb-2">
-                        <CardTitle className="text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
+                        <CardTitle className="text-xs sm:text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
                           {video.title}
                         </CardTitle>
                         <div className="flex items-center space-x-1 shrink-0">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-indigo-300 hover:text-indigo-600"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600"
                             onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
                           >
-                            <Download className="h-4 h-4" />
+                            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           </Button>
-                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-300 hover:text-indigo-600">
+                          <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600">
                             <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 h-4" />
+                              <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </a>
                           </Button>
                         </div>
                       </div>
                       
-                      {/* Visual Progress Bar */}
-                      <VideoProgressIndicator videoId={video.id} className="mt-2" />
+                      <VideoProgressIndicator videoId={video.id} className="mt-1 sm:mt-2" />
                     </CardHeader>
                   </Card>
                 ))}
@@ -239,7 +238,7 @@ const VideoGallery = () => {
         )}
       </main>
 
-      <footer className="mt-20">
+      <footer className="mt-12 sm:mt-20">
         <MadeWithDyad />
       </footer>
     </div>
