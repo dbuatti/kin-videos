@@ -23,6 +23,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import { showSuccess } from '@/utils/toast';
 import { useVideoProgress } from '@/hooks/use-video-progress';
+import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -157,7 +158,8 @@ const MasterPlayer = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          <PlaybackSpeedControl className="border-slate-700 text-slate-300 hover:bg-slate-800" />
           <Button
             variant="outline"
             size="sm"

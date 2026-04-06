@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import React, { useState } from 'react';
 import { cn } from "@/lib/utils";
 import SyllabusClipboard from "@/components/SyllabusClipboard";
+import PlaybackSpeedControl from "@/components/PlaybackSpeedControl";
 
 const Index = () => {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ const Index = () => {
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          <PlaybackSpeedControl />
           <Button 
             onClick={handleSyncCourse} 
             disabled={isSyncing}

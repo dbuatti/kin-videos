@@ -5,6 +5,7 @@ import { PlayCircle, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVideoProgress } from '@/hooks/use-video-progress';
+import { usePlaybackSpeed } from '@/hooks/use-playback-speed';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -31,8 +32,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [error, setError] = useState<string | null>(null);
   
   const effectiveKey = progressKey || videoId;
-  const { progress, isLoading, saveProgress } = useVideoProgress(effectiveKey);
+  const { progress, isLoading: isProgressLoading, saveProgress } = useVideoProgress(effectiveKey);
+  const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
+
+  // Apply global playback speed whenever it changes or video loads
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  }, [speed, videoUrl]);
 
   useEffect(() => {
     setError(null);
@@ -48,6 +57,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
+      // Apply speed again on metadata load to be safe
+      videoRef.current.playbackRate = speed;
+      
       // Save duration immediately so gallery can show progress bar
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
       
@@ -121,7 +133,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  if (isLoading) {
+  if (isProgressLoading) {
     return (
       <div className={cn("flex items-center justify-center bg-slate-900", className)}>
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
