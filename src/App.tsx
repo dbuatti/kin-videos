@@ -16,6 +16,7 @@ import Bookmarks from "./pages/Bookmarks";
 import Scraper from "./pages/Scraper";
 import Stitcher from "./pages/Stitcher";
 import MasterPlayer from "./pages/MasterPlayer";
+import AppLayout from "./components/AppLayout";
 
 const queryClient = new QueryClient();
 
@@ -30,15 +31,17 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             
             <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/instructions" element={<Instructions />} />
-              <Route path="/debug" element={<Debug />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/gallery" element={<VideoGallery />} />
-              <Route path="/bookmarks" element={<Bookmarks />} />
-              <Route path="/scraper" element={<Scraper />} />
-              <Route path="/stitcher" element={<Stitcher />} />
-              <Route path="/master-player" element={<MasterPlayer />} />
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/instructions" element={<Instructions />} />
+                <Route path="/debug" element={<Debug />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/gallery" element={<VideoGallery />} />
+                <Route path="/bookmarks" element={<Bookmarks />} />
+                <Route path="/scraper" element={<Scraper />} />
+                <Route path="/stitcher" element={<Stitcher />} />
+                <Route path="/master-player" element={<MasterPlayer />} />
+              </Route>
             </Route>
 
             <Route path="*" element={<NotFound />} />
