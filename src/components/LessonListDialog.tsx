@@ -3,11 +3,10 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useJobLessons } from '@/hooks/use-job-lessons';
-import { Loader2, CheckCircle, XCircle, Clock, Download, LinkIcon, FolderDown } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, Clock, Download, FolderDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Lesson } from '@/types/supabase';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { showSuccess, showError } from '@/utils/toast';
@@ -121,7 +120,6 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
 
     showSuccess(`Starting sequential download for '${category}' (${completedVideos.length} videos).`);
     
-    // Sequential download with delay to prevent browser blocking
     for (let i = 0; i < completedVideos.length; i++) {
       const lesson = completedVideos[i];
       const link = document.createElement('a');
@@ -131,7 +129,6 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ jobId, jobTargetUrl
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      // Wait 800ms between downloads
       await new Promise(resolve => setTimeout(resolve, 800));
     }
   };

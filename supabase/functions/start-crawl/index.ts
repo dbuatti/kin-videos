@@ -29,15 +29,173 @@ const COURSE_STRUCTURE = [
   },
   {
     category: "Course Introduction & Foundational Knowledge",
-    lessons: ["Learning Materials", "About Your Instructor", "Overview of the Approach", "Performance Iceberg"]
+    lessons: [
+      "Learning Materials", 
+      "About Your Instructor", 
+      "Overview of the Approach", 
+      "Performance Iceberg",
+      "Neurophysiology 101",
+      "3 Stages of Stress",
+      "Threat Neurophysiology",
+      "Autonomic Nervous System Overview"
+    ]
   },
   {
     category: "Clinical Assessments",
-    lessons: ["BOLT Test", "Breathing Assessment Quiz", "Lecture: Muscle Testing Fundamentals"]
+    lessons: [
+      "BOLT Test", 
+      "Breathing Assessment Quiz", 
+      "Lecture: Muscle Testing Fundamentals",
+      "Muscle Testing Quiz",
+      "Demo: Indicator Muscle Fundamentals",
+      "Lecture: Therapy Localisation",
+      "Lecture: Intention Based Muscle Testing"
+    ]
   },
   {
     category: "Direct Muscle Tests",
-    lessons: ["Muscle Tests: Intrinsic Stabilisation System", "Muscle Tests: Transverse Abdominals", "Demo: TVA Muscle Test"]
+    lessons: [
+      "Muscle Tests: Intrinsic Stabilisation System", 
+      "Muscle Tests: Transverse Abdominals", 
+      "Demo: TVA Muscle Test",
+      "Diaphragm",
+      "Pelvic Floor Muscle Tests",
+      "Multifidi",
+      "Sacrospinalis",
+      "Demo: Quadriceps Group",
+      "Deltoids, Mid & Lower Traps, Pecs and Serratus Anterior",
+      "Biceps and Triceps"
+    ]
+  },
+  {
+    category: "Beginning Procedures - Sympathetic Down Regulation",
+    lessons: [
+      "Lecture: Beginning Procedure (Sympathetic Down Regulation)",
+      "Harmonic Rocking",
+      "Lecture: T1 - Sympathetic Chain",
+      "T1 - Sympathetic Chain Demonstration",
+      "Lecture: Phrenic Nerve",
+      "In Class Demo: Phrenic Nerve",
+      "Phrenic Nerve Demonstration"
+    ]
+  },
+  {
+    category: "Lymphatic System Assessment and Correction",
+    lessons: [
+      "Lecture: Lymphatic System",
+      "Lymphatic Cranial Reflex Zone",
+      "Lymphatic Release Positions",
+      "Lymphatic System Full Procedure"
+    ]
+  },
+  {
+    category: "Vagus Nerve",
+    lessons: [
+      "Vagus Nerve Masterclass",
+      "Lecture: Vagus Nerve Procedure",
+      "Demonstration: Vagus Nerve Screen"
+    ]
+  },
+  {
+    category: "Pathway Assessments and Corrections",
+    lessons: [
+      "Lecture: Pathway Assessment Process Overview",
+      "Lecture: Nociceptive Threat Assessment",
+      "Nociceptive Threat Assessment Demonstration",
+      "Nociceptive Demo Review",
+      "Lecture: Efferent Pathway Correction",
+      "Lecture: Cortical Brain Zones",
+      "Lecture: Sub-Corticol Brain Zones",
+      "Locating the Brain Reflex Areas",
+      "Lecture: Mechanoreceptor (Conscious)",
+      "Demo: Mechanoreceptor (Conscious)"
+    ]
+  },
+  {
+    category: "Primitive Reflexes",
+    lessons: [
+      "Background Information for the Primitive Reflexes",
+      "Lecture: Primitive Reflexes Overview",
+      "In Class Demo: Moro Reflex, Startle",
+      "In Class Demo: Spinal Gallant Reflex",
+      "ATNR Assessment Demo",
+      "Tonic Labrynthine Reflex (TLR) Assessment Demo",
+      "Fear Paralyis Reflex Demo",
+      "Babinski Reflex Demo",
+      "Moro/Startle Reflex Demo",
+      "ATNR"
+    ]
+  },
+  {
+    category: "Postural Reflexes",
+    lessons: ["Occular & Labrythine Righting Reflexes Assessment"]
+  },
+  {
+    category: "Cranial Nerves",
+    lessons: [
+      "Lecture: Cranial Nerves",
+      "Cranial Nerve I (Olfactory)",
+      "Cranial Nerve II (Optic Nerve)",
+      "Cranial Nerve III (Oculomotor)",
+      "Cranial Nerve IV (Trochlear)",
+      "Cranial Nerve V (Trigeminal)",
+      "Cranial Nerve VI (Abducens)",
+      "Cranial Nerve VII (Facial)",
+      "Cranial Nerve VIII (Vestibulo-cochlear)",
+      "Cranial Nerve IX (Glossopharyngeal)"
+    ]
+  },
+  {
+    category: "Emotional Corrections",
+    lessons: [
+      "Lecture: Emotional Corrections",
+      "In class Lecture and Demo: Emotions",
+      "Demo: Emotional Correction"
+    ]
+  },
+  {
+    category: "Finishing Procedures and Home Reinforcement",
+    lessons: [
+      "Lecture: Gaits Integration",
+      "Gaits Integration Procedure",
+      "In class Lecture: Gaits",
+      "Things to Check during the session and for Home Reinforcement"
+    ]
+  },
+  {
+    category: "Background Information",
+    lessons: [
+      "Lecture: How the Brain Maps Movement",
+      "Chronic Pain and the Brain"
+    ]
+  },
+  {
+    category: "Masterclasses",
+    lessons: [
+      "Vertigo Masterclass - 21/Nov/2023",
+      "Personal Mindset Mastery Masterclass (Jan 3rd, 2024)",
+      "Neuro Mastery Masterclass: Muscle Testing Nuance and Back Pain Demo",
+      "Tendon Guard Reflex Masterclass"
+    ]
+  },
+  {
+    category: "Functional Anatomy and Biomechanics",
+    lessons: [
+      "Functional Anatomy Basics of the Saggital Plane",
+      "Functional Anatomy Basics of the Frontal Plane",
+      "Functional Anatomy basics of the Transverse Plane"
+    ]
+  },
+  {
+    category: "Putting it all Together",
+    lessons: [
+      "Lower Back Pain (In Class Demo)",
+      "Q and A - 5/8/2025 (STNR test, Navigating Challenging Muscle Tests)"
+    ]
+  },
+  {
+    category: "FNH Foundations Exam",
+    lessons: ["FNH Foundations Theory Exam"]
   }
 ];
 
