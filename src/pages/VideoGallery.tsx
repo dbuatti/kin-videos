@@ -7,20 +7,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   ArrowLeft, 
-  PlayCircle, 
   Search, 
   LayoutGrid, 
   List,
   ExternalLink,
-  Video,
-  ChevronRight
+  Video
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
+import VideoPlayer from '@/components/VideoPlayer';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -34,8 +32,6 @@ const VideoGallery = () => {
 
   const getThumbnailUrl = (videoUrl: string | null) => {
     if (!videoUrl) return "/placeholder.svg";
-    // Wistia delivery URLs can be converted to images by changing the extension
-    // and adding resizing parameters
     if (videoUrl.includes('wistia.com/deliveries/')) {
       return videoUrl.replace('.mp4', '.jpg') + '?image_crop_resized=640x360';
     }
@@ -145,18 +141,12 @@ const VideoGallery = () => {
               )}>
                 {group.videos.map((video) => (
                   <Card key={video.id} className="overflow-hidden border-indigo-100 shadow-md hover:shadow-lg transition-all bg-white group rounded-2xl">
-                    <div className="aspect-video bg-slate-900 relative overflow-hidden">
-                      <video 
-                        src={video.video_url!} 
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                        controls
-                        preload="metadata"
-                        poster={getThumbnailUrl(video.video_url)}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:hidden bg-black/10">
-                        <PlayCircle className="w-12 h-12 text-white drop-shadow-lg" />
-                      </div>
-                    </div>
+                    <VideoPlayer 
+                      videoUrl={video.video_url!}
+                      videoId={video.id}
+                      posterUrl={getThumbnailUrl(video.video_url)}
+                      className="aspect-video"
+                    />
                     <CardHeader className="p-4">
                       <div className="flex justify-between items-start gap-2">
                         <CardTitle className="text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
