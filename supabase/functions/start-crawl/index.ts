@@ -188,6 +188,12 @@ const COURSE_STRUCTURE = [
     lessons: [
       { title: "FNH Foundations Theory Exam", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2156390136/posts/2182274096", video_url: null }
     ]
+  },
+  {
+    category: "Weekly Q & A",
+    lessons: [
+      { title: "Weekly Q & A Session", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2164655474", video_url: null }
+    ]
   }
 ];
 

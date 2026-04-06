@@ -166,9 +166,9 @@ const Library = () => {
 
     let text = "";
     sortedCategories.forEach((category) => {
-      text += `${category}\n`;
+      text += `[${category}]\n`;
       grouped[category].forEach((lesson: any) => {
-        text += `null 🔗 Page: ${lesson.lesson_url} 🎥 Video: ${lesson.video_url || 'No Video'}\n\n`;
+        text += `${lesson.title || 'Untitled'} 🔗 Page: ${lesson.lesson_url} 🎥 Video: ${lesson.video_url || 'No Video'}\n\n`;
       });
       text += "\n";
     });
