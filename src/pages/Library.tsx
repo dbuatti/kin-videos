@@ -17,12 +17,12 @@ import {
   Circle, 
   AlertCircle,
   Search,
-  ExternalLink,
   Terminal,
   Copy,
   FileText,
   PlayCircle,
-  ChevronRight
+  Download,
+  Map as MapIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,6 +32,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const Library = () => {
   const navigate = useNavigate();
@@ -125,16 +126,30 @@ const Library = () => {
     );
   }, [inventoryStats.processedLessons, searchQuery]);
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    showSuccess(`${label} copied to clipboard!`);
-  };
-
-  const copyCourseMap = () => {
-    if (!lessons) {
-      showError("No course data available to copy.");
+  const handleDownloadMissing = async () => {
+    const missingVideos = inventoryStats.processedLessons.filter(l => !l.isDownloaded && l.video_url);
+    if (missingVideos.length === 0) {
+      showSuccess("All videos are already downloaded!");
       return;
     }
+
+    showSuccess(`Starting download for ${missingVideos.length} missing videos...`);
+    
+    for (let i = 0; i < missingVideos.length; i++) {
+      const lesson = missingVideos[i];
+      const link = document.createElement('a');
+      link.href = lesson.video_url!;
+      link.download = lesson.expectedFilename;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  };
+
+  const courseMapText = useMemo(() => {
+    if (!lessons) return "";
 
     const grouped = lessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
@@ -149,32 +164,26 @@ const Library = () => {
       return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
     });
 
-    let mapText = "";
+    let text = "";
     sortedCategories.forEach((category) => {
-      mapText += `${category}\n`;
+      text += `${category}\n`;
       grouped[category].forEach((lesson: any) => {
-        const videoText = lesson.video_url ? lesson.video_url : "No Video ID found on page";
-        mapText += `${lesson.title} 🔗 Page: ${lesson.lesson_url} 🎥 Video: ${videoText}\n\n`;
+        text += `null 🔗 Page: ${lesson.lesson_url} 🎥 Video: ${lesson.video_url || 'No Video'}\n\n`;
       });
-      mapText += "\n";
+      text += "\n";
     });
+    return text.trim();
+  }, [lessons]);
 
-    navigator.clipboard.writeText(mapText.trim());
-    showSuccess("Course map copied to clipboard!");
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    showSuccess(`${label} copied to clipboard!`);
   };
 
   const commands = [
     {
       label: "Combined List (Clean)",
       cmd: `(find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH" -maxdepth 1 -not -path '*/.*'; echo ""; echo "--- VIDEOS SUBFOLDER ---"; find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos" -maxdepth 1 -not -path '*/.*') | pbcopy`
-    },
-    {
-      label: "Tree View (Structure)",
-      cmd: `cd "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH" && find . -not -path '*/.*' -maxdepth 2`
-    },
-    {
-      label: "Videos Only",
-      cmd: `find "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos" -maxdepth 2 | pbcopy`
     }
   ];
 
@@ -196,37 +205,43 @@ const Library = () => {
           </h1>
         </div>
         <div className="flex items-center space-x-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200">
+                <MapIcon className="w-4 h-4 mr-2" />
+                View Course Map
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+              <DialogHeader>
+                <DialogTitle>Course Map (Raw Format)</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="flex-1 bg-slate-950 p-4 rounded-xl font-mono text-[10px] text-slate-300">
+                <pre className="whitespace-pre-wrap">{courseMapText}</pre>
+              </ScrollArea>
+              <Button onClick={() => copyToClipboard(courseMapText, "Course Map")} className="mt-4 bg-indigo-600">
+                <Copy className="w-4 h-4 mr-2" /> Copy Map
+              </Button>
+            </DialogContent>
+          </Dialog>
           <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700">
             <Link to="/gallery">
               <PlayCircle className="w-4 h-4 mr-2" />
-              Video Gallery
+              Gallery
             </Link>
-          </Button>
-          <Button 
-            onClick={copyCourseMap} 
-            variant="outline" 
-            size="sm" 
-            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-          >
-            <FileText className="w-4 h-4 mr-2" />
-            Copy Course Map
           </Button>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Column: Sync & Commands */}
         <div className="space-y-6">
           <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
             <CardHeader className="bg-indigo-600 text-white">
               <CardTitle className="text-lg flex items-center">
                 <Terminal className="w-5 h-5 mr-2" />
-                Command Center
+                Sync Terminal
               </CardTitle>
-              <CardDescription className="text-indigo-100">
-                Quick access to Terminal sync commands.
-              </CardDescription>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
               {commands.map((c, i) => (
@@ -247,27 +262,16 @@ const Library = () => {
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
-            <CardHeader className="bg-white border-b border-indigo-50">
-              <CardTitle className="text-lg flex items-center text-indigo-900">
-                <RefreshCw className="w-5 h-5 mr-2 text-indigo-600" />
-                Sync Inventory
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
               <Textarea 
                 placeholder="Paste Terminal output here..."
-                className="min-h-[120px] font-mono text-xs border-indigo-100 focus-visible:ring-indigo-500"
+                className="min-h-[100px] font-mono text-[10px] border-indigo-100 mt-4"
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
               />
               <Button 
                 onClick={handleSync}
                 disabled={isSyncing || !pasteValue.trim()}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 rounded-xl"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 rounded-xl mt-2"
               >
                 {isSyncing ? "Syncing..." : "Update Inventory"}
               </Button>
@@ -289,17 +293,18 @@ const Library = () => {
                   <p className="text-3xl font-black text-amber-700">{inventoryStats.missing}</p>
                 </div>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div 
-                  className="bg-indigo-600 h-full transition-all duration-500" 
-                  style={{ width: `${(inventoryStats.downloaded / inventoryStats.total) * 100}%` }}
-                />
-              </div>
+              <Button 
+                onClick={handleDownloadMissing}
+                disabled={inventoryStats.missing === 0}
+                className="w-full bg-amber-600 hover:bg-amber-700 rounded-xl"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download All Missing
+              </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Lesson List */}
         <div className="lg:col-span-2 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -347,9 +352,9 @@ const Library = () => {
                         )}
                         {lesson.video_url && (
                           <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-400 hover:text-indigo-600">
-                            <Link to={`/gallery?search=${encodeURIComponent(lesson.title || '')}`}>
-                              <PlayCircle className="h-5 w-5" />
-                            </Link>
+                            <a href={lesson.video_url} download={lesson.expectedFilename} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-5 w-5" />
+                            </a>
                           </Button>
                         )}
                       </div>

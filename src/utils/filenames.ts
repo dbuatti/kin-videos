@@ -32,4 +32,5 @@ export const MODULE_ORDER = [
   "Functional Anatomy and Biomechanics",
   "Putting it all Together",
   "FNH Foundations Exam",
+  "Weekly Q & A",
 ];
