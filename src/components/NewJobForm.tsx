@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useCreateCrawlerJob } from '@/hooks/use-crawler-jobs';
 import { Zap } from 'lucide-react';
-import { showError } from '@/utils/toast';
 
 // Define the schema to only require the target URL
 const formSchema = z.object({
@@ -30,7 +29,6 @@ const NewJobForm: React.FC = () => {
     // The Edge Function will now handle the discovery (Pass 1)
     createJob({
       targetUrl: values.targetUrl,
-      wistiaJson: null, // Pass null/empty data since we are not using it here anymore
     });
     // Note: We don't reset the form immediately so the user can easily submit another job with similar data.
   };

@@ -36,7 +36,7 @@ export const useCrawlerJobs = () => {
     queryFn: () => fetchCrawlerJobs(userId!),
     enabled: !!userId,
     // Poll every 3 seconds if there are pending or running jobs
-    refetchInterval: (data) => (data?.needsPolling ? 3000 : false),
+    refetchInterval: (query) => (query.state.data?.needsPolling ? 3000 : false),
   });
   
   // Return the jobs array directly for easier consumption in JobTable
