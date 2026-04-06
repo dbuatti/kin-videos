@@ -36,13 +36,13 @@ const Index = () => {
           <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:bg-indigo-50">
             <Link to="/gallery">
               <PlayCircle className="w-4 h-4 mr-2" />
-              Gallery
+              Video Library
             </Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:bg-indigo-50">
             <Link to="/library">
               <Library className="w-4 h-4 mr-2" />
-              Library
+              Inventory
             </Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="text-indigo-600 hover:bg-indigo-50 hidden sm:flex">

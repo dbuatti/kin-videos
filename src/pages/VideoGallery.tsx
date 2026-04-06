@@ -65,10 +65,13 @@ const VideoGallery = () => {
           >
             <ArrowLeft className="w-6 h-6" />
           </Button>
-          <h1 className="text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
-            <Video className="w-6 h-6 mr-2 text-indigo-600" />
-            Video Gallery
-          </h1>
+          <div className="flex flex-col">
+            <h1 className="text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
+              <Video className="w-6 h-6 mr-2 text-indigo-600" />
+              Foundations Video Library
+            </h1>
+            <p className="text-xs text-indigo-400 font-medium ml-8">Functional Neuro Approach</p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 flex-1 max-w-md">
