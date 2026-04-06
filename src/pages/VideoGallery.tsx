@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,10 @@ import {
   LayoutGrid, 
   List,
   ExternalLink,
-  Video
+  Video,
+  Menu,
+  ChevronRight,
+  Hash
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +22,8 @@ import { MODULE_ORDER } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -65,6 +70,13 @@ const VideoGallery = () => {
     })).filter(group => group.videos.length > 0);
   }, [lessons, searchQuery]);
 
+  const scrollToSection = (category: string) => {
+    const element = document.getElementById(`section-${category.replace(/\s+/g, '-').toLowerCase()}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 border-b pb-4 border-indigo-100">
@@ -96,6 +108,39 @@ const VideoGallery = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon" className="rounded-xl border-indigo-100 text-indigo-600">
+                <Menu className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle className="text-indigo-900 flex items-center">
+                  <Hash className="w-5 h-5 mr-2" />
+                  Module Index
+                </SheetTitle>
+              </SheetHeader>
+              <ScrollArea className="h-[calc(100vh-100px)] mt-6 pr-4">
+                <div className="space-y-1">
+                  {groupedVideos.map((group) => (
+                    <button
+                      key={group.category}
+                      onClick={() => scrollToSection(group.category)}
+                      className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center justify-between group"
+                    >
+                      <span className="truncate pr-4">{group.category}</span>
+                      <Badge variant="secondary" className="bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        {group.videos.length}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </SheetContent>
+          </Sheet>
+
           <div className="flex border border-indigo-100 rounded-xl overflow-hidden bg-white">
             <Button 
               variant="ghost" 
@@ -124,7 +169,11 @@ const VideoGallery = () => {
           </div>
         ) : groupedVideos.length > 0 ? (
           groupedVideos.map((group) => (
-            <section key={group.category} className="space-y-6">
+            <section 
+              key={group.category} 
+              id={`section-${group.category.replace(/\s+/g, '-').toLowerCase()}`}
+              className="space-y-6 scroll-mt-24"
+            >
               <div className="flex items-center space-x-2">
                 <div className="h-8 w-1 bg-indigo-600 rounded-full" />
                 <h2 className="text-xl font-black text-indigo-900 tracking-tight uppercase text-sm">
