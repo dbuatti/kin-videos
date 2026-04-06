@@ -125,25 +125,25 @@ const Scraper = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
-      <header className="max-w-4xl mx-auto flex items-center justify-between mb-8 border-b pb-4 border-indigo-100">
+    <div className="min-h-screen bg-gray-50 p-3 sm:p-8">
+      <header className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4 border-b pb-4 border-indigo-100">
         <div className="flex items-center space-x-3">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigate('/')}
-            className="rounded-full hover:bg-indigo-50 text-indigo-600"
+            className="rounded-full hover:bg-indigo-50 text-indigo-600 h-9 w-9"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
-            <Terminal className="w-6 h-6 mr-2 text-indigo-600" />
-            Master Scraper Tool
+          <h1 className="text-xl sm:text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
+            <Terminal className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-indigo-600" />
+            Master Scraper
           </h1>
         </div>
         <Button 
           onClick={handleCopy}
-          className="bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100"
+          className="bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 h-10 sm:h-11 text-sm font-bold"
         >
           <Copy className="w-4 h-4 mr-2" />
           Copy Script
@@ -152,48 +152,47 @@ const Scraper = () => {
 
       <main className="max-w-4xl mx-auto space-y-6">
         <Card className="border-indigo-100 bg-indigo-900 text-white rounded-3xl overflow-hidden shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center text-indigo-200">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center text-indigo-200 text-base sm:text-lg">
               <Info className="w-5 h-5 mr-2" />
-              How to use this script
+              How to use
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 text-indigo-100 text-sm">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="space-y-4 text-indigo-100 text-xs sm:text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               <div className="bg-indigo-800/50 p-4 rounded-2xl border border-indigo-700">
                 <span className="font-bold text-white block mb-1">Step 1</span>
                 Open the FNH Foundations course page in your browser.
               </div>
               <div className="bg-indigo-800/50 p-4 rounded-2xl border border-indigo-700">
                 <span className="font-bold text-white block mb-1">Step 2</span>
-                Press <kbd className="bg-indigo-950 px-1.5 py-0.5 rounded text-[10px]">F12</kbd> or <kbd className="bg-indigo-950 px-1.5 py-0.5 rounded text-[10px]">Cmd+Opt+I</kbd> to open Console.
+                Press <kbd className="bg-indigo-950 px-1.5 py-0.5 rounded text-[10px]">F12</kbd> to open the Console.
               </div>
               <div className="bg-indigo-800/50 p-4 rounded-2xl border border-indigo-700">
                 <span className="font-bold text-white block mb-1">Step 3</span>
-                Paste the script and press Enter. Wait for the "DONE!" message.
+                Paste the script and press Enter. Wait for "DONE!".
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-indigo-100 shadow-lg rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="border-b border-indigo-50 bg-gray-50/50">
+          <CardHeader className="border-b border-indigo-50 bg-gray-50/50 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-indigo-900 flex items-center">
-                  <FileCode className="w-5 h-5 mr-2 text-indigo-600" />
+                <CardTitle className="text-indigo-900 flex items-center text-sm sm:text-base">
+                  <FileCode className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-indigo-600" />
                   Extraction Script
                 </CardTitle>
-                <CardDescription>Master extraction logic for Kajabi & Wistia</CardDescription>
               </div>
-              <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50">
-                v2.0 - Verified
+              <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50 text-[10px]">
+                v2.0
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px] w-full bg-slate-950">
-              <pre className="p-6 text-indigo-300 font-mono text-[11px] leading-relaxed">
+            <ScrollArea className="h-[300px] sm:h-[500px] w-full bg-slate-950">
+              <pre className="p-4 sm:p-6 text-indigo-300 font-mono text-[10px] sm:text-[11px] leading-relaxed">
                 {SCRAPER_SCRIPT}
               </pre>
             </ScrollArea>
@@ -202,9 +201,9 @@ const Scraper = () => {
 
         <div className="flex items-center justify-center p-6 border-2 border-dashed border-indigo-100 rounded-3xl bg-white">
           <div className="text-center">
-            <Zap className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 font-medium">
-              This script extracts direct MP4 links from Wistia metadata automatically.
+            <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 mx-auto mb-2" />
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              Extracts direct MP4 links from Wistia metadata automatically.
             </p>
           </div>
         </div>
