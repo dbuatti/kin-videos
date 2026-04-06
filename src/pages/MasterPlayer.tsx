@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
 import VideoPlayer from '@/components/VideoPlayer';
+import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import { showSuccess } from '@/utils/toast';
@@ -299,38 +300,46 @@ const MasterPlayer = () => {
                   key={video.id}
                   onClick={() => selectVideo(index)}
                   className={cn(
-                    "w-full text-left p-3 rounded-xl transition-all group flex items-start space-x-3",
+                    "w-full text-left p-3 rounded-xl transition-all group flex flex-col space-y-2",
                     currentIndex === index 
                       ? "bg-indigo-600/20 border border-indigo-500/30" 
                       : "hover:bg-slate-800/50 border border-transparent"
                   )}
                 >
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs",
-                    currentIndex === index ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-500"
-                  )}>
-                    {index + 1}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={cn(
-                      "text-xs font-bold truncate",
-                      currentIndex === index ? "text-white" : "text-slate-300 group-hover:text-white"
+                  <div className="flex items-start space-x-3 w-full">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs",
+                      currentIndex === index ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-500"
                     )}>
-                      {video.title}
-                    </p>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                      {video.category}
-                    </p>
-                  </div>
-                  {currentIndex === index && (
-                    <div className="ml-auto">
-                      <div className="flex space-x-0.5 items-end h-3">
-                        <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.8s]" />
-                        <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.6s]" />
-                        <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:1s]" />
-                      </div>
+                      {index + 1}
                     </div>
-                  )}
+                    <div className="min-w-0 flex-1">
+                      <p className={cn(
+                        "text-xs font-bold truncate",
+                        currentIndex === index ? "text-white" : "text-slate-300 group-hover:text-white"
+                      )}>
+                        {video.title}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                        {video.category}
+                      </p>
+                    </div>
+                    {currentIndex === index && (
+                      <div className="ml-auto">
+                        <div className="flex space-x-0.5 items-end h-3">
+                          <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.8s]" />
+                          <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.6s]" />
+                          <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:1s]" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Watch Progress in Sidebar */}
+                  <VideoProgressIndicator 
+                    videoId={isAudioOnly ? `${video.id}-audio` : video.id} 
+                    className="w-full px-1" 
+                  />
                 </button>
               ))}
             </div>

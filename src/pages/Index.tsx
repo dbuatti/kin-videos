@@ -4,7 +4,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Zap, BookOpen, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones, Video } from "lucide-react";
+import { LogOut, Zap, BookOpen, Library, PlayCircle, RefreshCw, Bookmark, Terminal, Scissors, Headphones, Video, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
@@ -13,10 +13,13 @@ import React, { useState } from 'react';
 import { cn } from "@/lib/utils";
 import SyllabusClipboard from "@/components/SyllabusClipboard";
 import PlaybackSpeedControl from "@/components/PlaybackSpeedControl";
+import { useCourseProgress } from "@/hooks/use-course-progress";
+import { Progress } from "@/components/ui/progress";
 
 const Index = () => {
   const { user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
+  const { data: courseProgress } = useCourseProgress();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -80,6 +83,30 @@ const Index = () => {
       </header>
 
       <main className="max-w-5xl mx-auto space-y-12">
+        {/* Course Progress Overview */}
+        <Card className="border-indigo-100 shadow-xl rounded-3xl overflow-hidden bg-white border-2">
+          <CardContent className="p-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-indigo-900 flex items-center">
+                  <CheckCircle2 className="w-6 h-6 mr-2 text-green-500" />
+                  Course Completion
+                </h2>
+                <p className="text-gray-500 text-sm">
+                  You've completed <span className="font-bold text-indigo-600">{courseProgress?.watchedCount || 0}</span> out of <span className="font-bold text-indigo-600">{courseProgress?.totalCount || 0}</span> video lessons.
+                </p>
+              </div>
+              <div className="flex-1 max-w-md w-full space-y-2">
+                <div className="flex justify-between items-end">
+                  <span className="text-4xl font-black text-indigo-600">{courseProgress?.percentage || 0}%</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Overall Progress</span>
+                </div>
+                <Progress value={courseProgress?.percentage || 0} className="h-3 bg-indigo-50" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Syllabus Clipboard Section */}
         <SyllabusClipboard />
 

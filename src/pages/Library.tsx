@@ -31,6 +31,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { downloadFile } from '@/utils/download';
+import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 
 const VIDEO_PATH = "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos";
 
@@ -373,31 +374,38 @@ const Library = () => {
                   
                   <div className="divide-y divide-indigo-50">
                     {group.lessons.map((lesson: any) => (
-                      <div key={lesson.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors group">
-                        <div className="flex items-center space-x-3 min-w-0">
-                          {lesson.isDownloaded ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-gray-300 shrink-0" />
-                          )}
-                          <div className="min-w-0">
-                            <p className={cn(
-                              "text-xs font-medium truncate",
-                              lesson.isDownloaded ? "text-gray-500" : "text-gray-900"
-                            )}>
-                              <span className="text-indigo-400 mr-2">{lesson.displayIndex}</span>
-                              {lesson.title}
-                            </p>
+                      <div key={lesson.id} className="p-3 flex flex-col space-y-2 hover:bg-gray-50 transition-colors group">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 min-w-0">
+                            {lesson.isDownloaded ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                            ) : (
+                              <Circle className="w-4 h-4 text-gray-300 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className={cn(
+                                "text-xs font-medium truncate",
+                                lesson.isDownloaded ? "text-gray-500" : "text-gray-900"
+                              )}>
+                                <span className="text-indigo-400 mr-2">{lesson.displayIndex}</span>
+                                {lesson.title}
+                              </p>
+                            </div>
                           </div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-indigo-300 hover:text-indigo-600"
+                            onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7 text-indigo-300 hover:text-indigo-600"
-                          onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                        
+                        {/* Watch Progress in Library */}
+                        <div className="pl-7 pr-10">
+                          <VideoProgressIndicator videoId={lesson.id} />
+                        </div>
                       </div>
                     ))}
                   </div>
