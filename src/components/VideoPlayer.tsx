@@ -29,16 +29,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasStarted, setHasStarted] = useState(autoPlay);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [error, setError] = useState<string | null>(null);
-  const [isMetadataLoaded, setIsMetadataLoaded] = useState(false);
   
   const effectiveKey = progressKey || videoId;
   const { progress, isLoading, saveProgress } = useVideoProgress(effectiveKey);
   const lastSavedTime = useRef<number>(0);
 
   useEffect(() => {
-    console.log(`[VideoPlayer] Initializing with URL: ${videoUrl}`);
     setError(null);
-    setIsMetadataLoaded(false);
     
     if (autoPlay && videoRef.current) {
       videoRef.current.play().catch((err) => {
@@ -51,13 +48,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
-      console.log(`[VideoPlayer] Metadata loaded. Duration: ${videoRef.current.duration}s`);
-      setIsMetadataLoaded(true);
+      // Save duration immediately so gallery can show progress bar
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
       
       if (progress && progress > 5 && !autoPlay) {
         if (progress < videoRef.current.duration - 5) {
-          console.log(`[VideoPlayer] Setting initial time to: ${progress}s`);
           videoRef.current.currentTime = progress;
         }
       }
@@ -75,14 +70,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handlePlay = () => {
-    console.log("[VideoPlayer] Play event triggered");
     setHasStarted(true);
     setIsPlaying(true);
     setError(null);
   };
 
   const handlePause = () => {
-    console.log("[VideoPlayer] Pause event triggered");
     setIsPlaying(false);
     if (videoRef.current) {
       saveProgress(videoRef.current.currentTime, videoRef.current.duration);
@@ -91,25 +84,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleVideoError = (e: any) => {
     const videoElement = e.target as HTMLVideoElement;
-    console.error(`[VideoPlayer] Video Error:`, videoElement.error);
-    setError("Failed to load video. Please check your connection or the video source.");
+    const errorCode = videoElement.error?.code;
+    const errorMessage = videoElement.error?.message;
+    console.error(`[VideoPlayer] Video Error: Code ${errorCode}, Message: ${errorMessage}`);
+    
+    let userMessage = "Failed to load video.";
+    if (errorCode === 1) userMessage = "Video loading aborted.";
+    if (errorCode === 2) userMessage = "Network error while loading video.";
+    if (errorCode === 3) userMessage = "Video decoding failed.";
+    if (errorCode === 4) userMessage = "Video format not supported or URL invalid.";
+    
+    setError(userMessage);
   };
 
-  const togglePlay = (e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    
+  const togglePlay = () => {
     if (videoRef.current) {
       if (videoRef.current.paused) {
-        console.log("[VideoPlayer] Calling .play()");
-        videoRef.current.play().catch(err => {
-          console.error("[VideoPlayer] Play failed:", err);
-          setError("Playback failed. Your browser might be blocking the video.");
-        });
+        videoRef.current.play();
       } else {
-        console.log("[VideoPlayer] Calling .pause()");
         videoRef.current.pause();
       }
     }
@@ -119,7 +111,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     e.preventDefault();
     e.stopPropagation();
     if (videoRef.current) {
-      console.log("[VideoPlayer] Resetting progress to 0");
       videoRef.current.currentTime = 0;
       saveProgress(0, videoRef.current.duration);
       videoRef.current.play();
@@ -135,17 +126,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }
 
   return (
-    <div className={cn("relative group overflow-hidden bg-slate-900", className)}>
+    <div 
+      className={cn("relative group overflow-hidden bg-slate-900 cursor-pointer", className)}
+      onClick={togglePlay}
+    >
       {error ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center z-20">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
           <h3 className="text-white font-bold mb-2">Playback Error</h3>
           <p className="text-slate-400 text-sm mb-4">{error}</p>
+          <p className="text-[10px] text-slate-600 font-mono break-all max-w-xs">{videoUrl}</p>
           <Button 
             variant="outline" 
             size="sm" 
             className="mt-4 border-slate-700 text-slate-300"
-            onClick={() => window.location.reload()}
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.reload();
+            }}
           >
             Reload Page
           </Button>
@@ -154,8 +152,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <video
           ref={videoRef}
           src={videoUrl}
-          className="w-full h-full object-cover"
-          controls={hasStarted}
+          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+          controls
           preload="auto"
           poster={posterUrl}
           onLoadedMetadata={handleLoadedMetadata}
@@ -167,27 +165,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         />
       )}
       
-      {/* Play Overlay - Only visible before start or when paused */}
-      {!error && (!hasStarted || !isPlaying) && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer z-10 transition-opacity group-hover:bg-black/20"
-          onClick={togglePlay}
-        >
-          <PlayCircle className="w-20 h-20 text-white drop-shadow-2xl opacity-90 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
+      {!error && (!hasStarted || (!isPlaying && hasStarted)) && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 transition-opacity group-hover:bg-black/10">
+          <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
           
-          {/* Resume/Restart Controls */}
-          {!hasStarted && progress && progress > 5 && isMetadataLoaded && (
-            <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center">
-              <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xl border border-indigo-400/30">
+          {!hasStarted && progress && progress > 5 && (
+            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-auto">
+              <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
                 RESUMING AT {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')}
               </div>
               <Button 
                 variant="secondary" 
                 size="sm" 
-                className="h-9 px-4 bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-md rounded-xl"
+                className="h-7 px-2 bg-white/20 hover:bg-white/40 text-white border-none backdrop-blur-sm"
                 onClick={resetProgress}
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
+                <RotateCcw className="w-3 h-3 mr-1" />
                 Restart
               </Button>
             </div>

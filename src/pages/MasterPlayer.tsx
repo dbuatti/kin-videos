@@ -43,13 +43,9 @@ const MasterPlayer = () => {
   }, [isAudioOnly, setSearchParams, searchParams]);
 
   const playlist = useMemo(() => {
-    if (!lessons) {
-      console.log("[MasterPlayer] No lessons data available yet.");
-      return [];
-    }
+    if (!lessons) return [];
     
     const videoOnly = lessons.filter(l => l.video_url);
-    console.log(`[MasterPlayer] Found ${videoOnly.length} lessons with video URLs out of ${lessons.length} total.`);
     
     const sorted = videoOnly.sort((a, b) => {
       const catA = a.category || 'Uncategorized';
@@ -69,27 +65,8 @@ const MasterPlayer = () => {
 
   const currentVideo = playlist[currentIndex];
 
-  useEffect(() => {
-    if (lessonsError) {
-      console.error("[MasterPlayer] Error fetching lessons:", lessonsError);
-    }
-  }, [lessonsError]);
-
-  useEffect(() => {
-    if (playlist.length > 0) {
-      console.log(`[MasterPlayer] Current video index: ${currentIndex}`);
-      console.log(`[MasterPlayer] Current video details:`, {
-        id: currentVideo?.id,
-        title: currentVideo?.title,
-        url: currentVideo?.video_url,
-        category: currentVideo?.category
-      });
-    }
-  }, [currentIndex, playlist, currentVideo]);
-
   const handleNext = () => {
     if (currentIndex < playlist.length - 1) {
-      console.log("[MasterPlayer] Moving to next video");
       setCurrentIndex(prev => prev + 1);
       setAutoPlay(true);
     } else {
@@ -99,14 +76,12 @@ const MasterPlayer = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      console.log("[MasterPlayer] Moving to previous video");
       setCurrentIndex(prev => prev - 1);
       setAutoPlay(true);
     }
   };
 
   const selectVideo = (index: number) => {
-    console.log(`[MasterPlayer] Manually selected video at index ${index}`);
     setCurrentIndex(index);
     setAutoPlay(true);
   };
@@ -178,11 +153,11 @@ const MasterPlayer = () => {
         {/* Player Section */}
         <div className="flex-1 flex flex-col p-4 lg:p-8 justify-center items-center bg-black/40">
           <div className={cn(
-            "w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative",
-            isAudioOnly && "flex items-center justify-center"
+            "w-full max-w-5xl aspect-video rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900 relative"
           )}>
-            {isAudioOnly ? (
-              <div className="flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/30">
+            {/* Audio Mode Overlay */}
+            {isAudioOnly && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm">
                 <div className="relative">
                   <div className="w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
                     <Music className="w-20 h-20 text-indigo-500" />
@@ -213,28 +188,18 @@ const MasterPlayer = () => {
                     />
                   ))}
                 </div>
-
-                <div className="hidden">
-                  {/* Use a separate progress key for audio mode */}
-                  <VideoPlayer 
-                    videoUrl={currentVideo?.video_url || ''} 
-                    videoId={currentVideo?.id || ''} 
-                    progressKey={currentVideo ? `${currentVideo.id}-audio` : undefined}
-                    onEnded={handleNext}
-                    autoPlay={autoPlay}
-                  />
-                </div>
               </div>
-            ) : (
-              <VideoPlayer 
-                videoUrl={currentVideo?.video_url || ''} 
-                videoId={currentVideo?.id || ''} 
-                progressKey={currentVideo?.id} // Standard video ID for video mode
-                className="w-full h-full"
-                onEnded={handleNext}
-                autoPlay={autoPlay}
-              />
             )}
+
+            {/* The actual player - always rendered to maintain state and playback */}
+            <VideoPlayer 
+              videoUrl={currentVideo?.video_url || ''} 
+              videoId={currentVideo?.id || ''} 
+              progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
+              className="w-full h-full"
+              onEnded={handleNext}
+              autoPlay={autoPlay}
+            />
           </div>
 
           {/* Controls */}
