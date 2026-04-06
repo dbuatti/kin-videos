@@ -97,7 +97,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setError(userMessage);
   };
 
-  const togglePlay = () => {
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (videoRef.current) {
       if (videoRef.current.paused) {
         videoRef.current.play();
@@ -126,10 +130,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }
 
   return (
-    <div 
-      className={cn("relative group overflow-hidden bg-slate-900 cursor-pointer", className)}
-      onClick={togglePlay}
-    >
+    <div className={cn("relative group overflow-hidden bg-slate-900", className)}>
       {error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
@@ -166,11 +167,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )}
       
       {!error && (!hasStarted || (!isPlaying && hasStarted)) && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20 transition-opacity group-hover:bg-black/10">
+        <div 
+          className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity group-hover:bg-black/10 cursor-pointer z-20"
+          onClick={togglePlay}
+        >
           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
           
           {!hasStarted && progress && progress > 5 && (
-            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-auto">
+            <div className="absolute bottom-16 left-4 right-4 flex justify-between items-center pointer-events-auto">
               <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
                 RESUMING AT {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')}
               </div>

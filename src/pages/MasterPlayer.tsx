@@ -184,7 +184,7 @@ const MasterPlayer = () => {
           )}>
             {/* Audio Mode Overlay */}
             {isAudioOnly && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm">
+              <div className="absolute inset-0 z-10 flex flex-col items-center space-y-6 text-center p-8 w-full h-full justify-center bg-gradient-to-b from-slate-900 to-indigo-950/90 backdrop-blur-sm pointer-events-none">
                 <div className="relative">
                   <div className="w-40 h-40 bg-indigo-600/10 rounded-full flex items-center justify-center animate-pulse border border-indigo-500/20">
                     <Music className="w-20 h-20 text-indigo-500" />
