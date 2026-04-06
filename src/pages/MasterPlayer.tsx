@@ -26,7 +26,7 @@ import { showSuccess } from '@/utils/toast';
 const MasterPlayer = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: lessons, isLoading } = useJobLessons();
+  const { data: lessons, isLoading, error: lessonsError } = useJobLessons();
   
   // Initialize mode from URL or default to video
   const initialMode = searchParams.get('mode') === 'audio';
@@ -43,11 +43,15 @@ const MasterPlayer = () => {
   }, [isAudioOnly, setSearchParams, searchParams]);
 
   const playlist = useMemo(() => {
-    if (!lessons) return [];
+    if (!lessons) {
+      console.log("[MasterPlayer] No lessons data available yet.");
+      return [];
+    }
     
     const videoOnly = lessons.filter(l => l.video_url);
+    console.log(`[MasterPlayer] Found ${videoOnly.length} lessons with video URLs out of ${lessons.length} total.`);
     
-    return videoOnly.sort((a, b) => {
+    const sorted = videoOnly.sort((a, b) => {
       const catA = a.category || 'Uncategorized';
       const catB = b.category || 'Uncategorized';
       const indexA = MODULE_ORDER.indexOf(catA);
@@ -59,12 +63,33 @@ const MasterPlayer = () => {
       
       return (a.title || '').localeCompare(b.title || '');
     });
+
+    return sorted;
   }, [lessons]);
 
   const currentVideo = playlist[currentIndex];
 
+  useEffect(() => {
+    if (lessonsError) {
+      console.error("[MasterPlayer] Error fetching lessons:", lessonsError);
+    }
+  }, [lessonsError]);
+
+  useEffect(() => {
+    if (playlist.length > 0) {
+      console.log(`[MasterPlayer] Current video index: ${currentIndex}`);
+      console.log(`[MasterPlayer] Current video details:`, {
+        id: currentVideo?.id,
+        title: currentVideo?.title,
+        url: currentVideo?.video_url,
+        category: currentVideo?.category
+      });
+    }
+  }, [currentIndex, playlist, currentVideo]);
+
   const handleNext = () => {
     if (currentIndex < playlist.length - 1) {
+      console.log("[MasterPlayer] Moving to next video");
       setCurrentIndex(prev => prev + 1);
       setAutoPlay(true);
     } else {
@@ -74,12 +99,14 @@ const MasterPlayer = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
+      console.log("[MasterPlayer] Moving to previous video");
       setCurrentIndex(prev => prev - 1);
       setAutoPlay(true);
     }
   };
 
   const selectVideo = (index: number) => {
+    console.log(`[MasterPlayer] Manually selected video at index ${index}`);
     setCurrentIndex(index);
     setAutoPlay(true);
   };
@@ -88,6 +115,21 @@ const MasterPlayer = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-950">
         <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
+  if (!isLoading && playlist.length === 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-slate-400 p-8">
+        <Video className="w-16 h-16 mb-4 opacity-20" />
+        <h2 className="text-xl font-bold text-white mb-2">No Videos Found</h2>
+        <p className="text-center max-w-md mb-6">
+          We couldn't find any lessons with video content. Please make sure your course data is synced.
+        </p>
+        <Button onClick={() => navigate('/')} variant="outline" className="border-slate-700">
+          Return to Dashboard
+        </Button>
       </div>
     );
   }
