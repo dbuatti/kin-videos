@@ -12,7 +12,8 @@ import {
   LayoutGrid, 
   List,
   ExternalLink,
-  Video
+  Video,
+  ChevronRight
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,24 +32,32 @@ const VideoGallery = () => {
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  const videoLessons = useMemo(() => {
+  const groupedVideos = useMemo(() => {
     if (!lessons) return [];
     
-    return lessons
-      .filter(l => l.video_url)
-      .sort((a, b) => {
-        const indexA = MODULE_ORDER.indexOf(a.category || '');
-        const indexB = MODULE_ORDER.indexOf(b.category || '');
-        return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
-      });
-  }, [lessons]);
+    const videoOnly = lessons.filter(l => l.video_url);
+    
+    const grouped = videoOnly.reduce((acc, lesson) => {
+      const category = lesson.category || 'Uncategorized';
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(lesson);
+      return acc;
+    }, {} as Record<string, typeof videoOnly>);
 
-  const filteredVideos = useMemo(() => {
-    return videoLessons.filter(v => 
-      v.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.category?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [videoLessons, searchQuery]);
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+      const indexA = MODULE_ORDER.indexOf(a);
+      const indexB = MODULE_ORDER.indexOf(b);
+      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    });
+
+    return sortedCategories.map(category => ({
+      category,
+      videos: grouped[category].filter(v => 
+        v.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        category.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    })).filter(group => group.videos.length > 0);
+  }, [lessons, searchQuery]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
@@ -76,7 +85,7 @@ const VideoGallery = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input 
               placeholder="Search videos..." 
-              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500"
+              className="pl-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -102,50 +111,59 @@ const VideoGallery = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto">
+      <main className="max-w-7xl mx-auto space-y-12">
         {isLoading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           </div>
-        ) : filteredVideos.length > 0 ? (
-          <div className={cn(
-            "grid gap-6",
-            viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
-          )}>
-            {filteredVideos.map((video) => (
-              <Card key={video.id} className="overflow-hidden border-indigo-100 shadow-md hover:shadow-lg transition-shadow bg-white group">
-                <div className="aspect-video bg-slate-900 relative overflow-hidden">
-                  <video 
-                    src={video.video_url!} 
-                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-                    controls
-                    preload="none"
-                    poster="/placeholder.svg"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:hidden">
-                    <PlayCircle className="w-12 h-12 text-white opacity-80" />
-                  </div>
-                </div>
-                <CardHeader className="p-4">
-                  <div className="flex justify-between items-start gap-2">
-                    <div>
-                      <Badge variant="secondary" className="mb-2 text-[10px] bg-indigo-50 text-indigo-600 border-indigo-100">
-                        {video.category}
-                      </Badge>
-                      <CardTitle className="text-sm font-bold text-indigo-900 line-clamp-2">
-                        {video.title}
-                      </CardTitle>
+        ) : groupedVideos.length > 0 ? (
+          groupedVideos.map((group) => (
+            <section key={group.category} className="space-y-6">
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-1 bg-indigo-600 rounded-full" />
+                <h2 className="text-xl font-black text-indigo-900 tracking-tight uppercase text-sm">
+                  {group.category}
+                </h2>
+                <Badge variant="outline" className="ml-2 bg-white text-indigo-400 border-indigo-100">
+                  {group.videos.length} Videos
+                </Badge>
+              </div>
+
+              <div className={cn(
+                "grid gap-6",
+                viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
+              )}>
+                {group.videos.map((video) => (
+                  <Card key={video.id} className="overflow-hidden border-indigo-100 shadow-md hover:shadow-lg transition-all bg-white group rounded-2xl">
+                    <div className="aspect-video bg-slate-900 relative overflow-hidden">
+                      <video 
+                        src={video.video_url!} 
+                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                        controls
+                        preload="none"
+                        poster="/placeholder.svg"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:hidden">
+                        <PlayCircle className="w-12 h-12 text-white opacity-80" />
+                      </div>
                     </div>
-                    <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-400 hover:text-indigo-600 shrink-0">
-                      <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
+                    <CardHeader className="p-4">
+                      <div className="flex justify-between items-start gap-2">
+                        <CardTitle className="text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
+                          {video.title}
+                        </CardTitle>
+                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-indigo-300 hover:text-indigo-600 shrink-0">
+                          <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 h-4" />
+                          </a>
+                        </Button>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ))
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-indigo-200">
             <Video className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -154,7 +172,7 @@ const VideoGallery = () => {
         )}
       </main>
 
-      <footer className="mt-12">
+      <footer className="mt-20">
         <MadeWithDyad />
       </footer>
     </div>
