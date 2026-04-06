@@ -23,7 +23,8 @@ import {
   RefreshCw,
   FolderDown,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Command
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -35,417 +36,7 @@ import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-const VERIFIED_COURSE_MAP = `## General / Intro
-Resume Course
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2164655474
-🎥 Video: https://embed-ssl.wistia.com/deliveries/fcd1fa9b2e0cd9585565ea43214d78d51e6d28ef.mp4
-
----
-
-## Course Introduction & Foundational Knowledge
-Learning Materials
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2167681807
-🎥 Video: No Video ID found on page
-
-About Your Instructor
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2164655462
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e5a21ab718d5d38897b67e5198e4a4a0de7a8e2f.mp4
-
-Overview of the Approach
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2164655465
-🎥 Video: https://embed-ssl.wistia.com/deliveries/5e942a70cbfc426869d23a830a97c2a40e039ff9.mp4
-
-Performance Iceberg
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2167257485
-🎥 Video: https://embed-ssl.wistia.com/deliveries/b0ac85ac3c52d5d2ad43c4c9a71e80d6.mp4
-
-Neurophysiology 101
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2164655463
-🎥 Video: https://embed-ssl.wistia.com/deliveries/7f7b905558ab660388a5c7857cda8e6f.mp4
-
-3 Stages of Stress
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2167622397
-🎥 Video: https://embed-ssl.wistia.com/deliveries/8df63fab7d036034f3391890f34ec4c1.mp4
-
-Threat Neurophysiology
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2167622399
-🎥 Video: https://embed-ssl.wistia.com/deliveries/08890a205def390372cc741fe20f5c9d47980c9f.mp4
-
-Autonomic Nervous System Overview
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2167679824
-🎥 Video: No Video ID found on page
-
----
-
-## Clinical Assessments
-BOLT Test
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167251417
-🎥 Video: https://embed-ssl.wistia.com/deliveries/ce764cc10222173fa80c6d8c6a3d90210f4cf1a1.mp4
-
-Breathing Assessment Quiz
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167619695
-🎥 Video: No Video ID found on page
-
-Lecture: Muscle Testing Fundamentals
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2164865269
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e37292d9950da2bf0a17301a86271c77.mp4
-
-Muscle Testing Quiz
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2173091485
-🎥 Video: No Video ID found on page
-
-Demo: Indicator Muscle Fundamentals
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167415588
-🎥 Video: https://embed-ssl.wistia.com/deliveries/9b7a8027aac01cf743b0cbaa06ae280b.mp4
-
-Lecture: Therapy Localisation
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2164866613
-🎥 Video: https://embed-ssl.wistia.com/deliveries/c8c8b7fdde09fd3b913b8dc8bba6867c.mp4
-
-Lecture: Intention Based Muscle Testing
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2164893984
-🎥 Video: https://embed-ssl.wistia.com/deliveries/d184f429aeadf32399cea00daff99282.mp4
-
----
-
-## Direct Muscle Tests
-Muscle Tests: Intrinsic Stabilisation System
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164756677
-🎥 Video: https://embed-ssl.wistia.com/deliveries/364abce3a360a7845926d9d775c0b462.mp4
-
-Muscle Tests: Transverse Abdominals
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164655470
-🎥 Video: https://embed-ssl.wistia.com/deliveries/6b766a1d79b608a860d8b0b4886befb7.mp4
-
-Demo: TVA Muscle Test
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166239953
-🎥 Video: https://embed-ssl.wistia.com/deliveries/06654b19dfccfcb0bf7333a032825f4a.mp4
-
-Diaphragm
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167833384
-🎥 Video: https://embed-ssl.wistia.com/deliveries/9813e62a13a7ef09e17f7a16e5ca810b096b5ed2.mp4
-
-Pelvic Floor Muscle Tests
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166647569
-🎥 Video: https://embed-ssl.wistia.com/deliveries/57cf210cb9ae6a0aa951271be09f0f33.mp4
-
-Multifidi
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167418078
-🎥 Video: https://embed-ssl.wistia.com/deliveries/2630882e5679cf0ec3b82ea50047b8490aeebf16.mp4
-
-Sacrospinalis
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167833389
-🎥 Video: https://embed-ssl.wistia.com/deliveries/67f55210add07eaec9dbcde9a093d5e8589d3a37.mp4
-
-Demo: Quadriceps Group
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166288733
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e3568b13d3b8ecaa2e2c7e363a064435.mp4
-
-Deltoids, Mid & Lower Traps, Pecs and Serratus Anterior
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166647725
-🎥 Video: https://embed-ssl.wistia.com/deliveries/8dc68372fa942300d450b03ec8487454cacb02c7.mp4
-
-Biceps and Triceps
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503394
-🎥 Video: https://embed-ssl.wistia.com/deliveries/006270ae8c685161a8a2c55053ee0fd5ecf69b18.mp4
-
----
-
-## Beginning Procedures - Sympathetic Down Regulation
-Lecture: Beginning Procedure (Sympathetic Down Regulation)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164765571
-🎥 Video: https://embed-ssl.wistia.com/deliveries/fb89c1759fbb08c91ed375ffb8a56c8a227eae56.mp4
-
-Harmonic Rocking
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164655471
-🎥 Video: https://embed-ssl.wistia.com/deliveries/a8c771702cf0998e7caee0f064316544.mp4
-
-Lecture: T1 - Sympathetic Chain
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164763360
-🎥 Video: https://embed-ssl.wistia.com/deliveries/7c00ec58add6be2aee32e14d203e1ad3.mp4
-
-T1 - Sympathetic Chain Demonstration
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164655472
-🎥 Video: https://embed-ssl.wistia.com/deliveries/ac0d803e766ec7535b8b981303df93bcc177c920.mp4
-
-Lecture: Phrenic Nerve
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164764506
-🎥 Video: https://embed-ssl.wistia.com/deliveries/140c1d17f4eb8afbc7ea1e29fedcb7e7.mp4
-
-In Class Demo: Phrenic Nerve
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2192994870
-🎥 Video: https://embed-ssl.wistia.com/deliveries/5b36605cc4109d6c88a934231963c6d11e94c22b.mp4
-
-Phrenic Nerve Demonstration
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164663189
-🎥 Video: https://embed-ssl.wistia.com/deliveries/fc38346a4cb0b8fd1fa8cfba2a74102ed3d5a641.mp4
-
----
-
-## Lymphatic System Assessment and Correction
-Lecture: Lymphatic System
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2158539300/posts/2164764799
-🎥 Video: https://embed-ssl.wistia.com/deliveries/57b0be805ff3539e9b8892ebef2ead99.mp4
-
-Lymphatic Cranial Reflex Zone
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2158539300/posts/2191285451
-🎥 Video: https://embed-ssl.wistia.com/deliveries/08dcfc80453cd9a1a10f7dc9940ab0b2f16f206e.mp4
-
-Lymphatic Release Positions
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2158539300/posts/2164723635
-🎥 Video: https://embed-ssl.wistia.com/deliveries/4b7c5c29f3e15bf49762d7f9f34bc246133eb924.mp4
-
-Lymphatic System Full Procedure
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2158539300/posts/2164719983
-🎥 Video: https://embed-ssl.wistia.com/deliveries/ba06079f4c7f3429554fe6c97a8e8cf0b8e48460.mp4
-
----
-
-## Vagus Nerve
-Vagus Nerve Masterclass
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152152431/posts/2164865060
-🎥 Video: https://embed-ssl.wistia.com/deliveries/cc54a87622fa51b31e28f8ec63db323b.mp4
-
-Lecture: Vagus Nerve Procedure
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152152431/posts/2164865138
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e107ed3db9578a55bf57d6e05f5deeb4.mp4
-
-Demonstration: Vagus Nerve Screen
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152152431/posts/2166291753
-🎥 Video: https://embed-ssl.wistia.com/deliveries/fde31242dde2c7536f59b7c3a46f6070.mp4
-
----
-
-## Pathway Assessments and Corrections
-Lecture: Pathway Assessment Process Overview
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2164723262
-🎥 Video: https://embed-ssl.wistia.com/deliveries/55a0f86087e5c17de9faadeefdd8ee51.mp4
-
-Lecture: Nociceptive Threat Assessment
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2164728792
-🎥 Video: https://embed-ssl.wistia.com/deliveries/c429c851a4ba8da06e7496f3a707286c.mp4
-
-Nociceptive Threat Assessment Demonstration
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2164726137
-🎥 Video: https://embed-ssl.wistia.com/deliveries/09ca171520ee772d6a31ba5602e9e1f328ca4b65.mp4
-
-Nociceptive Demo Review
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2164772241
-🎥 Video: https://embed-ssl.wistia.com/deliveries/aa43654593f3093f2a4fffbe3b9b9d8f.mp4
-
-Lecture: Efferent Pathway Correction
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167444469
-🎥 Video: https://embed-ssl.wistia.com/deliveries/c073a34e30bab8435cf686fcf41a19f8.mp4
-
-Lecture: Cortical Brain Zones
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167468893
-🎥 Video: https://embed-ssl.wistia.com/deliveries/9e055a1ca5d1c3ccbf779da2619d0b32.mp4
-
-Lecture: Sub-Corticol Brain Zones
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2167469166
-🎥 Video: https://embed-ssl.wistia.com/deliveries/f51219398c512c17889b57e265ec67f2.mp4
-
-Locating the Brain Reflex Areas
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2169356729
-🎥 Video: https://embed-ssl.wistia.com/deliveries/eea1515ab5542c401c5c77f8076748d433ba76b7.mp4
-
-Lecture: Mechanoreceptor (Conscious)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239933
-🎥 Video: https://embed-ssl.wistia.com/deliveries/a2452372e3fc3ebc703bd5ee39b5912d.mp4
-
-Demo: Mechanoreceptor (Conscious)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171201710
-🎥 Video: https://embed-ssl.wistia.com/deliveries/076585afb879fbd326958b2ceed1f696e6464254.mp4
-
----
-
-## Primitive Reflexes
-Background Information for the Primitive Reflexes
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164792212
-🎥 Video: No Video ID found on page
-
-Lecture: Primitive Reflexes Overview
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164760586
-🎥 Video: https://embed-ssl.wistia.com/deliveries/b94e227227785f7fde1c5d99a05a7c80.mp4
-
-In Class Demo: Moro Reflex, Startle
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164728867
-🎥 Video: https://embed-ssl.wistia.com/deliveries/09992becc69fc18767252d9048037fb58b3e59de.mp4
-
-In Class Demo: Spinal Gallant Reflex
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2169016216
-🎥 Video: https://embed-ssl.wistia.com/deliveries/ace191c3994201b6b30d5d5ba6a88f88834f537d.mp4
-
-ATNR Assessment Demo
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164729690
-🎥 Video: https://embed-ssl.wistia.com/deliveries/2f5b24fd1d3184a98d2e9c5b5ff1fff6be8bdb07.mp4
-
-Tonic Labrynthine Reflex (TLR) Assessment Demo
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164729000
-🎥 Video: https://embed-ssl.wistia.com/deliveries/710dba831b6b97eb558e3e4f1ad866800076dd0b.mp4
-
-Fear Paralyis Reflex Demo
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167094242
-🎥 Video: https://embed-ssl.wistia.com/deliveries/7d40f82dbdf33d51bdc9195adec04a9d0e8b5c7f.mp4
-
-Babinski Reflex Demo
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502394
-🎥 Video: https://embed-ssl.wistia.com/deliveries/18739c5ea2d71bafc1e674974e51ad0408c2bae2.mp4
-
-Moro/Startle Reflex Demo
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502429
-🎥 Video: https://embed-ssl.wistia.com/deliveries/7bee9c3cc03da234cda80dfd2f796c3a80b55414.mp4
-
-ATNR
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502432
-🎥 Video: https://embed-ssl.wistia.com/deliveries/896c250c771ff9c61de1176371bcaa86882f7685.mp4
-
----
-
-## Postural Reflexes
-Occular & Labrythine Righting Reflexes Assessment
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154822754/posts/2175437516
-🎥 Video: https://embed-ssl.wistia.com/deliveries/d91e9aea886dd9611199161bad9c472ee993464c.mp4
-
----
-
-## Cranial Nerves
-Lecture: Cranial Nerves
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2164792486
-🎥 Video: https://embed-ssl.wistia.com/deliveries/eff3c4639f49f29eba770402add63a63.mp4
-
-Cranial Nerve I (Olfactory)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167205372
-🎥 Video: https://embed-ssl.wistia.com/deliveries/aca41508634a068fbda3d10c96f150a9.mp4
-
-Cranial Nerve II (Optic Nerve)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167779783
-🎥 Video: https://embed-ssl.wistia.com/deliveries/b874823f0dc614160512b66bcb5b516f50f9eb2d.mp4
-
-Cranial Nerve III (Oculomotor)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167779787
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e469a668620604adbb0a0c69a192e7af50579078.mp4
-
-Cranial Nerve IV (Trochlear)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167779806
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e469a668620604adbb0a0c69a192e7af50579078.mp4
-
-Cranial Nerve V (Trigeminal)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780073
-🎥 Video: https://embed-ssl.wistia.com/deliveries/10de3ccab1d8595c4c3e451aea5b91c84cf6213f.mp4
-
-Cranial Nerve VI (Abducens)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780077
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e469a668620604adbb0a0c69a192e7af50579078.mp4
-
-Cranial Nerve VII (Facial)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780903
-🎥 Video: https://embed-ssl.wistia.com/deliveries/e80792dddb73e4f494dd7f56a6cb1958e571e5ae.mp4
-
-Cranial Nerve VIII (Vestibulo-cochlear)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780911
-🎥 Video: https://embed-ssl.wistia.com/deliveries/465c56ed15ec74012154656cd87ff84d9307a40c.mp4
-
-Cranial Nerve IX (Glossopharyngeal)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780916
-🎥 Video: https://embed-ssl.wistia.com/deliveries/c951c07cedadced7e1d2291c60a8dc22d90ac90a.mp4
-
----
-
-## Emotional Corrections
-Lecture: Emotional Corrections
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152249762/posts/2165230137
-🎥 Video: https://embed-ssl.wistia.com/deliveries/8ddc33c93e37dbd198427d6c7da016a7.mp4
-
-In class Lecture and Demo: Emotions
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152249762/posts/2172678455
-🎥 Video: https://embed-ssl.wistia.com/deliveries/74f72fb98cf3019e50d1e310df99a4ef93cc2b19.mp4
-
-Demo: Emotional Correction
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152249762/posts/2164720410
-🎥 Video: https://embed-ssl.wistia.com/deliveries/cad0e20b489871a2997a21059ac906c6dd508784.mp4
-
----
-
-## Finishing Procedures and Home Reinforcement
-Lecture: Gaits Integration
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2164655473
-🎥 Video: https://embed-ssl.wistia.com/deliveries/fb56b63684af8fb13393a96766003f79.mp4
-
-Gaits Integration Procedure
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2164757718
-🎥 Video: https://embed-ssl.wistia.com/deliveries/14f550f77b125c6afb95ef30dd7bb5cafccc62c1.mp4
-
-In class Lecture: Gaits
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2172690792
-🎥 Video: https://embed-ssl.wistia.com/deliveries/cb71913262c6189738b009feeae179eb5ca0d273.mp4
-
-Things to Check during the session and for Home Reinforcement
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2164655474
-🎥 Video: https://embed-ssl.wistia.com/deliveries/fcd1fa9b2e0cd9585565ea43214d78d51e6d28ef.mp4
-
----
-
-## Background Information
-Lecture: How the Brain Maps Movement
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099723/posts/2164853086
-🎥 Video: https://embed-ssl.wistia.com/deliveries/243cd0fc59634489307c00201705599a.mp4
-
-Chronic Pain and the Brain
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099723/posts/2165118302
-🎥 Video: https://embed-ssl.wistia.com/deliveries/270b4bf082b552acd2e8405766865adf.mp4
-
----
-
-## Masterclasses
-Vertigo Masterclass -  21/Nov/2023
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154460220/posts/2172969132
-🎥 Video: https://embed-ssl.wistia.com/deliveries/527fc8abdc7e4e3ab93029c86fb02341.mp4
-
-Personal Mindset Mastery Masterclass  (Jan 3rd, 2024)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154460220/posts/2174007926
-🎥 Video: https://embed-ssl.wistia.com/deliveries/835805a30a5914703a2022414f48fe50.mp4
-
-Neuro Mastery Masterclass: Muscle Testing Nuance and Back Pain Demo
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154460220/posts/2187544782
-🎥 Video: https://embed-ssl.wistia.com/deliveries/4372236e5853d61e7149d1f88bb894a8.mp4
-
-Tendon Guard Reflex Masterclass
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154460220/posts/2187887358
-🎥 Video: https://embed-ssl.wistia.com/deliveries/f8a82bc9595b550236df6e27afc75356.mp4
-
----
-
-## Functional Anatomy and Biomechanics
-Functional Anatomy Basics of the Saggital Plane
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152867936/posts/2171369485
-🎥 Video: https://embed-ssl.wistia.com/deliveries/6be7f23b2ea21a8291a7f4d5b0e489a9af0b4566.mp4
-
-Functional Anatomy Basics of the Frontal Plane
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152867936/posts/2171369489
-🎥 Video: https://embed-ssl.wistia.com/deliveries/94038e6917bcc3648be5af16fde2c44c81f60b2b.mp4
-
-Functional Anatomy basics of the Transverse Plane
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152867936/posts/2171369492
-🎥 Video: https://embed-ssl.wistia.com/deliveries/bb80583185b4618d3ee4ddf8cfefc1c7c60ae4a8.mp4
-
----
-
-## Putting it all Together
-Lower Back Pain (In Class Demo)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154487237/posts/2176704641
-🎥 Video: https://embed-ssl.wistia.com/deliveries/92d89b854b608145eba07a77eb734b8421a4bdba.mp4
-
-Q and A - 5/8/2025 (STNR test, Navigating Challenging Muscle Tests)
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154487237/posts/2187520560
-🎥 Video: https://embed-ssl.wistia.com/deliveries/0ac1da7790c7d8bff65b957bcad11e0a.mp4
-
----
-
-## FNH Foundations Exam
-FNH Foundations Theory Exam
-🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2156390136/posts/2182274096
-🎥 Video: No Video ID found on page`;
+const VIDEO_PATH = "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos";
 
 const Library = () => {
   const navigate = useNavigate();
@@ -475,12 +66,18 @@ const Library = () => {
     showSuccess(`${label} copied to clipboard!`);
   };
 
+  const copyTerminalCommand = (recursive: boolean) => {
+    const cmd = recursive 
+      ? `find "${VIDEO_PATH}" -type f | pbcopy`
+      : `find "${VIDEO_PATH}" -maxdepth 1 -type f | pbcopy`;
+    copyToClipboard(cmd, recursive ? "Subfolders Command" : "Folder Command");
+  };
+
   const processedData = useMemo(() => {
     if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 } };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
     
-    // STRICT FILTER: Only lessons with titles and video URLs
     const validLessons = lessons.filter(l => l.title && l.title !== 'Untitled' && l.video_url);
 
     const grouped = validLessons.reduce((acc, lesson) => {
@@ -510,7 +107,6 @@ const Library = () => {
 
         const isDownloaded = localFileNames.has(expectedFilename.toLowerCase());
         
-        // Fuzzy matching fallback
         let fuzzyMatch = false;
         if (!isDownloaded) {
           const cleanTitle = lesson.title.toLowerCase();
@@ -609,26 +205,6 @@ const Library = () => {
             Refresh
           </Button>
           
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-indigo-600 border-indigo-200 rounded-xl">
-                <MapIcon className="w-4 h-4 mr-2" />
-                View Course Map
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl h-[80vh] flex flex-col rounded-2xl">
-              <DialogHeader>
-                <DialogTitle>Verified Course Map</DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="flex-1 bg-slate-950 p-4 rounded-xl font-mono text-[10px] text-slate-300">
-                <pre className="whitespace-pre-wrap">{VERIFIED_COURSE_MAP}</pre>
-              </ScrollArea>
-              <Button onClick={() => copyToClipboard(VERIFIED_COURSE_MAP, "Course Map")} className="mt-4 bg-indigo-600 rounded-xl">
-                <Copy className="w-4 h-4 mr-2" /> Copy Map to Clipboard
-              </Button>
-            </DialogContent>
-          </Dialog>
-
           <Button asChild variant="default" size="sm" className="bg-indigo-600 hover:bg-indigo-700 rounded-xl">
             <Link to="/gallery">
               <PlayCircle className="w-4 h-4 mr-2" />
@@ -640,7 +216,6 @@ const Library = () => {
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Sidebar Controls */}
         <div className="space-y-6">
           <Card className="border-indigo-100 shadow-lg rounded-2xl overflow-hidden">
             <CardHeader className="bg-indigo-600 text-white py-4">
@@ -650,9 +225,38 @@ const Library = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-              <p className="text-xs text-gray-500">Paste your terminal file list here to update your download progress.</p>
+              <div className="grid grid-cols-1 gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="justify-start text-xs font-mono border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                  onClick={() => copyTerminalCommand(false)}
+                >
+                  <Command className="w-3 h-3 mr-2" />
+                  Copy Folder Command
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="justify-start text-xs font-mono border-indigo-100 text-indigo-600 hover:bg-indigo-50"
+                  onClick={() => copyTerminalCommand(true)}
+                >
+                  <Command className="w-3 h-3 mr-2" />
+                  Copy Subfolders Command
+                </Button>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-gray-200"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-400">Then Paste Below</span>
+                </div>
+              </div>
+
               <Textarea 
-                placeholder="Paste 'find' output here..."
+                placeholder="Paste terminal output here..."
                 className="min-h-[120px] font-mono text-[10px] border-indigo-100 rounded-xl"
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
@@ -692,7 +296,6 @@ const Library = () => {
           </Card>
         </div>
 
-        {/* Main Content: Grouped Modules */}
         <div className="lg:col-span-2 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
