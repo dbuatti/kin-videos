@@ -8,7 +8,6 @@ import {
   ArrowLeft, 
   SkipForward, 
   SkipBack, 
-  ListMusic,
   Headphones,
   Video,
   Zap,
@@ -16,10 +15,9 @@ import {
   Music
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
 import VideoPlayer from '@/components/VideoPlayer';
-import VideoProgressIndicator from '@/components/VideoProgressIndicator';
+import PlaylistCard from '@/components/PlaylistCard';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import { showSuccess } from '@/utils/toast';
@@ -216,48 +214,15 @@ const MasterPlayer = () => {
           </div>
         </div>
 
-        <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h2 className="font-bold flex items-center text-sm">
-              <ListMusic className="w-4 h-4 mr-2 text-indigo-400" />
-              Course Playlist
-            </h2>
-            <Badge variant="outline" className="border-slate-700 text-slate-500">{playlist.length} Items</Badge>
-          </div>
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-1">
-              {playlist.map((video, index) => (
-                <button
-                  key={video.id}
-                  onClick={() => selectVideo(index)}
-                  className={cn(
-                    "w-full text-left p-3 rounded-xl transition-all group flex flex-col space-y-2",
-                    currentIndex === index ? "bg-indigo-600/20 border border-indigo-500/30" : "hover:bg-slate-800/50 border border-transparent"
-                  )}
-                >
-                  <div className="flex items-start space-x-3 w-full">
-                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs", currentIndex === index ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-500")}>
-                      {index + 1}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={cn("text-xs font-bold truncate", currentIndex === index ? "text-white" : "text-slate-300 group-hover:text-white")}>{video.title}</p>
-                      <p className="text-[10px] text-slate-500 truncate mt-0.5">{video.category}</p>
-                    </div>
-                    {currentIndex === index && (
-                      <div className="ml-auto">
-                        <div className="flex space-x-0.5 items-end h-3">
-                          <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.8s]" />
-                          <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:0.6s]" />
-                          <div className="w-0.5 bg-indigo-400 animate-bounce [animation-duration:1s]" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <VideoProgressIndicator videoId={isAudioOnly ? `${video.id}-audio` : video.id} className="w-full px-1" />
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
+        {/* Playlist Sidebar - Now using the contained PlaylistCard component */}
+        <aside className="w-full lg:w-96 p-4 lg:p-0 lg:border-l border-slate-800 bg-slate-900/30 flex flex-col">
+          <PlaylistCard 
+            playlist={playlist}
+            currentIndex={currentIndex}
+            onSelectVideo={selectVideo}
+            isAudioOnly={isAudioOnly}
+            className="h-[400px] lg:h-full lg:rounded-none lg:border-none"
+          />
         </aside>
       </main>
       <footer className="p-4 border-t border-slate-800 bg-slate-900/50">
