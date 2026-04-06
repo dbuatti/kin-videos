@@ -32,6 +32,16 @@ const VideoGallery = () => {
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  const getThumbnailUrl = (videoUrl: string | null) => {
+    if (!videoUrl) return "/placeholder.svg";
+    // Wistia delivery URLs can be converted to images by changing the extension
+    // and adding resizing parameters
+    if (videoUrl.includes('wistia.com/deliveries/')) {
+      return videoUrl.replace('.mp4', '.jpg') + '?image_crop_resized=640x360';
+    }
+    return "/placeholder.svg";
+  };
+
   const groupedVideos = useMemo(() => {
     if (!lessons) return [];
     
@@ -138,13 +148,13 @@ const VideoGallery = () => {
                     <div className="aspect-video bg-slate-900 relative overflow-hidden">
                       <video 
                         src={video.video_url!} 
-                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                         controls
-                        preload="none"
-                        poster="/placeholder.svg"
+                        preload="metadata"
+                        poster={getThumbnailUrl(video.video_url)}
                       />
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:hidden">
-                        <PlayCircle className="w-12 h-12 text-white opacity-80" />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover:hidden bg-black/10">
+                        <PlayCircle className="w-12 h-12 text-white drop-shadow-lg" />
                       </div>
                     </div>
                     <CardHeader className="p-4">
