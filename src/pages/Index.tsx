@@ -3,7 +3,7 @@
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/integrations/supabase/auth-context";
 import { Button } from "@/components/ui/button";
-import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark } from "lucide-react";
+import { LogOut, Zap, BookOpen, Bug, Library, PlayCircle, RefreshCw, Bookmark, Terminal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { showError, showSuccess } from "@/utils/toast";
 import { Link } from "react-router-dom";
@@ -109,6 +109,21 @@ const Index = () => {
               <CardContent className="p-8">
                 <div className="flex items-center text-emerald-600 font-bold">
                   Manage Inventory <Zap className="w-4 h-4 ml-2 animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Scraper Tool Card */}
+          <Link to="/scraper" className="group">
+            <Card className="border-indigo-100 shadow-md hover:shadow-lg transition-all rounded-2xl bg-white border hover:border-indigo-200">
+              <CardContent className="p-6 flex items-center space-x-4">
+                <div className="bg-slate-900 p-3 rounded-xl">
+                  <Terminal className="w-6 h-6 text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-indigo-900">Scraper Tool</h3>
+                  <p className="text-sm text-gray-500">Master extraction script for course data.</p>
                 </div>
               </CardContent>
             </Card>

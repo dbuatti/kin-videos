@@ -13,6 +13,7 @@ import Debug from "./pages/Debug";
 import Library from "./pages/Library";
 import VideoGallery from "./pages/VideoGallery";
 import Bookmarks from "./pages/Bookmarks";
+import Scraper from "./pages/Scraper";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/library" element={<Library />} />
               <Route path="/gallery" element={<VideoGallery />} />
               <Route path="/bookmarks" element={<Bookmarks />} />
+              <Route path="/scraper" element={<Scraper />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
