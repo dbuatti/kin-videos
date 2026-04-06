@@ -58,6 +58,8 @@ export const useVideoProgress = (progressKey: string) => {
         upsertData.duration = duration;
       }
 
+      console.log(`[Persistence] Saving progress for ${progressKey}: ${currentTime}s`);
+
       const { error } = await supabase
         .from('video_progress')
         .upsert(upsertData, { onConflict: 'user_id,video_id' });
