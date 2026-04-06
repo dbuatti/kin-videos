@@ -8,14 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   ArrowLeft, 
   Search, 
-  LayoutGrid, 
-  List,
-  ExternalLink,
   Video,
-  Menu,
-  Hash,
   Download,
-  X
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -24,11 +20,8 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { downloadFile } from '@/utils/download';
 import LessonSkeleton from '@/components/LessonSkeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -36,9 +29,7 @@ const VideoGallery = () => {
   const initialSearch = searchParams.get('search') || '';
   
   const { data: lessons, isLoading } = useJobLessons();
-  
   const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const getThumbnailUrl = (videoUrl: string | null) => {
     if (!videoUrl) return "/placeholder.svg";
@@ -78,176 +69,92 @@ const VideoGallery = () => {
     })).filter(group => group.videos.length > 0);
   }, [lessons, searchQuery]);
 
-  const scrollToSection = (category: string) => {
-    const element = document.getElementById(`section-${category.replace(/\s+/g, '-').toLowerCase()}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-3 sm:p-8">
-      <header className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8 gap-4 border-b pb-4 border-indigo-100">
-        <div className="flex items-center space-x-3">
+    <div className="min-h-screen bg-background p-6 sm:p-12 max-w-7xl mx-auto w-full">
+      <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+        <div className="flex items-center space-x-4">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigate('/')}
-            className="rounded-full hover:bg-indigo-50 text-indigo-600 h-9 w-9"
+            className="rounded-full hover:bg-white/5 text-slate-400"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex flex-col">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-indigo-900 tracking-tight flex items-center">
-              <Video className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-indigo-600" />
-              Video Library
+          <div>
+            <h1 className="text-3xl font-black text-white tracking-tight flex items-center">
+              <Video className="w-6 h-6 mr-3 text-primary" />
+              Library
             </h1>
-            <p className="text-[10px] text-indigo-400 font-medium ml-7 sm:ml-8">Functional Neuro Approach</p>
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Browse all lessons</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 flex-1 max-w-md w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input 
-              placeholder="Search videos..." 
-              className="pl-10 pr-10 rounded-xl border-indigo-100 focus-visible:ring-indigo-500 bg-white h-10 text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="rounded-xl border-indigo-100 text-indigo-600 h-10 w-10 shrink-0">
-                <Menu className="h-4 w-4" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[85%] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle className="text-indigo-900 flex items-center">
-                  <Hash className="w-5 h-5 mr-2" />
-                  Module Index
-                </SheetTitle>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-100px)] mt-6 pr-4">
-                <div className="space-y-1">
-                  {groupedVideos.map((group) => (
-                    <button
-                      key={group.category}
-                      onClick={() => scrollToSection(group.category)}
-                      className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center justify-between group"
-                    >
-                      <span className="truncate pr-4">{group.category}</span>
-                      <Badge variant="secondary" className="bg-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                        {group.videos.length}
-                      </Badge>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-
-          <div className="hidden sm:flex border border-indigo-100 rounded-xl overflow-hidden bg-white">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn("rounded-none h-10 w-10", viewMode === 'grid' ? "bg-indigo-50 text-indigo-600" : "text-gray-400")}
-              onClick={() => setViewMode('grid')}
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Input 
+            placeholder="Search lessons..." 
+            className="pl-11 pr-11 rounded-2xl border-white/5 bg-white/5 h-12 text-sm focus-visible:ring-primary"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
             >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={cn("rounded-none h-10 w-10", viewMode === 'list' ? "bg-indigo-50 text-indigo-600" : "text-gray-400")}
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto space-y-10 sm:space-y-12">
+      <main className="space-y-16">
         {isLoading ? (
           <LessonSkeleton />
         ) : groupedVideos.length > 0 ? (
           groupedVideos.map((group) => (
-            <section 
-              key={group.category} 
-              id={`section-${group.category.replace(/\s+/g, '-').toLowerCase()}`}
-              className="space-y-4 sm:space-y-6 scroll-mt-24"
-            >
-              <div className="flex items-center space-x-2">
-                <div className="h-6 sm:h-8 w-1 bg-indigo-600 rounded-full" />
-                <h2 className="text-xs sm:text-sm font-black text-indigo-900 tracking-tight uppercase">
+            <section key={group.category} className="space-y-6">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <h2 className="text-sm font-black text-slate-400 tracking-widest uppercase">
                   {group.category}
                 </h2>
-                <Badge variant="outline" className="ml-2 bg-white text-indigo-400 border-indigo-100 text-[9px] sm:text-[10px]">
-                  {group.videos.length} Videos
+                <Badge variant="outline" className="bg-white/5 text-slate-500 border-none px-3 py-1 text-[10px] font-bold">
+                  {group.videos.length} Lessons
                 </Badge>
               </div>
 
-              <div className={cn(
-                "grid gap-4 sm:gap-6",
-                viewMode === 'grid' ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
-              )}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {group.videos.map((video) => (
-                  <Card key={video.id} className="overflow-hidden border-indigo-100 shadow-md hover:shadow-lg transition-all bg-white group rounded-2xl">
+                  <Card key={video.id} className="overflow-hidden border-white/5 bg-slate-900/40 hover:bg-slate-900/60 transition-all group rounded-2xl">
                     <VideoPlayer 
                       videoUrl={video.video_url!}
                       videoId={video.id}
                       posterUrl={getThumbnailUrl(video.video_url)}
                       className="aspect-video"
                     />
-                    <CardHeader className="p-3 sm:p-4">
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <CardTitle className="text-xs sm:text-sm font-bold text-indigo-900 line-clamp-2 leading-tight">
+                    <CardHeader className="p-5">
+                      <div className="flex justify-between items-start gap-4 mb-4">
+                        <CardTitle className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
                           {video.title}
                         </CardTitle>
-                        <div className="flex items-center space-x-1 shrink-0">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600"
-                                  onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
-                                >
-                                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Download Video</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                          
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button asChild variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-indigo-300 hover:text-indigo-600">
-                                  <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
-                                    <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                  </a>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Open Original Page</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <div className="flex items-center space-x-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-500 hover:text-white"
+                            onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-white">
+                            <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
                         </div>
                       </div>
-                      
-                      <VideoProgressIndicator videoId={video.id} className="mt-1 sm:mt-2" />
+                      <VideoProgressIndicator videoId={video.id} />
                     </CardHeader>
                   </Card>
                 ))}
@@ -255,14 +162,14 @@ const VideoGallery = () => {
             </section>
           ))
         ) : (
-          <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-indigo-200">
-            <Video className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No videos found matching your search.</p>
+          <div className="text-center py-24 bg-white/5 rounded-[2rem] border-2 border-dashed border-white/5">
+            <Video className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No lessons found.</p>
           </div>
         )}
       </main>
 
-      <footer className="mt-12 sm:mt-20">
+      <footer className="mt-24 opacity-50">
         <MadeWithDyad />
       </footer>
     </div>

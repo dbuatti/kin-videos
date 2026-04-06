@@ -7,17 +7,11 @@ import {
   PlayCircle, 
   Library, 
   Zap, 
-  Bookmark,
-  Scissors,
-  Terminal,
   Menu,
-  RefreshCw,
   LogOut,
-  BookOpen,
   Settings,
-  User as UserIcon,
-  ChevronRight,
-  Search
+  Search,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,8 +20,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { MadeWithDyad } from './made-with-dyad';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
-import { showSuccess, showError } from '@/utils/toast';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import CommandPalette from './CommandPalette';
 
 const NAV_ITEMS = [
@@ -37,28 +30,20 @@ const NAV_ITEMS = [
   { label: 'Inventory', icon: Library, path: '/library' },
 ];
 
-const UTILITY_ITEMS = [
-  { label: 'Stitcher', icon: Scissors, path: '/stitcher' },
-  { label: 'Scraper', icon: Terminal, path: '/scraper' },
-  { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
-  { label: 'Manual', icon: BookOpen, path: '/instructions' },
-];
-
 const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [profile, setProfile] = useState<{ first_name?: string, last_name?: string } | null>(null);
+  const [profile, setProfile] = useState<{ first_name?: string } | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('first_name')
         .eq('id', user.id)
         .maybeSingle();
       if (data) setProfile(data);
@@ -67,40 +52,22 @@ const AppLayout = () => {
   }, [user]);
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) showError(error.message);
-    else navigate('/login');
-  };
-
-  const handleSyncCourse = async () => {
-    if (!user) return;
-    setIsSyncing(true);
-    try {
-      const { error } = await supabase.functions.invoke('sync-course', {
-        body: { user_id: user.id }
-      });
-      if (error) throw error;
-      showSuccess("Course data synced!");
-    } catch (err: any) {
-      showError(err.message);
-    } finally {
-      setIsSyncing(false);
-    }
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
   const NavContent = () => (
-    <div className="flex flex-col h-full py-6 sm:py-8">
-      <div className="px-6 sm:px-8 mb-8 sm:mb-10">
+    <div className="flex flex-col h-full py-8">
+      <div className="px-8 mb-12">
         <div className="flex items-center space-x-3">
-          <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
+          <div className="bg-primary p-2 rounded-xl">
             <Zap className="text-white w-5 h-5" />
           </div>
-          <span className="font-black text-white tracking-tighter text-xl">FNH ARCHIVER</span>
+          <span className="font-black text-white tracking-tighter text-xl">FNH</span>
         </div>
       </div>
 
       <nav className="flex-1 px-4 space-y-1">
-        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Main Menu</p>
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.path}
@@ -109,35 +76,15 @@ const AppLayout = () => {
             className={cn(
               "flex items-center space-x-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all group",
               location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
-                ? "bg-primary text-white shadow-xl shadow-primary/20"
+                ? "bg-primary text-white shadow-lg shadow-primary/20"
                 : "text-slate-400 hover:bg-white/5 hover:text-white"
             )}
           >
-            <item.icon className={cn("w-5 h-5", (location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) ? "text-white" : "text-slate-500 group-hover:text-primary")} />
-            <span>{item.label === 'Home' && !isMobile ? 'Dashboard' : item.label}</span>
+            <item.icon className="w-5 h-5" />
+            <span>{item.label}</span>
             {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
               <ChevronRight className="ml-auto w-4 h-4 opacity-50" />
             )}
-          </Link>
-        ))}
-
-        <div className="my-6 border-t border-white/5 mx-4" />
-        
-        <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Tools & Utils</p>
-        {UTILITY_ITEMS.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={() => setIsOpen(false)}
-            className={cn(
-              "flex items-center space-x-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all group",
-              location.pathname === item.path
-                ? "bg-accent text-white shadow-xl shadow-accent/20"
-                : "text-slate-400 hover:bg-white/5 hover:text-white"
-            )}
-          >
-            <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-slate-500 group-hover:text-accent")} />
-            <span>{item.label}</span>
           </Link>
         ))}
       </nav>
@@ -146,42 +93,29 @@ const AppLayout = () => {
         <Link 
           to="/settings" 
           onClick={() => setIsOpen(false)}
-          className="flex items-center space-x-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group"
+          className="flex items-center space-x-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all"
         >
-          <Avatar className="h-10 w-10 border-2 border-primary/20">
-            <AvatarFallback className="bg-slate-800 text-primary font-black">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-slate-800 text-primary text-xs font-black">
               {profile?.first_name?.[0] || user?.email?.[0].toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-black text-white truncate">
-              {profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : 'User Profile'}
-            </p>
-            <p className="text-[10px] text-slate-500 truncate font-medium">{user?.email}</p>
+            <p className="text-xs font-bold text-white truncate">Settings</p>
           </div>
-          <Settings className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+          <Settings className="w-4 h-4 text-slate-500" />
         </Link>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Button 
-            onClick={handleSyncCourse} 
-            disabled={isSyncing}
-            variant="outline" 
-            className="rounded-xl border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 font-bold h-10 text-[10px]"
-          >
-            <RefreshCw className={cn("w-3 h-3 mr-2", isSyncing && "animate-spin")} />
-            Sync
-          </Button>
-          <Button 
-            onClick={handleLogout} 
-            variant="ghost" 
-            className="rounded-xl text-red-400 hover:bg-red-400/10 font-bold h-10 text-[10px]"
-          >
-            <LogOut className="w-3 h-3 mr-2" />
-            Logout
-          </Button>
-        </div>
-        <div className="pt-4">
+        <Button 
+          onClick={handleLogout} 
+          variant="ghost" 
+          className="w-full justify-start rounded-2xl text-red-400 hover:bg-red-400/10 font-bold h-11 px-4"
+        >
+          <LogOut className="w-4 h-4 mr-3" />
+          Logout
+        </Button>
+        
+        <div className="pt-4 opacity-50">
           <MadeWithDyad />
         </div>
       </div>
@@ -192,56 +126,37 @@ const AppLayout = () => {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <CommandPalette />
-        <header className="h-16 bg-background/80 backdrop-blur-2xl border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-40">
+        <header className="h-16 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-40">
           <div className="flex items-center space-x-2">
-            <div className="bg-primary p-1.5 rounded-lg">
-              <Zap className="text-white w-4 h-4" />
-            </div>
-            <span className="font-black text-white text-sm tracking-tighter">FNH ARCHIVER</span>
+            <Zap className="text-primary w-5 h-5" />
+            <span className="font-black text-white text-sm tracking-tighter">FNH</span>
           </div>
-          <div className="flex items-center space-x-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="text-slate-400 h-10 w-10"
-              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-            >
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="icon" className="text-slate-400" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}>
               <Search className="w-5 h-5" />
             </Button>
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white h-10 w-10">
+                <Button variant="ghost" size="icon" className="text-white">
                   <Menu className="w-6 h-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-[85%] max-w-xs bg-background border-r-white/5">
+              <SheetContent side="left" className="p-0 w-72 bg-background border-r-white/5">
                 <NavContent />
               </SheetContent>
             </Sheet>
           </div>
         </header>
-        
         <main className="flex-1 pb-20">
           <Outlet />
         </main>
-
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-3xl border-t border-white/5 flex items-center justify-around px-2 z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2 z-40">
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex flex-col items-center justify-center space-y-1 flex-1 h-full transition-all relative",
-                  isActive ? "text-primary" : "text-slate-500"
-                )}
-              >
-                <item.icon className={cn("w-5 h-5 transition-transform", isActive && "scale-110")} />
+              <Link key={item.path} to={item.path} className={cn("flex flex-col items-center space-y-1", isActive ? "text-primary" : "text-slate-500")}>
+                <item.icon className="w-5 h-5" />
                 <span className="text-[8px] font-black uppercase tracking-widest">{item.label}</span>
-                {isActive && (
-                  <div className="absolute top-0 w-8 h-0.5 bg-primary rounded-b-full shadow-[0_0_10px_rgba(0,210,255,0.8)]" />
-                )}
               </Link>
             );
           })}
@@ -253,19 +168,19 @@ const AppLayout = () => {
   return (
     <div className="min-h-screen bg-background flex">
       <CommandPalette />
-      <aside className="w-72 bg-background border-r border-white/5 sticky top-0 h-screen overflow-y-auto hidden lg:block">
+      <aside className="w-64 bg-background border-r border-white/5 sticky top-0 h-screen hidden lg:block">
         <NavContent />
       </aside>
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-8 pt-8 flex justify-end">
+        <div className="max-w-5xl mx-auto px-8 pt-8 flex justify-end">
           <Button 
             variant="outline" 
-            className="bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white rounded-xl h-10 px-4 font-bold text-xs"
+            className="bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 rounded-xl h-10 px-4 font-bold text-xs"
             onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
           >
             <Search className="w-4 h-4 mr-2" />
-            Search or Jump to...
-            <kbd className="ml-4 bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono">⌘ K</kbd>
+            Search...
+            <kbd className="ml-4 bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono">⌘K</kbd>
           </Button>
         </div>
         <Outlet />
