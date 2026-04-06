@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { useCrawlerJobs } from '@/hooks/use-crawler-jobs';
@@ -22,7 +22,8 @@ import {
   FileText,
   PlayCircle,
   Download,
-  Map as MapIcon
+  Map as MapIcon,
+  Bug
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,6 +49,7 @@ const Library = () => {
   
   const [pasteValue, setPasteValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
   const handleSync = () => {
     const lines = pasteValue.split('\n');
@@ -59,6 +61,7 @@ const Library = () => {
     if (!lessons || !localFiles) return { total: 0, downloaded: 0, missing: 0, processedLessons: [] };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
+    const logs: string[] = [];
     
     const grouped = lessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
@@ -98,19 +101,38 @@ const Library = () => {
 
         const isDownloaded = localFileNames.has(expectedFilename.toLowerCase());
         
+        // Fuzzy matching fallback: check if the title exists in any local filename
+        let fuzzyMatch = false;
+        if (!isDownloaded && lesson.title) {
+          const cleanTitle = lesson.title.toLowerCase();
+          for (const localName of localFileNames) {
+            if (localName.includes(cleanTitle)) {
+              fuzzyMatch = true;
+              break;
+            }
+          }
+        }
+
+        const finalMatch = isDownloaded || fuzzyMatch;
+
         total++;
-        if (isDownloaded) downloaded++;
+        if (finalMatch) downloaded++;
+
+        if (!finalMatch) {
+          logs.push(`MISSING: "${expectedFilename}" (Title: ${lesson.title})`);
+        }
 
         processedLessons.push({
           ...lesson,
           expectedFilename,
-          isDownloaded,
+          isDownloaded: finalMatch,
           category,
           displayIndex: `${catIdx + 1}.${lesIdx + 1}`
         });
       });
     });
 
+    setDebugLogs(logs);
     return { 
       total, 
       downloaded, 
@@ -301,6 +323,32 @@ const Library = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Download All Missing
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Sync Debugger Section */}
+          <Card className="border-red-100 shadow-lg rounded-2xl overflow-hidden bg-red-50/30">
+            <CardHeader className="bg-red-600 text-white py-3">
+              <CardTitle className="text-sm flex items-center">
+                <Bug className="w-4 h-4 mr-2" />
+                Sync Debugger
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ScrollArea className="h-[200px] w-full p-3">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Unmatched Lessons ({debugLogs.length})</p>
+                  {debugLogs.length > 0 ? (
+                    debugLogs.map((log, i) => (
+                      <div key={i} className="text-[9px] font-mono text-red-800 border-b border-red-100 pb-1">
+                        {log}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-gray-400 italic">No unmatched lessons found.</p>
+                  )}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
