@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -14,7 +14,9 @@ import {
   RefreshCw,
   LogOut,
   BookOpen,
-  Settings
+  Settings,
+  User as UserIcon,
+  ChevronRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,7 @@ import { MadeWithDyad } from './made-with-dyad';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { showSuccess, showError } from '@/utils/toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -37,7 +40,6 @@ const UTILITY_ITEMS = [
   { label: 'Scraper', icon: Terminal, path: '/scraper' },
   { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
   { label: 'Manual', icon: BookOpen, path: '/instructions' },
-  { label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
 const AppLayout = () => {
@@ -47,6 +49,20 @@ const AppLayout = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [profile, setProfile] = useState<{ first_name?: string, last_name?: string } | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (data) setProfile(data);
+    };
+    fetchProfile();
+  }, [user]);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -81,7 +97,7 @@ const AppLayout = () => {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-2">
+      <nav className="flex-1 px-4 space-y-1.5">
         <p className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-4">Main Menu</p>
         {NAV_ITEMS.map((item) => (
           <Link
@@ -89,7 +105,7 @@ const AppLayout = () => {
             to={item.path}
             onClick={() => setIsOpen(false)}
             className={cn(
-              "flex items-center space-x-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group",
+              "flex items-center space-x-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all group",
               location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))
                 ? "bg-primary text-white shadow-xl shadow-primary/20"
                 : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -97,6 +113,9 @@ const AppLayout = () => {
           >
             <item.icon className={cn("w-5 h-5", location.pathname === item.path ? "text-white" : "text-slate-500 group-hover:text-primary")} />
             <span>{item.label}</span>
+            {(location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path))) && (
+              <ChevronRight className="ml-auto w-4 h-4 opacity-50" />
+            )}
           </Link>
         ))}
 
@@ -109,7 +128,7 @@ const AppLayout = () => {
             to={item.path}
             onClick={() => setIsOpen(false)}
             className={cn(
-              "flex items-center space-x-4 px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group",
+              "flex items-center space-x-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all group",
               location.pathname === item.path
                 ? "bg-accent text-white shadow-xl shadow-accent/20"
                 : "text-slate-400 hover:bg-white/5 hover:text-white"
@@ -121,25 +140,47 @@ const AppLayout = () => {
         ))}
       </nav>
 
-      <div className="px-4 mt-auto space-y-3">
-        <Button 
-          onClick={handleSyncCourse} 
-          disabled={isSyncing}
-          variant="outline" 
-          className="w-full justify-start rounded-2xl border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 font-bold h-12"
+      <div className="px-4 mt-auto space-y-4">
+        {/* User Profile Summary */}
+        <Link 
+          to="/settings" 
+          onClick={() => setIsOpen(false)}
+          className="flex items-center space-x-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group"
         >
-          <RefreshCw className={cn("w-4 h-4 mr-3", isSyncing && "animate-spin")} />
-          {isSyncing ? "Syncing..." : "Sync Course"}
-        </Button>
-        <Button 
-          onClick={handleLogout} 
-          variant="ghost" 
-          className="w-full justify-start rounded-2xl text-red-400 hover:bg-red-400/10 font-bold h-12"
-        >
-          <LogOut className="w-4 h-4 mr-3" />
-          Logout
-        </Button>
-        <div className="pt-6">
+          <Avatar className="h-10 w-10 border-2 border-primary/20">
+            <AvatarFallback className="bg-slate-800 text-primary font-black">
+              {profile?.first_name?.[0] || user?.email?.[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-black text-white truncate">
+              {profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}` : 'User Profile'}
+            </p>
+            <p className="text-[10px] text-slate-500 truncate font-medium">{user?.email}</p>
+          </div>
+          <Settings className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
+        </Link>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Button 
+            onClick={handleSyncCourse} 
+            disabled={isSyncing}
+            variant="outline" 
+            className="rounded-xl border-white/5 bg-white/5 text-slate-300 hover:bg-white/10 font-bold h-10 text-[10px]"
+          >
+            <RefreshCw className={cn("w-3 h-3 mr-2", isSyncing && "animate-spin")} />
+            Sync
+          </Button>
+          <Button 
+            onClick={handleLogout} 
+            variant="ghost" 
+            className="rounded-xl text-red-400 hover:bg-red-400/10 font-bold h-10 text-[10px]"
+          >
+            <LogOut className="w-3 h-3 mr-2" />
+            Logout
+          </Button>
+        </div>
+        <div className="pt-4">
           <MadeWithDyad />
         </div>
       </div>
