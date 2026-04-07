@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { useJobLessons } from '@/hooks/use-job-lessons';
@@ -8,13 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Bug, Database, Shield, RefreshCw, Terminal } from 'lucide-react';
+import { ArrowLeft, Bug, Database, Shield, RefreshCw, Terminal, Trash2 } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+import { getLogs, clearLogs } from '@/utils/logger';
+import { cn } from '@/lib/utils';
 
 const Debug = () => {
   const navigate = useNavigate();
   const { user, session, isLoading: authLoading } = useAuth();
   const { data: lessons, isLoading: lessonsLoading, refetch: refetchLessons } = useJobLessons();
+  const [playbackLogs, setPlaybackLogs] = useState(getLogs());
+
+  useEffect(() => {
+    const handleLogUpdate = () => setPlaybackLogs(getLogs());
+    window.addEventListener('app-log-updated', handleLogUpdate);
+    return () => window.removeEventListener('app-log-updated', handleLogUpdate);
+  }, []);
 
   const handleRefresh = () => {
     refetchLessons();
@@ -37,15 +46,26 @@ const Debug = () => {
             System Debugger
           </h1>
         </div>
-        <Button 
-          onClick={handleRefresh} 
-          variant="outline" 
-          size="sm" 
-          className="border-slate-700 bg-slate-900 hover:bg-slate-800"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Force Refetch
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            onClick={() => clearLogs()} 
+            variant="outline" 
+            size="sm" 
+            className="border-slate-700 bg-slate-900 hover:bg-slate-800 text-red-400"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Clear Logs
+          </Button>
+          <Button 
+            onClick={handleRefresh} 
+            variant="outline" 
+            size="sm" 
+            className="border-slate-700 bg-slate-900 hover:bg-slate-800"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Force Refetch
+          </Button>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto space-y-6">
@@ -63,7 +83,6 @@ const Debug = () => {
                 <p><span className="text-slate-500">User ID:</span> {user?.id || 'null'}</p>
                 <p><span className="text-slate-500">Email:</span> {user?.email || 'null'}</p>
                 <p><span className="text-slate-500">Auth Status:</span> {authLoading ? 'Loading...' : (user ? 'Authenticated' : 'Anonymous')}</p>
-                <p><span className="text-slate-500">JWT Exp:</span> {session?.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : 'N/A'}</p>
               </div>
             </CardContent>
           </Card>
@@ -90,15 +109,35 @@ const Debug = () => {
         <Card className="bg-slate-900 border-slate-800 text-slate-300">
           <CardHeader className="border-b border-slate-800">
             <CardTitle className="text-sm font-bold flex items-center text-indigo-400">
-              <Terminal className="w-4 h-4 mr-2" /> Raw Data Inspector
+              <Terminal className="w-4 h-4 mr-2" /> System Inspector
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Tabs defaultValue="lessons" className="w-full">
+            <Tabs defaultValue="logs" className="w-full">
               <TabsList className="w-full justify-start bg-slate-950 rounded-none border-b border-slate-800 p-0 h-10">
+                <TabsTrigger value="logs" className="rounded-none data-[state=active]:bg-slate-900 data-[state=active]:text-indigo-400 px-6">Playback Logs</TabsTrigger>
                 <TabsTrigger value="lessons" className="rounded-none data-[state=active]:bg-slate-900 data-[state=active]:text-indigo-400 px-6">Lessons Table</TabsTrigger>
               </TabsList>
               
+              <TabsContent value="logs" className="m-0">
+                <ScrollArea className="h-[400px] w-full p-4 bg-slate-950">
+                  <div className="space-y-1">
+                    {playbackLogs.length === 0 && <p className="text-slate-600 italic text-xs">No logs captured yet. Play a video to see events.</p>}
+                    {playbackLogs.map((l, i) => (
+                      <div key={i} className="text-[10px] flex space-x-3 border-b border-white/5 pb-1">
+                        <span className="text-slate-600 shrink-0">{l.timestamp}</span>
+                        <span className={cn(
+                          "font-bold shrink-0 w-12",
+                          l.level === 'error' ? 'text-red-500' : l.level === 'warn' ? 'text-amber-500' : 'text-indigo-400'
+                        )}>[{l.level.toUpperCase()}]</span>
+                        <span className="text-slate-300">{l.message}</span>
+                        {l.data && <span className="text-slate-500 truncate">{JSON.stringify(l.data)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
               <TabsContent value="lessons" className="m-0">
                 <ScrollArea className="h-[400px] w-full p-4 bg-slate-950">
                   <pre className="text-[10px] leading-relaxed">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVideoProgress } from '@/hooks/use-video-progress';
 import { usePlaybackSpeed } from '@/hooks/use-playback-speed';
+import { log } from '@/utils/logger';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -47,19 +48,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const { progress, isLoading: isProgressLoading, saveProgress, incrementWatchCount } = useVideoProgress(effectiveKey);
   const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
+  const hasAttemptedResume = useRef<boolean>(false);
 
-  // Media Session API for Control Center & Lock Screen support
+  // Media Session API
   useEffect(() => {
     if ('mediaSession' in navigator && title) {
+      log(`Setting MediaSession for: ${title}`);
       const artworkUrl = posterUrl || 'https://xebtjnvfkroiplyzftas.supabase.co/storage/v1/object/public/assets/fnh-logo.png';
       
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title,
         artist: category || 'FNH Foundations',
         album: 'Functional Neuro Health',
-        artwork: [
-          { src: artworkUrl, sizes: '512x512', type: 'image/png' },
-        ]
+        artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }]
       });
 
       navigator.mediaSession.setActionHandler('play', () => mediaRef.current?.play());
@@ -80,31 +81,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
-
     const enforceSpeed = () => {
       if (media.playbackRate !== speed) {
+        log(`Enforcing speed: ${speed}x`);
         media.playbackRate = speed;
       }
     };
-
     media.addEventListener('ratechange', enforceSpeed);
     media.addEventListener('play', enforceSpeed);
     media.playbackRate = speed;
-
     return () => {
       media.removeEventListener('ratechange', enforceSpeed);
       media.removeEventListener('play', enforceSpeed);
     };
-  }, [speed, videoUrl, isReady]);
+  }, [speed, videoUrl]);
 
   // Save progress on unmount or visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && mediaRef.current && isReady) {
+        log(`App hidden, saving progress: ${mediaRef.current.currentTime.toFixed(2)}s`);
         saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -115,53 +114,49 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [isReady, saveProgress]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!mediaRef.current || document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
-
-      switch (e.code) {
-        case 'Space':
-          e.preventDefault();
-          togglePlay();
-          break;
-        case 'ArrowRight':
-          mediaRef.current.currentTime += 10;
-          break;
-        case 'ArrowLeft':
-          mediaRef.current.currentTime -= 10;
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  useEffect(() => {
+    log(`Loading new media: ${effectiveKey}`, { url: videoUrl });
     setError(null);
     setIsReady(false);
+    hasAttemptedResume.current = false;
     if (autoPlay && mediaRef.current) {
-      mediaRef.current.play().catch(() => {
+      mediaRef.current.play().catch((err) => {
+        log(`Autoplay failed: ${err.message}`, null, 'warn');
         setIsPlaying(false);
         setHasStarted(false);
       });
     }
   }, [videoUrl, autoPlay, effectiveKey]);
 
-  // Aggressive seeking logic
+  // Aggressive seeking logic for iOS
   useEffect(() => {
-    if (isReady && mediaRef.current && progress > 2) {
-      const media = mediaRef.current;
+    const media = mediaRef.current;
+    if (isReady && media && progress > 2 && !hasAttemptedResume.current) {
       const seekTime = Math.min(progress, media.duration - 2);
+      log(`Attempting resume to: ${seekTime.toFixed(2)}s (Saved: ${progress.toFixed(2)}s)`);
       
-      if (seekTime > 0 && Math.abs(media.currentTime - seekTime) > 2) {
-        media.currentTime = seekTime;
-        lastSavedTime.current = seekTime;
-      }
+      // iOS often needs multiple attempts or a specific state
+      const performSeek = () => {
+        try {
+          media.currentTime = seekTime;
+          lastSavedTime.current = seekTime;
+          hasAttemptedResume.current = true;
+          log(`Seek successful. Current time: ${media.currentTime.toFixed(2)}s`);
+        } catch (e: any) {
+          log(`Seek failed: ${e.message}`, null, 'error');
+        }
+      };
+
+      // Try immediately
+      performSeek();
+      
+      // And again after a short delay just in case iOS was lying about being ready
+      setTimeout(performSeek, 500);
     }
   }, [isReady, progress]);
 
   const handleLoadedMetadata = () => {
     if (mediaRef.current) {
+      log(`Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
       mediaRef.current.playbackRate = speed;
       setIsReady(true);
     }
@@ -174,64 +169,42 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         saveProgress(currentTime, mediaRef.current.duration);
         lastSavedTime.current = currentTime;
       }
-      
-      if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
-        navigator.mediaSession.setPositionState({
-          duration: mediaRef.current.duration || 0,
-          playbackRate: mediaRef.current.playbackRate || 1,
-          position: mediaRef.current.currentTime || 0,
-        });
-      }
     }
   };
 
   const handlePlay = () => {
+    log('Playback started');
     setHasStarted(true);
     setIsPlaying(true);
-    setError(null);
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'playing';
-    }
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   };
 
   const handlePause = () => {
+    log('Playback paused');
     setIsPlaying(false);
     if (mediaRef.current && isReady) {
       saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
     }
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.playbackState = 'paused';
-    }
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
   };
 
   const handleEnded = () => {
+    log('Playback ended');
     incrementWatchCount();
     if (onEnded) onEnded();
   };
 
   const handleMediaError = (e: any) => {
     const mediaElement = e.target as HTMLMediaElement;
-    setError(`Playback Error (Code ${mediaElement.error?.code}).`);
+    const errorMsg = `Media Error: ${mediaElement.error?.code} - ${mediaElement.error?.message}`;
+    log(errorMsg, null, 'error');
+    setError(errorMsg);
   };
 
   const togglePlay = () => {
     if (mediaRef.current) {
-      if (mediaRef.current.paused) {
-        mediaRef.current.play();
-      } else {
-        mediaRef.current.pause();
-      }
-    }
-  };
-
-  const resetProgress = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (mediaRef.current) {
-      mediaRef.current.currentTime = 0;
-      lastSavedTime.current = 0;
-      saveProgress(0, mediaRef.current.duration);
-      mediaRef.current.play();
+      if (mediaRef.current.paused) mediaRef.current.play();
+      else mediaRef.current.pause();
     }
   };
 
@@ -303,7 +276,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 variant="secondary" 
                 size="sm" 
                 className="h-7 px-2 bg-white/20 hover:bg-white/40 text-white border-none backdrop-blur-sm"
-                onClick={resetProgress}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (mediaRef.current) {
+                    log('Manual restart requested');
+                    mediaRef.current.currentTime = 0;
+                    saveProgress(0, mediaRef.current.duration);
+                    mediaRef.current.play();
+                  }
+                }}
               >
                 <RotateCcw className="w-3 h-3 mr-1" />
                 Restart
