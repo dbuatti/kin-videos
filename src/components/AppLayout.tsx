@@ -126,9 +126,9 @@ const AppLayout = () => {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="min-h-[100dvh] bg-background flex flex-col overflow-x-hidden">
         <CommandPalette />
-        <header className="h-16 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-40">
+        <header className="h-16 bg-background/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-40 shrink-0">
           <div className="flex items-center space-x-2">
             <Zap className="text-primary w-5 h-5" />
             <span className="font-black text-white text-sm tracking-tighter">FNH</span>
@@ -149,7 +149,7 @@ const AppLayout = () => {
             </Sheet>
           </div>
         </header>
-        <main className="flex-1 pb-20">
+        <main className="flex-1 pb-20 overflow-x-hidden">
           <Outlet />
         </main>
         <nav className="fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2 z-40">
@@ -168,12 +168,12 @@ const AppLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex overflow-x-hidden">
       <CommandPalette />
-      <aside className="w-64 bg-background border-r border-white/5 sticky top-0 h-screen hidden lg:block">
+      <aside className="w-64 bg-background border-r border-white/5 sticky top-0 h-screen hidden lg:block shrink-0">
         <NavContent />
       </aside>
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="max-w-5xl mx-auto px-8 pt-8 flex justify-end">
           <Button 
             variant="outline" 

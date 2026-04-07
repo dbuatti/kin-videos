@@ -41,6 +41,12 @@
     @apply border-border;
   }
 
+  html, body {
+    @apply overflow-x-hidden;
+    width: 100%;
+    position: relative;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     background-image: 
@@ -48,6 +54,7 @@
       radial-gradient(at 100% 0%, hsla(224, 76%, 48%, 0.1) 0px, transparent 50%),
       radial-gradient(at 50% 100%, hsla(240, 10%, 10%, 0.2) 0px, transparent 50%);
     background-attachment: fixed;
+    min-height: 100dvh;
   }
 }
 

@@ -112,7 +112,6 @@ const MasterPlayer = () => {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
       setAutoPlay(true);
-      // Explicitly save immediately to avoid race conditions
       saveMasterIndex(nextIdx);
     } else {
       showSuccess("You've reached the end of the course!");
@@ -124,7 +123,6 @@ const MasterPlayer = () => {
       const prevIdx = currentIndex - 1;
       setCurrentIndex(prevIdx);
       setAutoPlay(true);
-      // Explicitly save immediately to avoid race conditions
       saveMasterIndex(prevIdx);
     }
   };
@@ -149,14 +147,14 @@ const MasterPlayer = () => {
 
   if (isLoading || (isStateLoading && isInitialLoad)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-slate-950">
         <Loader2 className="w-12 h-12 animate-spin text-indigo-500" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-slate-950 text-slate-200 flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-slate-950 text-slate-200 flex flex-col overflow-hidden">
       <header className="p-2 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50 backdrop-blur-md shrink-0 z-50">
         <div className="flex items-center space-x-1 sm:space-x-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-slate-800 text-slate-400 h-9 w-9">
