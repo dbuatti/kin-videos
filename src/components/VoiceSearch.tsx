@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { showError } from '@/utils/toast';
+import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { log } from '@/utils/logger';
 import {
@@ -50,6 +50,8 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
     recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
       log(`[VoiceSearch] Heard: "${text}"`);
+      // Provide immediate feedback
+      showSuccess(`Heard: "${text}"`);
       onResult(text);
     };
 
