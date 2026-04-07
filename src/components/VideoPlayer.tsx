@@ -97,22 +97,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [speed, videoUrl]);
 
-  // Save progress on unmount or visibility change
+  // Save progress on unmount, visibility change, or beforeunload
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && mediaRef.current && isReady) {
-        log(`[VideoPlayer] App hidden, saving progress: ${mediaRef.current.currentTime.toFixed(2)}s`);
+    const saveCurrentProgress = () => {
+      if (mediaRef.current && isReady && mediaRef.current.currentTime > 0) {
+        log(`[VideoPlayer] Saving progress for ${effectiveKey}: ${mediaRef.current.currentTime.toFixed(2)}s`);
         saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
       }
     };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveCurrentProgress();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      saveCurrentProgress();
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (mediaRef.current && isReady) {
-        saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
-      }
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      saveCurrentProgress();
     };
-  }, [isReady, saveProgress]);
+  }, [isReady, saveProgress, effectiveKey]);
 
   useEffect(() => {
     log(`[VideoPlayer] Loading new media: ${effectiveKey}`, { url: videoUrl });
@@ -120,6 +132,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsReady(false);
     hasSuccessfullyResumed.current = false;
     resumeAttemptCount.current = 0;
+    lastSavedTime.current = 0;
     
     const media = mediaRef.current;
     if (media) {
@@ -134,7 +147,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const attemptResume = (source: string) => {
     const media = mediaRef.current;
-    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 5) return;
+    // Lowered threshold to 1s to be more aggressive with resuming
+    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 1) return;
 
     // Don't resume if we're already past the progress point
     if (media.currentTime > progress + 1) {
@@ -143,7 +157,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return;
     }
 
-    const seekTime = Math.min(progress, media.duration - 2);
+    const seekTime = Math.min(progress, media.duration - 1);
     if (seekTime <= 0) return;
 
     log(`[VideoPlayer] [Resume] Attempting seek from ${source} to ${seekTime.toFixed(2)}s (Duration: ${media.duration.toFixed(2)}s)`);
@@ -169,7 +183,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   useEffect(() => {
-    if (isReady && progress > 5 && !hasSuccessfullyResumed.current) {
+    if (isReady && progress > 1 && !hasSuccessfullyResumed.current) {
       const timer = setTimeout(() => attemptResume('isReady/progress effect'), 100);
       return () => clearTimeout(timer);
     }
@@ -195,11 +209,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleTimeUpdate = () => {
-    if (mediaRef.current && isPlaying && isReady) {
-      const currentTime = mediaRef.current.currentTime;
-      // Only save if we've moved forward and it's been more than 5 seconds
-      if (currentTime > lastSavedTime.current + 5) {
-        saveProgress(currentTime, mediaRef.current.duration);
+    const media = mediaRef.current;
+    if (media && !media.paused && isReady) {
+      const currentTime = media.currentTime;
+      // Lowered save interval to 3 seconds for better persistence
+      if (currentTime > lastSavedTime.current + 3) {
+        log(`[VideoPlayer] Periodic save for ${effectiveKey}: ${currentTime.toFixed(2)}s`);
+        saveProgress(currentTime, media.duration);
         lastSavedTime.current = currentTime;
       }
     }
@@ -212,7 +228,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     
     // Ensure we resume if we haven't yet
-    if (!hasSuccessfullyResumed.current && progress > 5) {
+    if (!hasSuccessfullyResumed.current && progress > 1) {
       attemptResume('handlePlay');
     }
   };
@@ -220,7 +236,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handlePause = () => {
     log('[VideoPlayer] Playback paused');
     setIsPlaying(false);
-    if (mediaRef.current && isReady) {
+    if (mediaRef.current && isReady && mediaRef.current.currentTime > 0) {
+      log(`[VideoPlayer] Pause save for ${effectiveKey}: ${mediaRef.current.currentTime.toFixed(2)}s`);
       saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
     }
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
@@ -242,7 +259,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     // Safety check: only trigger if we are actually near the end
-    // This prevents weird browser bugs where 'ended' fires prematurely
     if (media.duration > 0 && media.currentTime < media.duration - 5) {
       log(`[VideoPlayer] Ignoring premature ended event (currentTime ${media.currentTime.toFixed(2)}s is not near duration ${media.duration.toFixed(2)}s)`);
       return;
@@ -335,7 +351,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         >
           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
           
-          {!hasStarted && progress && progress > 5 && (
+          {!hasStarted && progress && progress > 1 && (
             <div className="absolute bottom-16 left-4 right-4 flex justify-between items-center pointer-events-auto">
               <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
                 RESUMING AT {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')}
