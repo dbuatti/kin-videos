@@ -117,12 +117,8 @@ const MasterPlayer = () => {
   };
 
   const handleVideoEnded = () => {
-    if (currentIndex < playlist.length - 1) {
-      toast.info(`Next lesson starting in 3 seconds...`, {
-        duration: 3000,
-        onAutoClose: handleNext
-      });
-    }
+    // Trigger next immediately for better background reliability
+    handleNext();
   };
 
   const handleCopyLink = () => {
@@ -305,6 +301,8 @@ const MasterPlayer = () => {
               progressKey={currentVideo?.id}
               className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
               autoPlay={autoPlay}
             />
           </div>

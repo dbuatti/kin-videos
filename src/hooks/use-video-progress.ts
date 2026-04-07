@@ -42,7 +42,8 @@ export const useVideoProgress = (progressKey: string) => {
       } as VideoProgressData;
     },
     enabled: !!user && !!progressKey,
-    staleTime: 30000,
+    // Set staleTime to 0 to ensure we always get the latest progress when switching lessons
+    staleTime: 0,
   });
 
   const saveMutation = useMutation({

@@ -17,6 +17,8 @@ interface VideoPlayerProps {
   posterUrl?: string;
   className?: string;
   onEnded?: () => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
   autoPlay?: boolean;
 }
 
@@ -30,6 +32,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   posterUrl, 
   className, 
   onEnded,
+  onNext,
+  onPrevious,
   autoPlay = false
 }) => {
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
@@ -54,20 +58,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         artist: category || 'FNH Foundations',
         album: 'Functional Neuro Health',
         artwork: [
-          { src: artworkUrl, sizes: '96x96', type: 'image/png' },
-          { src: artworkUrl, sizes: '128x128', type: 'image/png' },
-          { src: artworkUrl, sizes: '192x192', type: 'image/png' },
-          { src: artworkUrl, sizes: '256x256', type: 'image/png' },
-          { src: artworkUrl, sizes: '384x384', type: 'image/png' },
           { src: artworkUrl, sizes: '512x512', type: 'image/png' },
         ]
       });
 
-      const playMedia = () => mediaRef.current?.play();
-      const pauseMedia = () => mediaRef.current?.pause();
-
-      navigator.mediaSession.setActionHandler('play', playMedia);
-      navigator.mediaSession.setActionHandler('pause', pauseMedia);
+      navigator.mediaSession.setActionHandler('play', () => mediaRef.current?.play());
+      navigator.mediaSession.setActionHandler('pause', () => mediaRef.current?.pause());
       navigator.mediaSession.setActionHandler('seekbackward', (details) => {
         if (mediaRef.current) mediaRef.current.currentTime -= (details.seekOffset || 10);
       });
@@ -75,11 +71,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (mediaRef.current) mediaRef.current.currentTime += (details.seekOffset || 10);
       });
       
-      // Explicitly set these to null to avoid default behavior
-      navigator.mediaSession.setActionHandler('previoustrack', null);
-      navigator.mediaSession.setActionHandler('nexttrack', null);
+      // Enable Next/Previous in Control Center
+      if (onNext) navigator.mediaSession.setActionHandler('nexttrack', onNext);
+      if (onPrevious) navigator.mediaSession.setActionHandler('previoustrack', onPrevious);
     }
-  }, [title, category, posterUrl, videoUrl]);
+  }, [title, category, posterUrl, videoUrl, onNext, onPrevious]);
 
   // Speed Enforcement
   useEffect(() => {
@@ -94,16 +90,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     media.addEventListener('ratechange', enforceSpeed);
     media.addEventListener('play', enforceSpeed);
-    media.addEventListener('playing', enforceSpeed);
-    
     media.playbackRate = speed;
 
     return () => {
       media.removeEventListener('ratechange', enforceSpeed);
       media.removeEventListener('play', enforceSpeed);
-      media.removeEventListener('playing', enforceSpeed);
     };
   }, [speed, videoUrl, isReady]);
+
+  // Save progress on unmount or visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && mediaRef.current && isReady) {
+        saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (mediaRef.current && isReady) {
+        saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
+      }
+    };
+  }, [isReady, saveProgress]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -146,12 +156,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       if (progress && progress > 2) {
         const seekTime = Math.min(progress, mediaRef.current.duration - 2);
         if (seekTime > 0) {
+          // Use a slightly longer delay for mobile stability
           setTimeout(() => {
             if (mediaRef.current) {
               mediaRef.current.currentTime = seekTime;
               lastSavedTime.current = seekTime;
             }
-          }, 200);
+          }, 300);
         }
       }
       setIsReady(true);
@@ -161,7 +172,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleTimeUpdate = () => {
     if (mediaRef.current && isPlaying && isReady) {
       const currentTime = mediaRef.current.currentTime;
-      if (Math.abs(currentTime - lastSavedTime.current) > 5) {
+      // Save more frequently (every 3 seconds) for better reliability
+      if (Math.abs(currentTime - lastSavedTime.current) > 3) {
         saveProgress(currentTime, mediaRef.current.duration);
         lastSavedTime.current = currentTime;
       }
@@ -255,7 +267,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               onPause={handlePause}
               onEnded={handleEnded}
               onError={handleMediaError}
-              // We use a small visible element to ensure iOS doesn't kill the process
               className="opacity-0 pointer-events-none absolute w-1 h-1"
             />
           ) : (
