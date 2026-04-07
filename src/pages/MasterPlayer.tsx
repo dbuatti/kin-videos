@@ -297,6 +297,9 @@ const MasterPlayer = () => {
             <VideoPlayer 
               videoUrl={currentVideo?.video_url || ''} 
               videoId={currentVideo?.id || ''} 
+              title={currentVideo?.title || ''}
+              category={currentVideo?.category || ''}
+              isAudioOnly={isAudioOnly}
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
               className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}

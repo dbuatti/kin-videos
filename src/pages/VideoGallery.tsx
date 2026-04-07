@@ -134,6 +134,8 @@ const VideoGallery = () => {
                     <VideoPlayer 
                       videoUrl={video.video_url!}
                       videoId={video.id}
+                      title={video.title || ''}
+                      category={video.category || ''}
                       posterUrl={getThumbnailUrl(video.video_url)}
                       className="aspect-video"
                     />
