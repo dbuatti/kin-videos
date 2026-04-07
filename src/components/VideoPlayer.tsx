@@ -50,11 +50,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const lastSavedTime = useRef<number>(0);
   const hasSuccessfullyResumed = useRef<boolean>(false);
   const lastEndedTime = useRef<number>(0);
+  const resumeAttemptCount = useRef<number>(0);
 
   // Media Session API
   useEffect(() => {
     if ('mediaSession' in navigator && title) {
-      log(`Setting MediaSession for: ${title}`);
+      log(`[VideoPlayer] Setting MediaSession for: ${title}`);
       const artworkUrl = posterUrl || 'https://xebtjnvfkroiplyzftas.supabase.co/storage/v1/object/public/assets/fnh-logo.png';
       
       navigator.mediaSession.metadata = new MediaMetadata({
@@ -83,7 +84,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!media) return;
     const enforceSpeed = () => {
       if (media.playbackRate !== speed) {
-        log(`Enforcing speed: ${speed}x`);
+        log(`[VideoPlayer] Enforcing speed: ${speed}x`);
         media.playbackRate = speed;
       }
     };
@@ -100,7 +101,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && mediaRef.current && isReady) {
-        log(`App hidden, saving progress: ${mediaRef.current.currentTime.toFixed(2)}s`);
+        log(`[VideoPlayer] App hidden, saving progress: ${mediaRef.current.currentTime.toFixed(2)}s`);
         saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
       }
     };
@@ -114,17 +115,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [isReady, saveProgress]);
 
   useEffect(() => {
-    log(`Loading new media: ${effectiveKey}`, { url: videoUrl });
+    log(`[VideoPlayer] Loading new media: ${effectiveKey}`, { url: videoUrl });
     setError(null);
     setIsReady(false);
     hasSuccessfullyResumed.current = false;
+    resumeAttemptCount.current = 0;
     
     const media = mediaRef.current;
     if (media) {
       media.load();
       if (autoPlay) {
         media.play().catch((err) => {
-          log(`Initial play attempt failed: ${err.message}`, null, 'warn');
+          log(`[VideoPlayer] Initial play attempt failed: ${err.message}`, null, 'warn');
         });
       }
     }
@@ -132,64 +134,62 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const attemptResume = (source: string) => {
     const media = mediaRef.current;
-    
-    // Strict validation to prevent NaN errors
-    if (!media || !isReady || hasSuccessfullyResumed.current) return;
-    
-    const validProgress = Number(progress);
-    const validDuration = Number(media.duration);
+    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 5) return;
 
-    if (isNaN(validProgress) || isNaN(validDuration) || !isFinite(validDuration) || validProgress <= 5) {
-      if (isNaN(validDuration) || !isFinite(validDuration)) {
-        log(`[Resume] Delaying seek from ${source}: duration is not yet finite (${validDuration})`);
-      }
+    // Don't resume if we're already past the progress point
+    if (media.currentTime > progress + 1) {
+      log(`[VideoPlayer] Skipping resume from ${source}, already past progress point`);
+      hasSuccessfullyResumed.current = true;
       return;
     }
 
-    const seekTime = Math.min(validProgress, validDuration - 2);
-    
-    if (isNaN(seekTime)) {
-      log(`[Resume] Aborting seek: calculated seekTime is NaN`, { validProgress, validDuration }, 'error');
-      return;
-    }
+    const seekTime = Math.min(progress, media.duration - 2);
+    if (seekTime <= 0) return;
 
-    log(`[Resume] Attempting seek from ${source} to ${seekTime.toFixed(2)}s`);
+    log(`[VideoPlayer] [Resume] Attempting seek from ${source} to ${seekTime.toFixed(2)}s (Duration: ${media.duration.toFixed(2)}s)`);
 
     try {
       media.currentTime = seekTime;
       lastSavedTime.current = seekTime;
       
+      // Verify seek
       setTimeout(() => {
-        if (media && Math.abs(media.currentTime - seekTime) < 1) {
-          log(`[Resume] Seek verified successful at ${media.currentTime.toFixed(2)}s`);
+        if (media && Math.abs(media.currentTime - seekTime) < 2) {
+          log(`[VideoPlayer] [Resume] Seek verified successful at ${media.currentTime.toFixed(2)}s`);
           hasSuccessfullyResumed.current = true;
+        } else if (resumeAttemptCount.current < 3) {
+          resumeAttemptCount.current++;
+          log(`[VideoPlayer] [Resume] Seek verification failed, retrying (${resumeAttemptCount.current}/3)...`);
+          attemptResume('retry');
         }
-      }, 150);
+      }, 250);
     } catch (e: any) {
-      log(`[Resume] Seek error: ${e.message}`, null, 'error');
+      log(`[VideoPlayer] [Resume] Seek error: ${e.message}`, null, 'error');
     }
   };
 
   useEffect(() => {
-    if (isReady && progress > 5) {
-      attemptResume('isReady effect');
+    if (isReady && progress > 5 && !hasSuccessfullyResumed.current) {
+      const timer = setTimeout(() => attemptResume('isReady/progress effect'), 100);
+      return () => clearTimeout(timer);
     }
   }, [isReady, progress]);
 
   const handleLoadedMetadata = () => {
     if (mediaRef.current) {
-      log(`Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
+      log(`[VideoPlayer] Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
       mediaRef.current.playbackRate = speed;
       setIsReady(true);
-      setTimeout(() => attemptResume('handleLoadedMetadata'), 100);
+      // Small delay to ensure seekable range is populated
+      setTimeout(() => attemptResume('handleLoadedMetadata'), 200);
     }
   };
 
   const handleCanPlay = () => {
-    log('Media can play');
+    log('[VideoPlayer] Media can play');
     const media = mediaRef.current;
     if (media && autoPlay && media.paused) {
-      media.play().catch(err => log(`Auto-play failed: ${err.message}`, null, 'warn'));
+      media.play().catch(err => log(`[VideoPlayer] Auto-play failed: ${err.message}`, null, 'warn'));
     }
     attemptResume('handleCanPlay');
   };
@@ -197,7 +197,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleTimeUpdate = () => {
     if (mediaRef.current && isPlaying && isReady) {
       const currentTime = mediaRef.current.currentTime;
-      if (Math.abs(currentTime - lastSavedTime.current) > 5) {
+      // Only save if we've moved forward and it's been more than 5 seconds
+      if (currentTime > lastSavedTime.current + 5) {
         saveProgress(currentTime, mediaRef.current.duration);
         lastSavedTime.current = currentTime;
       }
@@ -205,15 +206,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handlePlay = () => {
-    log('Playback started');
+    log('[VideoPlayer] Playback started');
     setHasStarted(true);
     setIsPlaying(true);
-    setTimeout(() => attemptResume('handlePlay'), 200);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+    
+    // Ensure we resume if we haven't yet
+    if (!hasSuccessfullyResumed.current && progress > 5) {
+      attemptResume('handlePlay');
+    }
   };
 
   const handlePause = () => {
-    log('Playback paused');
+    log('[VideoPlayer] Playback paused');
     setIsPlaying(false);
     if (mediaRef.current && isReady) {
       saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
@@ -222,13 +227,32 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleEnded = () => {
-    const now = Date.now();
-    if (now - lastEndedTime.current < 2000) return;
-    lastEndedTime.current = now;
+    const media = mediaRef.current;
+    if (!media) return;
 
-    log('Playback ended');
+    const now = Date.now();
+    const timeSinceLastEnd = now - lastEndedTime.current;
+    
+    log(`[VideoPlayer] Playback ended event. CurrentTime: ${media.currentTime.toFixed(2)}s, Duration: ${media.duration.toFixed(2)}s, Time since last end: ${timeSinceLastEnd}ms`);
+
+    // Prevent double-triggering within 3 seconds
+    if (timeSinceLastEnd < 3000) {
+      log(`[VideoPlayer] Ignoring duplicate ended event (too soon)`);
+      return;
+    }
+
+    // Safety check: only trigger if we are actually near the end
+    // This prevents weird browser bugs where 'ended' fires prematurely
+    if (media.duration > 0 && media.currentTime < media.duration - 5) {
+      log(`[VideoPlayer] Ignoring premature ended event (currentTime ${media.currentTime.toFixed(2)}s is not near duration ${media.duration.toFixed(2)}s)`);
+      return;
+    }
+
+    lastEndedTime.current = now;
     incrementWatchCount();
+    
     if (onEnded) {
+      log(`[VideoPlayer] Triggering onEnded callback`);
       setTimeout(onEnded, 500);
     }
   };
@@ -236,14 +260,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleMediaError = (e: any) => {
     const mediaElement = e.target as HTMLMediaElement;
     const errorMsg = `Media Error: ${mediaElement.error?.code} - ${mediaElement.error?.message}`;
-    log(errorMsg, null, 'error');
+    log(`[VideoPlayer] ${errorMsg}`, null, 'error');
     setError(errorMsg);
   };
 
   const togglePlay = () => {
     if (mediaRef.current) {
-      if (mediaRef.current.paused) mediaRef.current.play();
-      else mediaRef.current.pause();
+      if (mediaRef.current.paused) {
+        mediaRef.current.play().catch(err => log(`[VideoPlayer] Manual play failed: ${err.message}`, null, 'error'));
+      } else {
+        mediaRef.current.pause();
+      }
     }
   };
 
@@ -320,10 +347,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (mediaRef.current) {
-                    log('Manual restart requested');
+                    log('[VideoPlayer] Manual restart requested');
                     mediaRef.current.currentTime = 0;
                     saveProgress(0, mediaRef.current.duration);
-                    mediaRef.current.play();
+                    mediaRef.current.play().catch(err => log(`[VideoPlayer] Restart play failed: ${err.message}`, null, 'error'));
                   }
                 }}
               >

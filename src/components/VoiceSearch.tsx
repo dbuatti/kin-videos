@@ -5,6 +5,13 @@ import { Mic, MicOff, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { log } from '@/utils/logger';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface VoiceSearchProps {
   onResult: (text: string) => void;
@@ -37,7 +44,7 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
 
     recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
-      showSuccess(`Heard: "${text}"`);
+      log(`[VoiceSearch] Heard: "${text}"`);
       onResult(text);
     };
 
@@ -61,19 +68,31 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
   if (!isSupported) return null;
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      onClick={startListening}
-      disabled={isListening}
-      className={cn(
-        "rounded-full transition-all duration-300",
-        isListening ? "bg-red-500/20 border-red-500 text-red-500 animate-pulse" : "bg-slate-900 border-slate-700 text-indigo-400 hover:bg-slate-800",
-        className
-      )}
-    >
-      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-    </Button>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={startListening}
+            disabled={isListening}
+            className={cn(
+              "rounded-full transition-all duration-300 relative overflow-hidden",
+              isListening ? "bg-red-500/20 border-red-500 text-red-500" : "bg-slate-900 border-slate-700 text-indigo-400 hover:bg-slate-800",
+              className
+            )}
+          >
+            {isListening && (
+              <span className="absolute inset-0 bg-red-500/10 animate-ping pointer-events-none" />
+            )}
+            {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="bg-slate-900 border-slate-800 text-white">
+          {isListening ? "Listening..." : "Voice Search (e.g. 'Play me something about brain zones')"}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 

@@ -86,7 +86,7 @@ const MasterPlayer = () => {
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
       const indexToLoad = Math.floor(Number(savedIndex));
-      log(`[MasterPlayer] Initial load for ${masterStateKey}. Saved index: ${savedIndex}, Loading index: ${indexToLoad}`);
+      log(`[MasterPlayer] Initial load for ${masterStateKey}. Saved index: ${savedIndex}, Loading index: ${indexToLoad}, Playlist size: ${playlist.length}`);
       
       if (!isNaN(indexToLoad) && indexToLoad >= 0 && indexToLoad < playlist.length) {
         setCurrentIndex(indexToLoad);
@@ -117,6 +117,7 @@ const MasterPlayer = () => {
 
     if (currentIndex < playlist.length - 1) {
       const nextIdx = currentIndex + 1;
+      log(`[MasterPlayer] Moving to next lesson: ${nextIdx}`);
       setCurrentIndex(nextIdx);
       setAutoPlay(true);
       saveMasterIndex(nextIdx);
@@ -132,6 +133,7 @@ const MasterPlayer = () => {
 
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
+      log(`[MasterPlayer] Moving to previous lesson: ${prevIdx}`);
       setCurrentIndex(prevIdx);
       setAutoPlay(true);
       saveMasterIndex(prevIdx);
@@ -139,12 +141,21 @@ const MasterPlayer = () => {
   };
 
   const handleVideoEnded = () => {
-    log(`[MasterPlayer] Video ended, moving to next.`);
+    log(`[MasterPlayer] Video ended event received, moving to next.`);
     handleNext();
   };
 
   const handleVoiceResult = (text: string) => {
-    const query = text.toLowerCase();
+    const query = text.toLowerCase()
+      .replace(/^play me something about\s+/i, '')
+      .replace(/^play me something\s+/i, '')
+      .replace(/^play\s+/i, '')
+      .replace(/^find\s+/i, '')
+      .replace(/^search for\s+/i, '')
+      .trim();
+
+    log(`[MasterPlayer] Voice query: "${query}"`);
+
     const matches = playlist.filter(v => 
       v.title?.toLowerCase().includes(query) || 
       v.category?.toLowerCase().includes(query)
@@ -158,7 +169,7 @@ const MasterPlayer = () => {
         selectVideo(index);
       }
     } else {
-      showError(`No lessons found for "${text}"`);
+      showError(`No lessons found for "${query}"`);
     }
   };
 
@@ -170,6 +181,7 @@ const MasterPlayer = () => {
   };
 
   const selectVideo = (index: number) => {
+    log(`[MasterPlayer] Selecting video at index: ${index}`);
     setCurrentIndex(index);
     setAutoPlay(true);
     saveMasterIndex(index);
