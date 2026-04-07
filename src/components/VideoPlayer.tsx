@@ -47,12 +47,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Media Session API for Control Center & Lock Screen support
   useEffect(() => {
     if ('mediaSession' in navigator && title) {
+      const artworkUrl = posterUrl || 'https://xebtjnvfkroiplyzftas.supabase.co/storage/v1/object/public/assets/fnh-logo.png';
+      
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title,
         artist: category || 'FNH Foundations',
         album: 'Functional Neuro Health',
         artwork: [
-          { src: posterUrl || '/placeholder.svg', sizes: '512x512', type: 'image/png' },
+          { src: artworkUrl, sizes: '96x96', type: 'image/png' },
+          { src: artworkUrl, sizes: '128x128', type: 'image/png' },
+          { src: artworkUrl, sizes: '192x192', type: 'image/png' },
+          { src: artworkUrl, sizes: '256x256', type: 'image/png' },
+          { src: artworkUrl, sizes: '384x384', type: 'image/png' },
+          { src: artworkUrl, sizes: '512x512', type: 'image/png' },
         ]
       });
 
@@ -68,7 +75,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (mediaRef.current) mediaRef.current.currentTime += (details.seekOffset || 10);
       });
       
-      // Clear handlers that might interfere with backgrounding
+      // Explicitly set these to null to avoid default behavior
       navigator.mediaSession.setActionHandler('previoustrack', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
     }
@@ -248,8 +255,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               onPause={handlePause}
               onEnded={handleEnded}
               onError={handleMediaError}
-              // IMPORTANT: Do not use display:none (hidden) as iOS will pause it in background.
-              // Instead, we make it invisible but technically "visible" to the OS.
+              // We use a small visible element to ensure iOS doesn't kill the process
               className="opacity-0 pointer-events-none absolute w-1 h-1"
             />
           ) : (
