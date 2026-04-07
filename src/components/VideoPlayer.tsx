@@ -120,12 +120,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     seekAttempts.current = 0;
     hasSuccessfullyResumed.current = false;
     
-    if (autoPlay && mediaRef.current) {
-      mediaRef.current.play().catch((err) => {
-        log(`Autoplay failed: ${err.message}`, null, 'warn');
-        setIsPlaying(false);
-        setHasStarted(false);
-      });
+    const media = mediaRef.current;
+    if (media) {
+      media.load(); // Force load the new source
+      if (autoPlay) {
+        media.play().catch((err) => {
+          log(`Initial play attempt failed: ${err.message}`, null, 'warn');
+          // We'll try again in handleCanPlay
+        });
+      }
     }
   }, [videoUrl, autoPlay, effectiveKey]);
 
@@ -173,6 +176,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleCanPlay = () => {
     log('Media can play');
+    const media = mediaRef.current;
+    if (media && autoPlay && media.paused) {
+      log('Auto-playing from handleCanPlay');
+      media.play().catch(err => log(`Auto-play from handleCanPlay failed: ${err.message}`, null, 'warn'));
+    }
     // Second attempt when buffer is ready
     attemptResume('handleCanPlay');
   };
@@ -208,7 +216,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleEnded = () => {
     log('Playback ended');
     incrementWatchCount();
-    if (onEnded) onEnded();
+    if (onEnded) {
+      // Small delay to ensure state updates don't collide with the ended event
+      setTimeout(onEnded, 100);
+    }
   };
 
   const handleMediaError = (e: any) => {
