@@ -17,8 +17,8 @@ import {
   Maximize2,
   Minimize2,
   Keyboard,
-  Info,
-  Share2
+  Share2,
+  Mic
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
@@ -29,13 +29,14 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useVideoProgress } from '@/hooks/use-video-progress';
 import { useAllProgress } from '@/hooks/use-all-progress';
 import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import PlaylistCardComponent from '@/components/PlaylistCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { log } from '@/utils/logger';
+import VoiceSearch from '@/components/VoiceSearch';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -47,10 +48,11 @@ const MasterPlayer = () => {
   const initialMode = searchParams.get('mode') === 'audio';
   const [isAudioOnly, setIsAudioOnly] = useState(initialMode);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(true); // Enabled by default
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const lastActionTime = useRef<number>(0);
 
   useEffect(() => {
     const mode = isAudioOnly ? 'audio' : 'video';
@@ -108,6 +110,11 @@ const MasterPlayer = () => {
   const currentVideo = playlist[currentIndex];
 
   const handleNext = () => {
+    // Debounce to prevent rapid skipping bug
+    const now = Date.now();
+    if (now - lastActionTime.current < 1000) return;
+    lastActionTime.current = now;
+
     if (currentIndex < playlist.length - 1) {
       const nextIdx = currentIndex + 1;
       setCurrentIndex(nextIdx);
@@ -119,6 +126,10 @@ const MasterPlayer = () => {
   };
 
   const handlePrevious = () => {
+    const now = Date.now();
+    if (now - lastActionTime.current < 1000) return;
+    lastActionTime.current = now;
+
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
       setCurrentIndex(prevIdx);
@@ -128,7 +139,27 @@ const MasterPlayer = () => {
   };
 
   const handleVideoEnded = () => {
+    log(`[MasterPlayer] Video ended, moving to next.`);
     handleNext();
+  };
+
+  const handleVoiceResult = (text: string) => {
+    const query = text.toLowerCase();
+    const matches = playlist.filter(v => 
+      v.title?.toLowerCase().includes(query) || 
+      v.category?.toLowerCase().includes(query)
+    );
+
+    if (matches.length > 0) {
+      const randomMatch = matches[Math.floor(Math.random() * matches.length)];
+      const index = playlist.findIndex(v => v.id === randomMatch.id);
+      if (index !== -1) {
+        showSuccess(`Playing: ${randomMatch.title}`);
+        selectVideo(index);
+      }
+    } else {
+      showError(`No lessons found for "${text}"`);
+    }
   };
 
   const handleCopyLink = () => {
@@ -169,6 +200,8 @@ const MasterPlayer = () => {
         </div>
 
         <div className="flex items-center space-x-1 sm:space-x-2">
+          <VoiceSearch onResult={handleVoiceResult} className="h-8 w-8 sm:h-9 sm:w-9" />
+          
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>

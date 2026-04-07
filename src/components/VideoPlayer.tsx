@@ -48,8 +48,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const { progress, isLoading: isProgressLoading, saveProgress, incrementWatchCount } = useVideoProgress(effectiveKey);
   const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
-  const seekAttempts = useRef<number>(0);
   const hasSuccessfullyResumed = useRef<boolean>(false);
+  const lastEndedTime = useRef<number>(0);
 
   // Media Session API
   useEffect(() => {
@@ -117,22 +117,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     log(`Loading new media: ${effectiveKey}`, { url: videoUrl });
     setError(null);
     setIsReady(false);
-    seekAttempts.current = 0;
     hasSuccessfullyResumed.current = false;
     
     const media = mediaRef.current;
     if (media) {
-      media.load(); // Force load the new source
+      media.load();
       if (autoPlay) {
         media.play().catch((err) => {
           log(`Initial play attempt failed: ${err.message}`, null, 'warn');
-          // We'll try again in handleCanPlay
         });
       }
     }
   }, [videoUrl, autoPlay, effectiveKey]);
 
-  // Multi-stage resume logic for iOS
   const attemptResume = (source: string) => {
     const media = mediaRef.current;
     if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 5) return;
@@ -144,15 +141,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       media.currentTime = seekTime;
       lastSavedTime.current = seekTime;
       
-      // Verify if the seek actually stuck after a tiny delay
       setTimeout(() => {
         if (media && Math.abs(media.currentTime - seekTime) < 1) {
           log(`[Resume] Seek verified successful at ${media.currentTime.toFixed(2)}s`);
           hasSuccessfullyResumed.current = true;
-        } else {
-          log(`[Resume] Seek failed to stick. Current: ${media?.currentTime.toFixed(2)}s`, null, 'warn');
         }
-      }, 100);
+      }, 150);
     } catch (e: any) {
       log(`[Resume] Seek error: ${e.message}`, null, 'error');
     }
@@ -169,8 +163,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       log(`Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
       mediaRef.current.playbackRate = speed;
       setIsReady(true);
-      // First attempt on metadata load
-      setTimeout(() => attemptResume('handleLoadedMetadata'), 50);
+      setTimeout(() => attemptResume('handleLoadedMetadata'), 100);
     }
   };
 
@@ -178,17 +171,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     log('Media can play');
     const media = mediaRef.current;
     if (media && autoPlay && media.paused) {
-      log('Auto-playing from handleCanPlay');
-      media.play().catch(err => log(`Auto-play from handleCanPlay failed: ${err.message}`, null, 'warn'));
+      media.play().catch(err => log(`Auto-play failed: ${err.message}`, null, 'warn'));
     }
-    // Second attempt when buffer is ready
     attemptResume('handleCanPlay');
   };
 
   const handleTimeUpdate = () => {
     if (mediaRef.current && isPlaying && isReady) {
       const currentTime = mediaRef.current.currentTime;
-      if (Math.abs(currentTime - lastSavedTime.current) > 3) {
+      if (Math.abs(currentTime - lastSavedTime.current) > 5) {
         saveProgress(currentTime, mediaRef.current.duration);
         lastSavedTime.current = currentTime;
       }
@@ -199,8 +190,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     log('Playback started');
     setHasStarted(true);
     setIsPlaying(true);
-    // Final attempt right after playback starts (often required on iOS)
-    setTimeout(() => attemptResume('handlePlay'), 100);
+    setTimeout(() => attemptResume('handlePlay'), 200);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   };
 
@@ -214,11 +204,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleEnded = () => {
+    // Prevent double-triggering within 2 seconds
+    const now = Date.now();
+    if (now - lastEndedTime.current < 2000) return;
+    lastEndedTime.current = now;
+
     log('Playback ended');
     incrementWatchCount();
     if (onEnded) {
-      // Small delay to ensure state updates don't collide with the ended event
-      setTimeout(onEnded, 100);
+      setTimeout(onEnded, 500);
     }
   };
 
