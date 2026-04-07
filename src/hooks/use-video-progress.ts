@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { log } from '@/utils/logger';
+import { VideoProgressMap } from './use-all-progress';
 
 export interface VideoProgressData {
   playback_time: number;
@@ -54,8 +55,6 @@ export const useVideoProgress = (progressKey: string) => {
     mutationFn: async ({ currentTime, duration }: { currentTime: number, duration?: number }) => {
       if (!user || !progressKey) return;
       
-      log(`[Persistence] Saving progress for ${progressKey}: ${currentTime.toFixed(2)}s`);
-      
       const upsertData: any = {
         user_id: user.id,
         video_id: progressKey,
@@ -77,11 +76,29 @@ export const useVideoProgress = (progressKey: string) => {
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.setQueryData(['videoProgress', user?.id, progressKey], (old: any) => {
+      const userId = user?.id;
+      const currentTime = variables.currentTime;
+      const duration = variables.duration;
+
+      // 1. Update individual cache
+      queryClient.setQueryData(['videoProgress', userId, progressKey], (old: any) => {
         return { 
           ...old, 
-          playback_time: variables.currentTime,
-          duration: variables.duration || old?.duration || 0
+          playback_time: currentTime,
+          duration: duration || old?.duration || 0
+        };
+      });
+
+      // 2. Update global 'allVideoProgress' cache used by indicators
+      queryClient.setQueryData(['allVideoProgress', userId], (old: VideoProgressMap | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          [progressKey]: {
+            ...old[progressKey],
+            playback_time: currentTime,
+            duration: duration || old[progressKey]?.duration || 0
+          }
         };
       });
     }
@@ -117,8 +134,24 @@ export const useVideoProgress = (progressKey: string) => {
       return newCount;
     },
     onSuccess: (newCount) => {
-      queryClient.setQueryData(['videoProgress', user?.id, progressKey], (old: any) => {
+      const userId = user?.id;
+
+      // 1. Update individual cache
+      queryClient.setQueryData(['videoProgress', userId, progressKey], (old: any) => {
         return { ...old, watch_count: newCount, playback_time: 0 };
+      });
+
+      // 2. Update global cache
+      queryClient.setQueryData(['allVideoProgress', userId], (old: VideoProgressMap | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          [progressKey]: {
+            ...old[progressKey],
+            watch_count: newCount,
+            playback_time: 0
+          }
+        };
       });
     }
   });
