@@ -71,7 +71,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         if (mediaRef.current) mediaRef.current.currentTime += (details.seekOffset || 10);
       });
       
-      // Enable Next/Previous in Control Center
       if (onNext) navigator.mediaSession.setActionHandler('nexttrack', onNext);
       if (onPrevious) navigator.mediaSession.setActionHandler('previoustrack', onPrevious);
     }
@@ -148,23 +147,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [videoUrl, autoPlay, effectiveKey]);
 
+  // Aggressive seeking logic
+  useEffect(() => {
+    if (isReady && mediaRef.current && progress > 2) {
+      const media = mediaRef.current;
+      const seekTime = Math.min(progress, media.duration - 2);
+      
+      if (seekTime > 0 && Math.abs(media.currentTime - seekTime) > 2) {
+        media.currentTime = seekTime;
+        lastSavedTime.current = seekTime;
+      }
+    }
+  }, [isReady, progress]);
+
   const handleLoadedMetadata = () => {
     if (mediaRef.current) {
       mediaRef.current.playbackRate = speed;
-      
-      // Robust seeking for mobile
-      if (progress && progress > 2) {
-        const seekTime = Math.min(progress, mediaRef.current.duration - 2);
-        if (seekTime > 0) {
-          // Use a slightly longer delay for mobile stability
-          setTimeout(() => {
-            if (mediaRef.current) {
-              mediaRef.current.currentTime = seekTime;
-              lastSavedTime.current = seekTime;
-            }
-          }, 300);
-        }
-      }
       setIsReady(true);
     }
   };
@@ -172,7 +170,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleTimeUpdate = () => {
     if (mediaRef.current && isPlaying && isReady) {
       const currentTime = mediaRef.current.currentTime;
-      // Save more frequently (every 3 seconds) for better reliability
       if (Math.abs(currentTime - lastSavedTime.current) > 3) {
         saveProgress(currentTime, mediaRef.current.duration);
         lastSavedTime.current = currentTime;

@@ -117,7 +117,6 @@ const MasterPlayer = () => {
   };
 
   const handleVideoEnded = () => {
-    // Trigger next immediately for better background reliability
     handleNext();
   };
 
@@ -297,8 +296,8 @@ const MasterPlayer = () => {
               title={currentVideo?.title || ''}
               category={currentVideo?.category || ''}
               isAudioOnly={isAudioOnly}
-              // Use the same key for both modes so progress is shared
-              progressKey={currentVideo?.id}
+              // Align with PlaylistCard logic: use -audio suffix for audio mode
+              progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
               className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
               onNext={handleNext}
@@ -324,7 +323,7 @@ const MasterPlayer = () => {
 
             <div className="w-full px-2 sm:px-0">
               <VideoProgressIndicator 
-                videoId={currentVideo?.id} 
+                videoId={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id} 
                 className="w-full"
                 showText={true}
               />
