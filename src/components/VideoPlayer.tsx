@@ -32,13 +32,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onEnded,
   autoPlay = false
 }) => {
-  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
+  // We always use a video element because we are playing .mp4 files.
+  // iOS handles .mp4 files in <audio> tags inconsistently.
+  const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasStarted, setHasStarted] = useState(autoPlay);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   
+  // Unify the key so progress is shared between video and audio modes
   const effectiveKey = progressKey || videoId;
   const { progress, isLoading: isProgressLoading, saveProgress, incrementWatchCount } = useVideoProgress(effectiveKey);
   const { speed } = usePlaybackSpeed();
@@ -52,53 +55,48 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         artist: category || 'FNH Foundations',
         album: 'Functional Neuro Health',
         artwork: [
-          { src: posterUrl || '/placeholder.svg', sizes: '96x96', type: 'image/png' },
-          { src: posterUrl || '/placeholder.svg', sizes: '128x128', type: 'image/png' },
-          { src: posterUrl || '/placeholder.svg', sizes: '192x192', type: 'image/png' },
-          { src: posterUrl || '/placeholder.svg', sizes: '256x256', type: 'image/png' },
-          { src: posterUrl || '/placeholder.svg', sizes: '384x384', type: 'image/png' },
           { src: posterUrl || '/placeholder.svg', sizes: '512x512', type: 'image/png' },
         ]
       });
 
-      navigator.mediaSession.setActionHandler('play', () => mediaRef.current?.play());
-      navigator.mediaSession.setActionHandler('pause', () => mediaRef.current?.pause());
+      navigator.mediaSession.setActionHandler('play', () => videoRef.current?.play());
+      navigator.mediaSession.setActionHandler('pause', () => videoRef.current?.pause());
       navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-        if (mediaRef.current) mediaRef.current.currentTime -= (details.seekOffset || 10);
+        if (videoRef.current) videoRef.current.currentTime -= (details.seekOffset || 10);
       });
       navigator.mediaSession.setActionHandler('seekforward', (details) => {
-        if (mediaRef.current) mediaRef.current.currentTime += (details.seekOffset || 10);
+        if (videoRef.current) videoRef.current.currentTime += (details.seekOffset || 10);
       });
+      navigator.mediaSession.setActionHandler('previoustrack', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
     }
   }, [title, category, posterUrl, videoUrl]);
 
   // Speed Enforcement
   useEffect(() => {
-    const media = mediaRef.current;
-    if (!media) return;
+    const video = videoRef.current;
+    if (!video) return;
 
     const enforceSpeed = () => {
-      if (media.playbackRate !== speed) {
-        media.playbackRate = speed;
+      if (video.playbackRate !== speed) {
+        video.playbackRate = speed;
       }
     };
 
-    media.addEventListener('ratechange', enforceSpeed);
-    media.addEventListener('play', enforceSpeed);
-    media.addEventListener('playing', enforceSpeed);
+    video.addEventListener('ratechange', enforceSpeed);
+    video.addEventListener('play', enforceSpeed);
     
-    media.playbackRate = speed;
+    video.playbackRate = speed;
 
     return () => {
-      media.removeEventListener('ratechange', enforceSpeed);
-      media.removeEventListener('play', enforceSpeed);
-      media.removeEventListener('playing', enforceSpeed);
+      video.removeEventListener('ratechange', enforceSpeed);
+      video.removeEventListener('play', enforceSpeed);
     };
   }, [speed, videoUrl, isReady]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!mediaRef.current || document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (!videoRef.current || document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
 
       switch (e.code) {
         case 'Space':
@@ -106,32 +104,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           togglePlay();
           break;
         case 'ArrowRight':
-          mediaRef.current.currentTime += 10;
+          videoRef.current.currentTime += 10;
           break;
         case 'ArrowLeft':
-          mediaRef.current.currentTime -= 10;
-          break;
-        case 'KeyF':
-          if (!isAudioOnly && containerRef.current) {
-            if (document.fullscreenElement) {
-              document.exitFullscreen();
-            } else {
-              containerRef.current.requestFullscreen();
-            }
-          }
+          videoRef.current.currentTime -= 10;
           break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAudioOnly]);
+  }, []);
 
   useEffect(() => {
     setError(null);
     setIsReady(false);
-    if (autoPlay && mediaRef.current) {
-      mediaRef.current.play().catch(() => {
+    if (autoPlay && videoRef.current) {
+      videoRef.current.play().catch(() => {
         setIsPlaying(false);
         setHasStarted(false);
       });
@@ -139,19 +128,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [videoUrl, autoPlay, effectiveKey]);
 
   const handleLoadedMetadata = () => {
-    if (mediaRef.current) {
-      mediaRef.current.playbackRate = speed;
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
       
-      // Robust seeking for mobile: use a small timeout to ensure the buffer is ready
+      // Robust seeking for mobile
       if (progress && progress > 2) {
-        const seekTime = Math.min(progress, mediaRef.current.duration - 2);
+        const seekTime = Math.min(progress, videoRef.current.duration - 2);
         if (seekTime > 0) {
+          // Small delay to ensure iOS buffer is ready for seeking
           setTimeout(() => {
-            if (mediaRef.current) {
-              mediaRef.current.currentTime = seekTime;
+            if (videoRef.current) {
+              videoRef.current.currentTime = seekTime;
               lastSavedTime.current = seekTime;
             }
-          }, 150);
+          }, 200);
         }
       }
       setIsReady(true);
@@ -159,19 +149,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleTimeUpdate = () => {
-    if (mediaRef.current && isPlaying && isReady) {
-      const currentTime = mediaRef.current.currentTime;
+    if (videoRef.current && isPlaying && isReady) {
+      const currentTime = videoRef.current.currentTime;
       if (Math.abs(currentTime - lastSavedTime.current) > 5) {
-        saveProgress(currentTime, mediaRef.current.duration);
+        saveProgress(currentTime, videoRef.current.duration);
         lastSavedTime.current = currentTime;
       }
       
-      // Update Media Session position state
       if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
         navigator.mediaSession.setPositionState({
-          duration: mediaRef.current.duration || 0,
-          playbackRate: mediaRef.current.playbackRate || 1,
-          position: mediaRef.current.currentTime || 0,
+          duration: videoRef.current.duration || 0,
+          playbackRate: videoRef.current.playbackRate || 1,
+          position: videoRef.current.currentTime || 0,
         });
       }
     }
@@ -181,9 +170,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setHasStarted(true);
     setIsPlaying(true);
     setError(null);
-    if (mediaRef.current) {
-      mediaRef.current.playbackRate = speed;
-    }
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
@@ -191,8 +177,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handlePause = () => {
     setIsPlaying(false);
-    if (mediaRef.current && isReady) {
-      saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
+    if (videoRef.current && isReady) {
+      saveProgress(videoRef.current.currentTime, videoRef.current.duration);
     }
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
@@ -206,16 +192,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleMediaError = (e: any) => {
     const mediaElement = e.target as HTMLMediaElement;
-    const errorCode = mediaElement.error?.code;
-    setError(`Playback Error (Code ${errorCode}). Please check your connection.`);
+    setError(`Playback Error (Code ${mediaElement.error?.code}).`);
   };
 
   const togglePlay = () => {
-    if (mediaRef.current) {
-      if (mediaRef.current.paused) {
-        mediaRef.current.play();
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
       } else {
-        mediaRef.current.pause();
+        videoRef.current.pause();
       }
     }
   };
@@ -223,68 +208,54 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const resetProgress = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (mediaRef.current) {
-      mediaRef.current.currentTime = 0;
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
       lastSavedTime.current = 0;
-      saveProgress(0, mediaRef.current.duration);
-      mediaRef.current.play();
+      saveProgress(0, videoRef.current.duration);
+      videoRef.current.play();
     }
   };
 
   if (isProgressLoading) {
     return (
       <div className={cn("flex items-center justify-center bg-slate-900", className)}>
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Syncing State...</p>
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className={cn("relative group bg-slate-900", className)}>
+    <div ref={containerRef} className={cn("relative group bg-slate-900 overflow-hidden", className)}>
       {error ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center z-30">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <h3 className="text-white font-bold mb-2">Playback Error</h3>
           <p className="text-slate-400 text-sm mb-4">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Reload Page</Button>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
         </div>
       ) : (
-        <>
-          {isAudioOnly ? (
-            <audio
-              ref={mediaRef as React.RefObject<HTMLAudioElement>}
-              src={videoUrl}
-              preload="auto"
-              onLoadedMetadata={handleLoadedMetadata}
-              onTimeUpdate={handleTimeUpdate}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onEnded={handleEnded}
-              onError={handleMediaError}
-              className="hidden"
-            />
-          ) : (
-            <video
-              ref={mediaRef as React.RefObject<HTMLVideoElement>}
-              src={videoUrl}
-              className="w-full h-full object-contain opacity-90 group-hover:opacity-100 transition-opacity"
-              controls
-              preload="auto"
-              poster={posterUrl}
-              playsInline
-              webkit-playsinline="true"
-              onLoadedMetadata={handleLoadedMetadata}
-              onTimeUpdate={handleTimeUpdate}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onEnded={handleEnded}
-              onError={handleMediaError}
-            />
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          // In audio mode, we keep the video element but hide it visually.
+          // We don't use display: none because iOS might pause background playback.
+          className={cn(
+            "w-full h-full object-contain transition-opacity",
+            isAudioOnly ? "opacity-0 pointer-events-none" : "opacity-90 group-hover:opacity-100"
           )}
-        </>
+          // We only show native controls in video mode when the user has started playback
+          // to avoid the native iOS player taking over immediately.
+          controls={!isAudioOnly && hasStarted}
+          preload="auto"
+          poster={posterUrl}
+          playsInline
+          webkit-playsinline="true"
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onEnded={handleEnded}
+          onError={handleMediaError}
+        />
       )}
       
       {!error && (!hasStarted || (!isPlaying && hasStarted)) && (

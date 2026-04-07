@@ -57,7 +57,8 @@ const MasterPlayer = () => {
     }
   }, [isAudioOnly, setSearchParams]);
 
-  const masterStateKey = isAudioOnly ? 'master-player-audio-index' : 'master-player-video-index';
+  // Unify the master state key so the playlist position is shared
+  const masterStateKey = 'master-player-shared-index';
   const { progress: savedIndex, saveProgress: saveMasterIndex, isLoading: isStateLoading } = useVideoProgress(masterStateKey);
 
   const playlist = useMemo(() => {
@@ -300,7 +301,8 @@ const MasterPlayer = () => {
               title={currentVideo?.title || ''}
               category={currentVideo?.category || ''}
               isAudioOnly={isAudioOnly}
-              progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
+              // Use the same key for both modes so progress is shared
+              progressKey={currentVideo?.id}
               className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
               autoPlay={autoPlay}
@@ -324,7 +326,7 @@ const MasterPlayer = () => {
 
             <div className="w-full px-2 sm:px-0">
               <VideoProgressIndicator 
-                videoId={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id} 
+                videoId={currentVideo?.id} 
                 className="w-full"
                 showText={true}
               />
