@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useVideoProgress } from '@/hooks/use-video-progress';
+import { useAllProgress } from '@/hooks/use-all-progress';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,16 +11,33 @@ interface VideoProgressIndicatorProps {
   videoId: string;
   className?: string;
   showText?: boolean;
+  // Optional: if provided, we use this instead of fetching
+  data?: {
+    playback_time: number;
+    duration: number;
+    watch_count: number;
+  };
 }
 
 const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({ 
   videoId, 
   className,
-  showText = true
+  showText = true,
+  data: providedData
 }) => {
-  const { progress, duration, watchCount, isLoading } = useVideoProgress(videoId);
+  // If no data provided, we use the optimized global hook
+  const { data: allProgress } = useAllProgress();
+  const { progress: individualProgress, duration: individualDuration, watchCount: individualWatchCount } = useVideoProgress(videoId);
 
-  if (isLoading || !duration || duration === 0) return null;
+  const data = providedData || allProgress?.[videoId] || {
+    playback_time: individualProgress,
+    duration: individualDuration,
+    watch_count: individualWatchCount
+  };
+
+  const { playback_time: progress, duration, watch_count: watchCount } = data;
+
+  if (!duration || duration === 0) return null;
 
   const percentage = Math.min(Math.round((progress / duration) * 100), 100);
   const isCompleted = percentage > 95 || watchCount > 0;

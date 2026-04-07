@@ -27,11 +27,11 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { useVideoProgress } from '@/hooks/use-video-progress';
+import { useAllProgress } from '@/hooks/use-all-progress';
 import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { toast } from 'sonner';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import PlaylistCardComponent from '@/components/PlaylistCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -42,6 +42,7 @@ const MasterPlayer = () => {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: lessons, isLoading } = useJobLessons();
+  const { data: allProgress } = useAllProgress();
   
   const initialMode = searchParams.get('mode') === 'audio';
   const [isAudioOnly, setIsAudioOnly] = useState(initialMode);
@@ -58,7 +59,6 @@ const MasterPlayer = () => {
     }
   }, [isAudioOnly, setSearchParams]);
 
-  // Use mode-specific keys so Audio and Video modes maintain independent playlist positions
   const masterStateKey = isAudioOnly ? 'master-player-audio-index' : 'master-player-video-index';
   const { progress: savedIndex, saveProgress: saveMasterIndex, isLoading: isStateLoading } = useVideoProgress(masterStateKey);
 
@@ -109,8 +109,11 @@ const MasterPlayer = () => {
 
   const handleNext = () => {
     if (currentIndex < playlist.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      const nextIdx = currentIndex + 1;
+      setCurrentIndex(nextIdx);
       setAutoPlay(true);
+      // Explicitly save immediately to avoid race conditions
+      saveMasterIndex(nextIdx);
     } else {
       showSuccess("You've reached the end of the course!");
     }
@@ -118,8 +121,11 @@ const MasterPlayer = () => {
 
   const handlePrevious = () => {
     if (currentIndex > 0) {
-      setCurrentIndex(prev => prev - 1);
+      const prevIdx = currentIndex - 1;
+      setCurrentIndex(prevIdx);
       setAutoPlay(true);
+      // Explicitly save immediately to avoid race conditions
+      saveMasterIndex(prevIdx);
     }
   };
 
@@ -137,6 +143,7 @@ const MasterPlayer = () => {
   const selectVideo = (index: number) => {
     setCurrentIndex(index);
     setAutoPlay(true);
+    saveMasterIndex(index);
     if (isMobile) setIsPlaylistOpen(false);
   };
 
