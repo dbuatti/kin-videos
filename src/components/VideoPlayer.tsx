@@ -48,7 +48,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const { progress, isLoading: isProgressLoading, saveProgress, incrementWatchCount } = useVideoProgress(effectiveKey);
   const { speed } = usePlaybackSpeed();
   const lastSavedTime = useRef<number>(0);
-  const hasAttemptedResume = useRef<boolean>(false);
+  const seekAttempts = useRef<number>(0);
+  const hasSuccessfullyResumed = useRef<boolean>(false);
 
   // Media Session API
   useEffect(() => {
@@ -59,7 +60,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title,
         artist: category || 'FNH Foundations',
-        album: 'Functional Neuro Health',
         artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }]
       });
 
@@ -117,7 +117,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     log(`Loading new media: ${effectiveKey}`, { url: videoUrl });
     setError(null);
     setIsReady(false);
-    hasAttemptedResume.current = false;
+    seekAttempts.current = 0;
+    hasSuccessfullyResumed.current = false;
+    
     if (autoPlay && mediaRef.current) {
       mediaRef.current.play().catch((err) => {
         log(`Autoplay failed: ${err.message}`, null, 'warn');
@@ -127,30 +129,35 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [videoUrl, autoPlay, effectiveKey]);
 
-  // Aggressive seeking logic for iOS
-  useEffect(() => {
+  // Multi-stage resume logic for iOS
+  const attemptResume = (source: string) => {
     const media = mediaRef.current;
-    if (isReady && media && progress > 2 && !hasAttemptedResume.current) {
-      const seekTime = Math.min(progress, media.duration - 2);
-      log(`Attempting resume to: ${seekTime.toFixed(2)}s (Saved: ${progress.toFixed(2)}s)`);
-      
-      // iOS often needs multiple attempts or a specific state
-      const performSeek = () => {
-        try {
-          media.currentTime = seekTime;
-          lastSavedTime.current = seekTime;
-          hasAttemptedResume.current = true;
-          log(`Seek successful. Current time: ${media.currentTime.toFixed(2)}s`);
-        } catch (e: any) {
-          log(`Seek failed: ${e.message}`, null, 'error');
-        }
-      };
+    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 5) return;
 
-      // Try immediately
-      performSeek();
+    const seekTime = Math.min(progress, media.duration - 2);
+    log(`[Resume] Attempting seek from ${source} to ${seekTime.toFixed(2)}s`);
+
+    try {
+      media.currentTime = seekTime;
+      lastSavedTime.current = seekTime;
       
-      // And again after a short delay just in case iOS was lying about being ready
-      setTimeout(performSeek, 500);
+      // Verify if the seek actually stuck after a tiny delay
+      setTimeout(() => {
+        if (media && Math.abs(media.currentTime - seekTime) < 1) {
+          log(`[Resume] Seek verified successful at ${media.currentTime.toFixed(2)}s`);
+          hasSuccessfullyResumed.current = true;
+        } else {
+          log(`[Resume] Seek failed to stick. Current: ${media?.currentTime.toFixed(2)}s`, null, 'warn');
+        }
+      }, 100);
+    } catch (e: any) {
+      log(`[Resume] Seek error: ${e.message}`, null, 'error');
+    }
+  };
+
+  useEffect(() => {
+    if (isReady && progress > 5) {
+      attemptResume('isReady effect');
     }
   }, [isReady, progress]);
 
@@ -159,7 +166,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       log(`Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
       mediaRef.current.playbackRate = speed;
       setIsReady(true);
+      // First attempt on metadata load
+      setTimeout(() => attemptResume('handleLoadedMetadata'), 50);
     }
+  };
+
+  const handleCanPlay = () => {
+    log('Media can play');
+    // Second attempt when buffer is ready
+    attemptResume('handleCanPlay');
   };
 
   const handleTimeUpdate = () => {
@@ -176,6 +191,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     log('Playback started');
     setHasStarted(true);
     setIsPlaying(true);
+    // Final attempt right after playback starts (often required on iOS)
+    setTimeout(() => attemptResume('handlePlay'), 100);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
   };
 
@@ -232,6 +249,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               src={videoUrl}
               preload="auto"
               onLoadedMetadata={handleLoadedMetadata}
+              onCanPlay={handleCanPlay}
               onTimeUpdate={handleTimeUpdate}
               onPlay={handlePlay}
               onPause={handlePause}
@@ -250,6 +268,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               playsInline
               webkit-playsinline="true"
               onLoadedMetadata={handleLoadedMetadata}
+              onCanPlay={handleCanPlay}
               onTimeUpdate={handleTimeUpdate}
               onPlay={handlePlay}
               onPause={handlePause}
