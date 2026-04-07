@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Loader2, Play } from 'lucide-react';
+import { Mic, MicOff, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { showSuccess, showError } from '@/utils/toast';
+import { showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { log } from '@/utils/logger';
 import {
@@ -26,13 +26,17 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setIsSupported(false);
+      log("[VoiceSearch] Speech recognition not supported in this browser.");
     }
   }, []);
 
   const startListening = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (!isSupported) {
+      showError("Voice search is not supported in this browser. Try Chrome or Safari.");
+      return;
+    }
 
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-US';
     recognition.interimResults = false;
@@ -40,6 +44,7 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
 
     recognition.onstart = () => {
       setIsListening(true);
+      log("[VoiceSearch] Listening started...");
     };
 
     recognition.onresult = (event: any) => {
@@ -53,19 +58,23 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
       if (event.error === 'not-allowed') {
         showError("Microphone access denied.");
       } else {
-        showError("Speech recognition failed.");
+        showError(`Speech recognition failed: ${event.error}`);
       }
       setIsListening(false);
     };
 
     recognition.onend = () => {
       setIsListening(false);
+      log("[VoiceSearch] Listening ended.");
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (err: any) {
+      log(`[VoiceSearch] Start error: ${err.message}`, null, 'error');
+      setIsListening(false);
+    }
   };
-
-  if (!isSupported) return null;
 
   return (
     <TooltipProvider>
@@ -77,19 +86,22 @@ const VoiceSearch: React.FC<VoiceSearchProps> = ({ onResult, className }) => {
             onClick={startListening}
             disabled={isListening}
             className={cn(
-              "rounded-full transition-all duration-300 relative overflow-hidden",
-              isListening ? "bg-red-500/20 border-red-500 text-red-500" : "bg-slate-900 border-slate-700 text-indigo-400 hover:bg-slate-800",
+              "rounded-full transition-all duration-300 relative overflow-hidden border-2",
+              !isSupported ? "opacity-50 cursor-not-allowed border-slate-800 text-slate-600" : 
+              isListening ? "bg-red-500/20 border-red-500 text-red-500" : "bg-indigo-500/10 border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/20 hover:border-indigo-400",
               className
             )}
           >
             {isListening && (
               <span className="absolute inset-0 bg-red-500/10 animate-ping pointer-events-none" />
             )}
-            {isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+            {!isSupported ? <MicOff className="w-4 h-4" /> : 
+             isListening ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" className="bg-slate-900 border-slate-800 text-white">
-          {isListening ? "Listening..." : "Voice Search (e.g. 'Play me something about brain zones')"}
+          {!isSupported ? "Voice search not supported in this browser" : 
+           isListening ? "Listening..." : "Voice Search (e.g. 'Play me something about brain zones')"}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

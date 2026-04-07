@@ -12,7 +12,8 @@ import {
   Sparkles,
   TrendingUp,
   Zap,
-  Bookmark
+  Bookmark,
+  Mic
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,8 @@ import { Progress } from "@/components/ui/progress";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { cn } from "@/lib/utils";
 import SyllabusClipboard from "@/components/SyllabusClipboard";
+import VoiceSearch from "@/components/VoiceSearch";
+import { showSuccess } from "@/utils/toast";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -36,6 +39,11 @@ const Index = () => {
       </div>
     );
   }
+
+  const handleVoiceResult = (text: string) => {
+    // Navigate to player and let it handle the search
+    navigate(`/master-player?mode=video&voiceQuery=${encodeURIComponent(text)}`);
+  };
 
   const ACTIONS = [
     {
@@ -70,6 +78,20 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col animate-in-fade max-w-5xl mx-auto w-full p-6 sm:p-12 space-y-12">
       
+      {/* Voice Search Hero */}
+      <section className="flex flex-col items-center text-center space-y-6 py-8">
+        <div className="relative">
+          <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+          <VoiceSearch onResult={handleVoiceResult} className="h-20 w-20 sm:h-24 sm:w-24 relative z-10" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Voice Command</h2>
+          <p className="text-slate-500 text-sm max-w-xs mx-auto">
+            Tap the mic and say <span className="text-primary font-bold">"Play me something about brain zones"</span>
+          </p>
+        </div>
+      </section>
+
       {/* 1. Core Purpose: The Big Buttons */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {ACTIONS.map((action) => (

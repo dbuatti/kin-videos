@@ -48,7 +48,7 @@ const MasterPlayer = () => {
   const initialMode = searchParams.get('mode') === 'audio';
   const [isAudioOnly, setIsAudioOnly] = useState(initialMode);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [autoPlay, setAutoPlay] = useState(true); // Enabled by default
+  const [autoPlay, setAutoPlay] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
   const [isTheaterMode, setIsTheaterMode] = useState(false);
@@ -83,6 +83,46 @@ const MasterPlayer = () => {
     });
   }, [lessons]);
 
+  const handleVoiceResult = (text: string) => {
+    const query = text.toLowerCase()
+      .replace(/^play me something about\s+/i, '')
+      .replace(/^play me something\s+/i, '')
+      .replace(/^play\s+/i, '')
+      .replace(/^find\s+/i, '')
+      .replace(/^search for\s+/i, '')
+      .trim();
+
+    log(`[VoiceSearch] Voice query: "${query}"`);
+
+    const matches = playlist.filter(v => 
+      v.title?.toLowerCase().includes(query) || 
+      v.category?.toLowerCase().includes(query)
+    );
+
+    if (matches.length > 0) {
+      const randomMatch = matches[Math.floor(Math.random() * matches.length)];
+      const index = playlist.findIndex(v => v.id === randomMatch.id);
+      if (index !== -1) {
+        showSuccess(`Playing: ${randomMatch.title}`);
+        selectVideo(index);
+      }
+    } else {
+      showError(`No lessons found for "${query}"`);
+    }
+  };
+
+  // Handle voice query from URL
+  useEffect(() => {
+    const voiceQuery = searchParams.get('voiceQuery');
+    if (voiceQuery && playlist.length > 0 && !isInitialLoad) {
+      handleVoiceResult(voiceQuery);
+      // Clear the query from URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('voiceQuery');
+      setSearchParams(newParams);
+    }
+  }, [searchParams, playlist, isInitialLoad]);
+
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
       const indexToLoad = Math.floor(Number(savedIndex));
@@ -110,7 +150,6 @@ const MasterPlayer = () => {
   const currentVideo = playlist[currentIndex];
 
   const handleNext = () => {
-    // Debounce to prevent rapid skipping bug
     const now = Date.now();
     if (now - lastActionTime.current < 1000) return;
     lastActionTime.current = now;
@@ -143,34 +182,6 @@ const MasterPlayer = () => {
   const handleVideoEnded = () => {
     log(`[MasterPlayer] Video ended event received, moving to next.`);
     handleNext();
-  };
-
-  const handleVoiceResult = (text: string) => {
-    const query = text.toLowerCase()
-      .replace(/^play me something about\s+/i, '')
-      .replace(/^play me something\s+/i, '')
-      .replace(/^play\s+/i, '')
-      .replace(/^find\s+/i, '')
-      .replace(/^search for\s+/i, '')
-      .trim();
-
-    log(`[MasterPlayer] Voice query: "${query}"`);
-
-    const matches = playlist.filter(v => 
-      v.title?.toLowerCase().includes(query) || 
-      v.category?.toLowerCase().includes(query)
-    );
-
-    if (matches.length > 0) {
-      const randomMatch = matches[Math.floor(Math.random() * matches.length)];
-      const index = playlist.findIndex(v => v.id === randomMatch.id);
-      if (index !== -1) {
-        showSuccess(`Playing: ${randomMatch.title}`);
-        selectVideo(index);
-      }
-    } else {
-      showError(`No lessons found for "${query}"`);
-    }
   };
 
   const handleCopyLink = () => {
