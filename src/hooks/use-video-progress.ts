@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
+import { log } from '@/utils/logger';
 
 export interface VideoProgressData {
   playback_time: number;
@@ -23,6 +24,8 @@ export const useVideoProgress = (progressKey: string) => {
     queryFn: async () => {
       if (!user || !progressKey) return { playback_time: 0, duration: 0, watch_count: 0 };
       
+      log(`[Persistence] Fetching progress for key: ${progressKey}`);
+      
       const { data, error } = await supabase
         .from('video_progress')
         .select('playback_time, duration, watch_count')
@@ -31,9 +34,11 @@ export const useVideoProgress = (progressKey: string) => {
         .maybeSingle();
       
       if (error) {
-        console.error(`[Persistence] Error fetching progress for ${progressKey}:`, error);
+        log(`[Persistence] Error fetching progress for ${progressKey}: ${error.message}`, null, 'error');
         throw error;
       }
+      
+      log(`[Persistence] Received data for ${progressKey}:`, data);
       
       return { 
         playback_time: data?.playback_time || 0, 
@@ -42,13 +47,14 @@ export const useVideoProgress = (progressKey: string) => {
       } as VideoProgressData;
     },
     enabled: !!user && !!progressKey,
-    // Set staleTime to 0 to ensure we always get the latest progress when switching lessons
     staleTime: 0,
   });
 
   const saveMutation = useMutation({
     mutationFn: async ({ currentTime, duration }: { currentTime: number, duration?: number }) => {
       if (!user || !progressKey) return;
+      
+      log(`[Persistence] Saving progress for ${progressKey}: ${currentTime.toFixed(2)}s`);
       
       const upsertData: any = {
         user_id: user.id,
@@ -65,7 +71,10 @@ export const useVideoProgress = (progressKey: string) => {
         .from('video_progress')
         .upsert(upsertData, { onConflict: 'user_id,video_id' });
 
-      if (error) throw error;
+      if (error) {
+        log(`[Persistence] Error saving progress for ${progressKey}: ${error.message}`, null, 'error');
+        throw error;
+      }
     },
     onSuccess: (_, variables) => {
       queryClient.setQueryData(['videoProgress', user?.id, progressKey], (old: any) => {
@@ -81,6 +90,8 @@ export const useVideoProgress = (progressKey: string) => {
   const incrementWatchMutation = useMutation({
     mutationFn: async () => {
       if (!user || !progressKey) return;
+      
+      log(`[Persistence] Incrementing watch count for ${progressKey}`);
       
       // Get current count first
       const { data } = await supabase

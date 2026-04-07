@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import PlaylistCardComponent from '@/components/PlaylistCard';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { log } from '@/utils/logger';
 
 const MasterPlayer = () => {
   const navigate = useNavigate();
@@ -83,22 +84,26 @@ const MasterPlayer = () => {
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
       const indexToLoad = Math.floor(savedIndex);
+      log(`[MasterPlayer] Initial load for ${masterStateKey}. Saved index: ${savedIndex}, Loading index: ${indexToLoad}`);
+      
       if (indexToLoad >= 0 && indexToLoad < playlist.length) {
         setCurrentIndex(indexToLoad);
       } else {
+        log(`[MasterPlayer] Saved index out of bounds or invalid, defaulting to 0`);
         setCurrentIndex(0);
       }
       setIsInitialLoad(false);
     }
-  }, [isStateLoading, savedIndex, playlist, isInitialLoad]);
+  }, [isStateLoading, savedIndex, playlist, isInitialLoad, masterStateKey]);
 
   const lastSavedIndex = useRef<number>(-1);
   useEffect(() => {
     if (!isInitialLoad && currentIndex !== lastSavedIndex.current) {
+      log(`[MasterPlayer] Index changed to ${currentIndex}. Saving to ${masterStateKey}`);
       saveMasterIndex(currentIndex);
       lastSavedIndex.current = currentIndex;
     }
-  }, [currentIndex, isInitialLoad, saveMasterIndex]);
+  }, [currentIndex, isInitialLoad, saveMasterIndex, masterStateKey]);
 
   const currentVideo = playlist[currentIndex];
 
@@ -252,6 +257,7 @@ const MasterPlayer = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => {
+                    log(`[MasterPlayer] Switching mode. Current isAudioOnly: ${isAudioOnly}`);
                     setIsAudioOnly(!isAudioOnly);
                     setIsInitialLoad(true);
                   }}
