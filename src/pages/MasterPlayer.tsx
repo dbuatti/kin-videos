@@ -57,8 +57,8 @@ const MasterPlayer = () => {
     }
   }, [isAudioOnly, setSearchParams]);
 
-  // Unify the master state key so the playlist position is shared
-  const masterStateKey = 'master-player-shared-index';
+  // Use mode-specific keys so Audio and Video modes maintain independent playlist positions
+  const masterStateKey = isAudioOnly ? 'master-player-audio-index' : 'master-player-video-index';
   const { progress: savedIndex, saveProgress: saveMasterIndex, isLoading: isStateLoading } = useVideoProgress(masterStateKey);
 
   const playlist = useMemo(() => {
@@ -85,6 +85,8 @@ const MasterPlayer = () => {
       const indexToLoad = Math.floor(savedIndex);
       if (indexToLoad >= 0 && indexToLoad < playlist.length) {
         setCurrentIndex(indexToLoad);
+      } else {
+        setCurrentIndex(0);
       }
       setIsInitialLoad(false);
     }
@@ -296,7 +298,6 @@ const MasterPlayer = () => {
               title={currentVideo?.title || ''}
               category={currentVideo?.category || ''}
               isAudioOnly={isAudioOnly}
-              // Align with PlaylistCard logic: use -audio suffix for audio mode
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
               className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
