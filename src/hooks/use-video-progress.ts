@@ -41,9 +41,9 @@ export const useVideoProgress = (progressKey: string) => {
       log(`[Persistence] Received data for ${progressKey}:`, data);
       
       return { 
-        playback_time: data?.playback_time || 0, 
-        duration: data?.duration || 0,
-        watch_count: data?.watch_count || 0
+        playback_time: Number(data?.playback_time ?? 0), 
+        duration: Number(data?.duration ?? 0),
+        watch_count: Number(data?.watch_count ?? 0)
       } as VideoProgressData;
     },
     enabled: !!user && !!progressKey,

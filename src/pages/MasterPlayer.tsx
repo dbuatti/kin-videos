@@ -85,13 +85,13 @@ const MasterPlayer = () => {
 
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
-      const indexToLoad = Math.floor(savedIndex);
+      const indexToLoad = Math.floor(Number(savedIndex));
       log(`[MasterPlayer] Initial load for ${masterStateKey}. Saved index: ${savedIndex}, Loading index: ${indexToLoad}`);
       
-      if (indexToLoad >= 0 && indexToLoad < playlist.length) {
+      if (!isNaN(indexToLoad) && indexToLoad >= 0 && indexToLoad < playlist.length) {
         setCurrentIndex(indexToLoad);
       } else {
-        log(`[MasterPlayer] Saved index out of bounds or invalid, defaulting to 0`);
+        log(`[MasterPlayer] Saved index out of bounds or invalid (${savedIndex}), defaulting to 0`);
         setCurrentIndex(0);
       }
       setIsInitialLoad(false);

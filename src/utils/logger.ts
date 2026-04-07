@@ -23,9 +23,16 @@ export const log = (message: string, data?: any, level: LogEntry['level'] = 'inf
   
   // Also output to real console
   const prefix = `[Playback]`;
-  if (level === 'error') console.error(prefix, message, data);
-  else if (level === 'warn') console.warn(prefix, message, data);
-  else console.log(prefix, message, data);
+  
+  if (data !== undefined) {
+    if (level === 'error') console.error(prefix, message, data);
+    else if (level === 'warn') console.warn(prefix, message, data);
+    else console.log(prefix, message, data);
+  } else {
+    if (level === 'error') console.error(prefix, message);
+    else if (level === 'warn') console.warn(prefix, message);
+    else console.log(prefix, message);
+  }
   
   // Trigger a custom event so the Debug page can update
   window.dispatchEvent(new CustomEvent('app-log-updated'));

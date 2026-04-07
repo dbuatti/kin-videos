@@ -132,9 +132,27 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const attemptResume = (source: string) => {
     const media = mediaRef.current;
-    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 5) return;
+    
+    // Strict validation to prevent NaN errors
+    if (!media || !isReady || hasSuccessfullyResumed.current) return;
+    
+    const validProgress = Number(progress);
+    const validDuration = Number(media.duration);
 
-    const seekTime = Math.min(progress, media.duration - 2);
+    if (isNaN(validProgress) || isNaN(validDuration) || !isFinite(validDuration) || validProgress <= 5) {
+      if (isNaN(validDuration) || !isFinite(validDuration)) {
+        log(`[Resume] Delaying seek from ${source}: duration is not yet finite (${validDuration})`);
+      }
+      return;
+    }
+
+    const seekTime = Math.min(validProgress, validDuration - 2);
+    
+    if (isNaN(seekTime)) {
+      log(`[Resume] Aborting seek: calculated seekTime is NaN`, { validProgress, validDuration }, 'error');
+      return;
+    }
+
     log(`[Resume] Attempting seek from ${source} to ${seekTime.toFixed(2)}s`);
 
     try {
@@ -204,7 +222,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   const handleEnded = () => {
-    // Prevent double-triggering within 2 seconds
     const now = Date.now();
     if (now - lastEndedTime.current < 2000) return;
     lastEndedTime.current = now;
