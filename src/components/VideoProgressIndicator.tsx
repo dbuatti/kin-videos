@@ -11,7 +11,6 @@ interface VideoProgressIndicatorProps {
   videoId: string;
   className?: string;
   showText?: boolean;
-  // Optional: if provided, we use this instead of fetching
   data?: {
     playback_time: number;
     duration: number;
@@ -25,7 +24,6 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
   showText = true,
   data: providedData
 }) => {
-  // If no data provided, we use the optimized global hook
   const { data: allProgress } = useAllProgress();
   const { progress: individualProgress, duration: individualDuration, watchCount: individualWatchCount } = useVideoProgress(videoId);
 
@@ -37,10 +35,22 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
 
   const { playback_time: progress, duration, watch_count: watchCount } = data;
 
-  if (!duration || duration === 0) return null;
+  // Handle cases where duration is 0 or missing (like in your idx 64 data)
+  if (!duration || duration <= 0) {
+    if (watchCount > 0) {
+      return (
+        <div className={cn("flex items-center space-x-2", className)}>
+          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+          <span className="text-[9px] font-bold text-emerald-500 uppercase">Watched {watchCount}x</span>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const percentage = Math.min(Math.round((progress / duration) * 100), 100);
-  const isCompleted = percentage > 95 || watchCount > 0;
+  const isCompleted = watchCount > 0;
+  const isCurrentlyWatching = percentage > 1 && percentage < 95;
 
   return (
     <div className={className}>
@@ -49,9 +59,9 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
           <div className="flex items-center space-x-2">
             <span className={cn(
               "text-[10px] font-black uppercase tracking-widest",
-              isCompleted ? "text-emerald-400" : "text-indigo-400"
+              isCurrentlyWatching ? "text-indigo-400" : (isCompleted ? "text-emerald-400" : "text-slate-600")
             )}>
-              {isCompleted ? "Completed" : `${percentage}% Watched`}
+              {isCurrentlyWatching ? `${percentage}% Watched` : (isCompleted ? "Completed" : "Not Started")}
             </span>
             {watchCount > 0 && (
               <span className="flex items-center text-[9px] font-bold text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">
@@ -60,14 +70,15 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
               </span>
             )}
           </div>
-          {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+          {isCompleted && !isCurrentlyWatching && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
         </div>
       )}
       <Progress 
-        value={percentage} 
+        value={percentage > 0 ? percentage : (isCompleted ? 100 : 0)} 
         className={cn(
-          "h-2 rounded-full transition-all",
-          isCompleted ? "bg-emerald-950/30" : "bg-indigo-950/30"
+          "h-1.5 rounded-full transition-all",
+          isCompleted && !isCurrentlyWatching ? "bg-emerald-950/30" : "bg-indigo-950/30",
+          isCompleted && !isCurrentlyWatching ? "[&>div]:bg-emerald-500" : "[&>div]:bg-indigo-500"
         )} 
       />
     </div>

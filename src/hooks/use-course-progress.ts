@@ -16,7 +16,7 @@ export const useCourseProgress = () => {
 
       const { data: progressData, error } = await supabase
         .from('video_progress')
-        .select('video_id, playback_time, duration')
+        .select('video_id, playback_time, duration, watch_count')
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -26,17 +26,27 @@ export const useCourseProgress = () => {
       
       if (totalVideos === 0) return { percentage: 0, watchedCount: 0, totalCount: 0 };
 
-      // A video is "watched" if it's > 90% complete
-      const watchedVideos = progressData?.filter(p => {
-        if (!p.duration || p.duration === 0) return false;
-        return (p.playback_time / p.duration) > 0.9;
-      }) || [];
+      // A lesson is "completed" if either its video OR its audio version is watched
+      const completedLessonIds = new Set<string>();
 
-      const percentage = Math.round((watchedVideos.length / totalVideos) * 100);
+      progressData?.forEach(p => {
+        const cleanId = p.video_id.replace('-audio', '');
+        const isWatched = p.watch_count > 0 || (p.duration > 0 && (p.playback_time / p.duration) > 0.9);
+        
+        if (isWatched) {
+          completedLessonIds.add(cleanId);
+        }
+      });
+
+      const watchedCount = Array.from(completedLessonIds).filter(id => 
+        videoLessons.some(l => l.id === id)
+      ).length;
+
+      const percentage = Math.round((watchedCount / totalVideos) * 100);
 
       return {
         percentage,
-        watchedCount: watchedVideos.length,
+        watchedCount,
         totalCount: totalVideos
       };
     },
