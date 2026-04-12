@@ -6,16 +6,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Zap, AlertCircle } from 'lucide-react';
+import { Loader2, Zap, AlertCircle, Smartphone, Monitor } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const Login = () => {
   const { user, isLoading } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isLocalhostOnMobile, setIsLocalhostOnMobile] = useState(false);
 
-  // Clear any hash fragments from the URL that might interfere with the Auth UI
   useEffect(() => {
+    // Check if we are on a mobile device but using localhost
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (isMobile && isLocalhost) {
+      setIsLocalhostOnMobile(true);
+    }
+
+    // Handle errors from URL hash
     if (window.location.hash && window.location.hash.includes('error=')) {
       const params = new URLSearchParams(window.location.hash.substring(1));
       const errorDescription = params.get('error_description');
@@ -37,17 +46,22 @@ const Login = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Determine the correct redirect URL. 
-  // On mobile/iPad, we must ensure we aren't redirecting to 'localhost' 
-  // if the app is being accessed via a network IP or Dyad URL.
-  const getRedirectUrl = () => {
-    const url = new URL(window.location.origin);
-    return url.toString();
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="w-full max-w-md space-y-4">
+        {isLocalhostOnMobile && (
+          <Alert className="rounded-2xl border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <Smartphone className="h-5 w-5" />
+            <AlertTitle className="font-black uppercase tracking-tight">iPad/Mobile Detected</AlertTitle>
+            <AlertDescription className="text-xs leading-relaxed">
+              You are accessing the app via <code className="text-white">localhost</code>. 
+              Google Login <strong>will fail</strong> because it won't know how to get back to your iPad.
+              <br /><br />
+              <strong>Solution:</strong> Use the URL from your computer's browser (the one ending in <code className="text-white">.dyad.sh</code>) instead of localhost.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {authError && (
           <Alert variant="destructive" className="rounded-2xl border-red-500/20 bg-red-500/10 text-red-400">
             <AlertCircle className="h-4 w-4" />
@@ -95,18 +109,15 @@ const Login = () => {
               }}
               view="sign_in" 
               theme="dark"
-              redirectTo={getRedirectUrl()}
+              redirectTo={window.location.origin}
             />
             
-            <div className="mt-6 text-center">
-              <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">
-                Current Origin: {window.location.origin}
-              </p>
-              {window.location.hostname === 'localhost' && (
-                <p className="text-[9px] text-amber-500/60 mt-2 px-4">
-                  Note: If you are on an iPad, ensure you are using the Dyad URL or your computer's IP address instead of "localhost".
-                </p>
-              )}
+            <div className="mt-8 p-4 rounded-2xl bg-white/5 border border-white/5 text-center">
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-2">Current Connection</p>
+              <div className="flex items-center justify-center space-x-2 text-white font-mono text-[10px]">
+                {window.location.hostname === 'localhost' ? <Monitor className="w-3 h-3 text-amber-500" /> : <Smartphone className="w-3 h-3 text-emerald-500" />}
+                <span>{window.location.origin}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
