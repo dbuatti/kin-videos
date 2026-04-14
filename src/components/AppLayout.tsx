@@ -12,7 +12,9 @@ import {
   Settings,
   Search,
   ChevronRight,
-  Bookmark
+  Bookmark,
+  Terminal,
+  Scissors
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,6 +32,8 @@ const NAV_ITEMS = [
   { label: 'Videos', icon: PlayCircle, path: '/gallery' },
   { label: 'Inventory', icon: Library, path: '/library' },
   { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
+  { label: 'Scraper', icon: Terminal, path: '/scraper' },
+  { label: 'Stitcher', icon: Scissors, path: '/stitcher' },
 ];
 
 const AppLayout = () => {
@@ -69,7 +73,7 @@ const AppLayout = () => {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 space-y-1">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => (
           <Link
             key={item.path}
@@ -153,7 +157,7 @@ const AppLayout = () => {
           <Outlet />
         </main>
         <nav className="fixed bottom-0 left-0 right-0 h-16 bg-background/90 backdrop-blur-xl border-t border-white/5 flex items-center justify-around px-2 z-40">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.slice(0, 5).map((item) => {
             const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
             return (
               <Link key={item.path} to={item.path} className={cn("flex flex-col items-center space-y-1", isActive ? "text-primary" : "text-slate-500")}>
