@@ -13,11 +13,13 @@ import {
   FileJson, 
   Sparkles,
   Globe,
-  Activity
+  Activity,
+  MessageSquare
 } from 'lucide-react';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const bookmarks = [
+  { title: "Claude Chat (FNH)", url: "https://claude.ai/chat/b844f931-709c-4adf-975c-f73531aaa929", description: "Reference chat for FNH development.", icon: MessageSquare, color: "text-orange-400", bg: "bg-orange-400/10" },
   { title: "Kinesiology App", url: "https://kinesiology-app.vercel.app/", description: "Access the Kinesiology application.", icon: Activity, color: "text-rose-400", bg: "bg-rose-400/10" },
   { title: "Local Library", url: "http://localhost:32110/library", description: "Access your local FNH library server.", icon: Library, color: "text-blue-400", bg: "bg-blue-400/10" },
   { title: "FNH Foundations Home", url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations?page=1", description: "Main course dashboard on Kajabi.", icon: GraduationCap, color: "text-indigo-400", bg: "bg-indigo-400/10" },
