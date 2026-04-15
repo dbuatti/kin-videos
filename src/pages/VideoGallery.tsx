@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
+import { getCategoryIndex, generateLessonFilename } from '@/utils/filenames';
 import { isPriorityLesson } from '@/utils/priority';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import LessonSkeleton from '@/components/LessonSkeleton';
@@ -39,10 +39,9 @@ const VideoGallery = () => {
       return acc;
     }, {} as Record<string, typeof videoOnly>);
 
-    const sortedCategories = Object.keys(grouped).sort((a, b) => {
-      const indexA = MODULE_ORDER.indexOf(a);
-      const indexB = MODULE_ORDER.indexOf(b);
-      return (indexA === -1 ? Infinity : indexA) - (indexB === -1 ? Infinity : indexB);
+    const allCategories = Object.keys(grouped);
+    const sortedCategories = [...allCategories].sort((a, b) => {
+      return getCategoryIndex(a, allCategories) - getCategoryIndex(b, allCategories);
     });
 
     return sortedCategories.map((category, catIdx) => ({
