@@ -4,27 +4,20 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   ArrowLeft, 
   Search, 
   Video,
-  Download,
-  X,
-  ExternalLink,
-  Star
+  X
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { isPriorityLesson } from '@/utils/priority';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { cn } from '@/lib/utils';
-import VideoPlayer from '@/components/VideoPlayer';
-import VideoProgressIndicator from '@/components/VideoProgressIndicator';
-import { downloadFile } from '@/utils/download';
 import LessonSkeleton from '@/components/LessonSkeleton';
 import PlaybackSpeedControl from '@/components/PlaybackSpeedControl';
+import GalleryVideoCard from '@/components/GalleryVideoCard';
 
 const VideoGallery = () => {
   const navigate = useNavigate();
@@ -33,14 +26,6 @@ const VideoGallery = () => {
   
   const { data: lessons, isLoading } = useJobLessons();
   const [searchQuery, setSearchQuery] = useState(initialSearch);
-
-  const getThumbnailUrl = (videoUrl: string | null) => {
-    if (!videoUrl) return "/placeholder.svg";
-    if (videoUrl.includes('wistia.com/deliveries/')) {
-      return videoUrl.replace('.mp4', '.jpg') + '?image_crop_resized=640x360';
-    }
-    return "/placeholder.svg";
-  };
 
   const groupedVideos = useMemo(() => {
     if (!lessons) return [];
@@ -133,53 +118,7 @@ const VideoGallery = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {group.videos.map((video) => (
-                  <Card key={video.id} className={cn(
-                    "overflow-hidden border-white/5 bg-slate-900/40 hover:bg-slate-900/60 transition-all group rounded-2xl relative",
-                    video.isPriority && "ring-1 ring-amber-500/30 bg-amber-500/[0.02]"
-                  )}>
-                    {video.isPriority && (
-                      <div className="absolute top-3 left-3 z-10">
-                        <Badge className="bg-amber-500 text-white border-none text-[9px] font-black uppercase tracking-widest px-2 py-0.5 shadow-lg">
-                          <Star className="w-2.5 h-2.5 mr-1 fill-white" />
-                          Priority
-                        </Badge>
-                      </div>
-                    )}
-                    <VideoPlayer 
-                      videoUrl={video.video_url!}
-                      videoId={video.id}
-                      title={video.title || ''}
-                      category={video.category || ''}
-                      posterUrl={getThumbnailUrl(video.video_url)}
-                      className="aspect-video"
-                    />
-                    <CardHeader className="p-5">
-                      <div className="flex justify-between items-start gap-4 mb-4">
-                        <CardTitle className={cn(
-                          "text-sm font-bold line-clamp-2 leading-snug transition-colors",
-                          video.isPriority ? "text-amber-400" : "text-white group-hover:text-primary"
-                        )}>
-                          {video.title}
-                        </CardTitle>
-                        <div className="flex items-center space-x-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-slate-500 hover:text-white"
-                            onClick={() => downloadFile(video.video_url!, video.expectedFilename)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-white">
-                            <a href={video.lesson_url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        </div>
-                      </div>
-                      <VideoProgressIndicator videoId={video.id} />
-                    </CardHeader>
-                  </Card>
+                  <GalleryVideoCard key={video.id} video={video} />
                 ))}
               </div>
             </section>
