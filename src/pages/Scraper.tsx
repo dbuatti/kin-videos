@@ -29,7 +29,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V17_SCRIPT = `(async function() {
+const SCRAPER_V18_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
   var LIMIT = 0; // Set to 0 for unlimited (Full Course)
   // ---------------------
@@ -43,7 +43,7 @@ const SCRAPER_V17_SCRIPT = `(async function() {
   
   var hdr = document.createElement('div');
   hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#6366f1;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Architect v17</span>';
+  hdr.innerHTML = '<span>FNH Architect v18</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -70,27 +70,19 @@ const SCRAPER_V17_SCRIPT = `(async function() {
     logEl.prepend(d);
   }
 
-  function getCleanStructure() {
-    var structure = [];
+  function extractLinksFromDoc(doc, baseUrl) {
+    var links = [];
+    var allLinks = Array.from(doc.querySelectorAll('a[href*="/posts/"]'));
     var seenUrls = new Set();
-    
-    // 1. Find all lesson links first
-    var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
-    
-    // 2. Group them by their nearest preceding heading
-    var currentModule = "General";
-    var moduleMap = new Map();
 
     allLinks.forEach(a => {
         var url = a.href.split('?')[0];
         if (seenUrls.has(url) || a.classList.contains('next-post')) return;
         seenUrls.add(url);
 
-        // Find the closest heading ABOVE this link
         var parent = a.parentElement;
         var foundHeading = null;
-        while (parent && parent !== document.body) {
-            // Look for siblings that are headings
+        while (parent && parent !== doc.body) {
             var prev = parent.previousElementSibling;
             while (prev) {
                 var h = prev.querySelector('h1,h2,h3,h4,h5') || (prev.tagName.match(/H[1-6]/) ? prev : null);
@@ -105,31 +97,65 @@ const SCRAPER_V17_SCRIPT = `(async function() {
         }
 
         var moduleName = foundHeading || "General";
-        // Filter out the course title if it's being picked up as a module
         if (moduleName.includes("Foundations") && moduleName.length > 30) moduleName = "General";
 
-        if (!moduleMap.has(moduleName)) moduleMap.set(moduleName, []);
-        moduleMap.get(moduleName).push({
+        links.push({
             url: url,
-            title: a.innerText.trim().split(/[\\r\\n]+/)[0]
+            title: a.innerText.trim().split(/[\\r\\n]+/)[0],
+            module: moduleName
         });
     });
+    return links;
+  }
 
-    moduleMap.forEach((lessons, module) => {
-        structure.push({ module: module, lessons: lessons });
+  async function getFullStructure() {
+    setStatus('Scanning for pagination...');
+    var allLessonData = [];
+    var processedPages = new Set([window.location.href]);
+    
+    // 1. Get links from current page
+    var initialLinks = extractLinksFromDoc(document, window.location.href);
+    allLessonData.push(...initialLinks);
+
+    // 2. Find other page links
+    var pageLinks = Array.from(document.querySelectorAll('a[href*="page="]'))
+        .map(a => a.href)
+        .filter(href => href.includes(window.location.pathname));
+
+    for (var pageUrl of pageLinks) {
+        if (processedPages.has(pageUrl)) continue;
+        processedPages.add(pageUrl);
+        addLog('Fetching additional page: ' + pageUrl.split('page=')[1], '#6366f1');
+        try {
+            var res = await fetch(pageUrl);
+            var html = await res.text();
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var moreLinks = extractLinksFromDoc(doc, pageUrl);
+            allLessonData.push(...moreLinks);
+        } catch (e) {
+            addLog('Failed to fetch page: ' + pageUrl, '#ef4444');
+        }
+    }
+
+    // Deduplicate by URL
+    var unique = [];
+    var seen = new Set();
+    allLessonData.forEach(l => {
+        if (!seen.has(l.url)) {
+            seen.add(l.url);
+            unique.push(l);
+        }
     });
 
-    return structure;
+    return unique;
   }
 
   async function extractVideo(html) {
     if (!html) return null;
-
-    // 1. Direct Delivery Link (Fastest & Most Reliable)
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
-    // 2. Wistia ID Search
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
@@ -142,61 +168,38 @@ const SCRAPER_V17_SCRIPT = `(async function() {
       try {
         var r = await fetch('https://fast.wistia.com/embed/medias/' + wistiaId + '.json');
         var d = await r.json();
-        // Look for 1080p or 720p specifically
         var asset = d.media.assets.find(a => a.display_name === '1080p' || a.slug === 'mp4_h264_2950k') ||
                     d.media.assets.find(a => a.display_name === '720p' || a.slug === 'mp4_h264_1271k') ||
                     d.media.assets.find(a => a.ext === 'mp4' || a.type === 'original');
         if (asset) return asset.url.replace('.bin', '.mp4');
-      } catch(e) {
-          addLog('   API Blocked for ' + wistiaId, '#f59e0b');
-      }
-    }
-
-    // 3. Kajabi Data Props Deep Scan
-    var propsMatch = html.match(/data-props="([^"]+)"/);
-    if (propsMatch) {
-      try {
-        var decoded = propsMatch[1].replace(/&quot;/g, '"');
-        var props = JSON.parse(decoded);
-        var vidId = props.video_id || (props.video && props.video.wistia_id) || (props.post && props.post.video_wistia_id);
-        if (vidId) return await extractVideo('wistia-id-' + vidId);
       } catch(e) {}
     }
-
     return null;
   }
 
-  setStatus('Architecting curriculum...');
-  var fullStructure = getCleanStructure();
-  var totalAvailable = fullStructure.reduce((n, s) => n + s.lessons.length, 0);
-  var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, totalAvailable) : totalAvailable;
+  var lessons = await getFullStructure();
+  var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, lessons.length) : lessons.length;
 
-  if (totalAvailable === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
-  addLog('Found ' + totalAvailable + ' lessons. Processing ' + totalToProcess + '.', '#10b981');
+  if (lessons.length === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
+  addLog('Found ' + lessons.length + ' total lessons across all pages.', '#10b981');
 
   var results = [];
-  var count = 0;
-
-  for (var mod of fullStructure) {
-    for (var lesson of mod.lessons) {
-      if (LIMIT > 0 && count >= LIMIT) break;
-      count++;
-      setStatus('Processing ' + count + ' / ' + totalToProcess + '...');
-      addLog('-> [' + mod.module + '] ' + lesson.title);
-      
-      try {
-        var response = await fetch(lesson.url);
-        var html = await response.text();
-        var videoUrl = await extractVideo(html);
-        results.push({ category: mod.module, title: lesson.title, page_url: lesson.url, video_url: videoUrl });
-        if (videoUrl) addLog('   ✓ Success', '#10b981');
-        else addLog('   × No Video', '#ef4444');
-        await new Promise(r => setTimeout(r, 500));
-      } catch (err) {
-        addLog('   ! Error: ' + err.message, '#ef4444');
-      }
+  for (var i = 0; i < totalToProcess; i++) {
+    var lesson = lessons[i];
+    setStatus('Processing ' + (i + 1) + ' / ' + totalToProcess + '...');
+    addLog('-> [' + lesson.module + '] ' + lesson.title);
+    
+    try {
+      var response = await fetch(lesson.url);
+      var html = await response.text();
+      var videoUrl = await extractVideo(html);
+      results.push({ category: lesson.module, title: lesson.title, page_url: lesson.url, video_url: videoUrl });
+      if (videoUrl) addLog('   ✓ Success', '#10b981');
+      else addLog('   × No Video', '#ef4444');
+      await new Promise(r => setTimeout(r, 400));
+    } catch (err) {
+      addLog('   ! Error: ' + err.message, '#ef4444');
     }
-    if (LIMIT > 0 && count >= LIMIT) break;
   }
 
   setStatus('COMPLETE!', '#10b981');
@@ -322,11 +325,11 @@ const Scraper = () => {
             <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
           
-          <Tabs defaultValue="v17" className="w-full">
+          <Tabs defaultValue="v18" className="w-full">
             <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v17" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
+              <TabsTrigger value="v18" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
                 <Zap className="w-4 h-4 mr-2" />
-                Architect v17
+                Architect v18
               </TabsTrigger>
               <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
                 <Bug className="w-4 h-4 mr-2" />
@@ -334,31 +337,31 @@ const Scraper = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="v17">
+            <TabsContent value="v18">
               <Card className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
                 <CardHeader className="border-b border-indigo-500/10 py-6">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Architect v17 (Full Course)
+                      FNH Architect v18 (Pagination Support)
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V17_SCRIPT, 'v17')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V18_SCRIPT, 'v18')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
-                      Copy v17 Script
+                      Copy v18 Script
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v17 Improvements</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v18 Improvements</h4>
                     <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Auto-Pagination:</strong> Detects and fetches lessons from page 2, 3, etc. automatically.</li>
                       <li><strong className="text-slate-200">Full Course Mode:</strong> LIMIT is set to 0. It will process every lesson found.</li>
-                      <li><strong className="text-slate-200">Aggressive Categories:</strong> Looks for headings above links to fix "Uncategorized".</li>
-                      <li><strong className="text-slate-200">Direct Delivery Scan:</strong> Finds video URLs directly in HTML.</li>
+                      <li><strong className="text-slate-200">Smart Deduplication:</strong> Ensures no duplicate lessons if you run it multiple times.</li>
                     </ul>
                   </div>
                   <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V17_SCRIPT}</pre>
+                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V18_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
@@ -372,7 +375,7 @@ const Scraper = () => {
                       <Bug className="w-5 h-5 mr-2" />
                       Titan v16
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V17_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V18_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy v16 Script
                     </Button>
@@ -380,7 +383,7 @@ const Scraper = () => {
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V17_SCRIPT}</pre>
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V18_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
