@@ -10,265 +10,316 @@ import {
   Copy, 
   Zap, 
   Info,
-  FileCode
+  FileCode,
+  SearchCode
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { showSuccess } from '@/utils/toast';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
-const SCRAPER_SCRIPT = `(async function() {
+const DIAGNOSTIC_SCRIPT = `// TITLE DIAGNOSTIC — paste on a single Kajabi lesson page
+(function() {
+  var results = [];
+  results.push('=== PAGE URL ===');
+  results.push(window.location.href);
+  results.push('');
+  results.push('=== document.title ===');
+  results.push(document.title);
+  results.push('');
+  results.push('=== All H1 elements ===');
+  document.querySelectorAll('h1').forEach(function(el, i) {
+    results.push('h1[' + i + ']: ' + JSON.stringify(el.innerText.trim().slice(0,100)));
+    results.push('  classes: ' + el.className);
+  });
+  results.push('');
+  results.push('=== All H2 elements ===');
+  document.querySelectorAll('h2').forEach(function(el, i) {
+    results.push('h2[' + i + ']: ' + JSON.stringify(el.innerText.trim().slice(0,100)));
+    results.push('  classes: ' + el.className);
+  });
+  results.push('');
+  results.push('=== Elements with "title" in class ===');
+  document.querySelectorAll('[class*="title"]').forEach(function(el, i) {
+    var t = el.innerText.trim().slice(0,80);
+    if (t) results.push('[' + i + '] .' + el.className.split(' ').join('.') + ': ' + JSON.stringify(t));
+  });
+  results.push('');
+  results.push('=== Elements with "post" in class ===');
+  document.querySelectorAll('[class*="post"]').forEach(function(el, i) {
+    var t = el.innerText.trim().slice(0,60);
+    if (t && el.children.length < 5) results.push('[' + i + '] .' + el.className.split(' ').join('.').slice(0,60) + ': ' + JSON.stringify(t));
+  });
+  results.push('');
+  results.push('=== Elements with "lesson" in class ===');
+  document.querySelectorAll('[class*="lesson"]').forEach(function(el, i) {
+    var t = el.innerText.trim().slice(0,80);
+    if (t && el.children.length < 5) results.push('[' + i + '] .' + el.className.split(' ').join('.').slice(0,60) + ': ' + JSON.stringify(t));
+  });
+  results.push('');
+  results.push('=== Elements with "content" in class (shallow) ===');
+  document.querySelectorAll('[class*="content"]').forEach(function(el, i) {
+    var t = el.innerText.trim().slice(0,60);
+    if (t && el.children.length < 3) results.push('[' + i + '] .' + el.className.split(' ').join('.').slice(0,60) + ': ' + JSON.stringify(t));
+  });
 
-  // UI
+  var out = results.join('\\n');
+  console.log(out);
+
+  var ta = document.createElement('textarea');
+  ta.value = out;
+  ta.setAttribute('style', 'position:fixed;top:10px;left:10px;width:90vw;height:80vh;z-index:999999;font-family:monospace;font-size:11px;background:#111;color:#0f0;border:1px solid #333;padding:12px;');
+  document.body.appendChild(ta);
+  ta.select();
+  var closeX = document.createElement('button');
+  closeX.innerText = 'Close';
+  closeX.setAttribute('style', 'position:fixed;top:10px;right:10px;z-index:9999999;padding:8px 16px;background:#c00;color:#fff;border:none;cursor:pointer;font-size:13px;');
+  closeX.onclick = function() { ta.remove(); closeX.remove(); };
+  document.body.appendChild(closeX);
+  alert('Diagnostic output shown on screen + logged to console. Copy all text from the box.');
+})();`;
+
+const SCRAPER_V6_SCRIPT = `(async function() {
+
+  // UI helpers
   var ui = document.createElement('div');
-  ui.id = '_fnh_ui';
-  ui.setAttribute('style', [
-    'position:fixed','bottom:20px','right:20px','z-index:999999',
-    'background:#111','border:1px solid #333','border-radius:10px',
-    'padding:16px 20px','width:400px','font-family:monospace',
-    'font-size:12px','color:#e0e0e0','box-shadow:0 8px 32px rgba(0,0,0,.6)',
-    'max-height:300px','overflow-y:auto'
-  ].join(';'));
-
-  var uiInner = document.createElement('div');
-  uiInner.setAttribute('style', 'font-size:13px;font-weight:bold;color:#fff;margin-bottom:8px');
-  uiInner.innerHTML = '&#128302; FNH Scraper v4';
-
-  var closeBtn = document.createElement('span');
-  closeBtn.setAttribute('style', 'float:right;cursor:pointer;color:#666;font-weight:normal');
-  closeBtn.innerText = 'x close';
-  closeBtn.onclick = function() { ui.remove(); };
-  uiInner.appendChild(closeBtn);
-
+  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#111;border:1px solid #333;border-radius:10px;padding:16px 20px;width:440px;font-family:monospace;font-size:12px;color:#e0e0e0;box-shadow:0 8px 32px rgba(0,0,0,.6);max-height:320px;overflow-y:auto;');
+  var hdr = document.createElement('div');
+  hdr.setAttribute('style', 'font-size:13px;font-weight:bold;color:#fff;margin-bottom:8px;');
+  hdr.innerText = 'FNH Scraper v6';
+  var xBtn = document.createElement('span');
+  xBtn.setAttribute('style', 'float:right;cursor:pointer;color:#666;font-weight:normal;font-size:11px;');
+  xBtn.innerText = '[close]';
+  xBtn.onclick = function() { ui.remove(); };
+  hdr.appendChild(xBtn);
   var statusEl = document.createElement('div');
-  statusEl.id = '_fnh_status';
-  statusEl.setAttribute('style', 'color:#aaa');
-  statusEl.innerText = 'Initialising...';
-
+  statusEl.setAttribute('style', 'color:#aaa;margin-bottom:4px;');
+  statusEl.innerText = 'Starting...';
+  var pathEl = document.createElement('div');
+  pathEl.setAttribute('style', 'color:#5a9a5a;font-size:10px;min-height:14px;word-break:break-all;');
   var logEl = document.createElement('div');
-  logEl.id = '_fnh_log';
-  logEl.setAttribute('style', 'margin-top:8px;color:#666;font-size:11px;line-height:1.6');
-
-  ui.appendChild(uiInner);
-  ui.appendChild(statusEl);
-  ui.appendChild(logEl);
+  logEl.setAttribute('style', 'margin-top:6px;color:#555;font-size:10px;line-height:1.5;');
+  ui.appendChild(hdr); ui.appendChild(statusEl); ui.appendChild(pathEl); ui.appendChild(logEl);
   document.body.appendChild(ui);
+  function setStatus(m,c){ statusEl.style.color=c||'#aaa'; statusEl.innerText=m; }
+  function setPath(m){ pathEl.innerText=m; }
+  function addLog(m){ logEl.innerHTML=m+'<br>'+logEl.innerHTML; }
 
-  function setStatus(msg, color) {
-    statusEl.style.color = color || '#aaa';
-    statusEl.innerText = msg;
-  }
-  function addLog(msg) {
-    logEl.innerHTML = msg + '<br>' + logEl.innerHTML;
-  }
-
-  // --- COURSE STRUCTURE from sidebar ---
+  // Collect lesson links + module groupings from sidebar
   function getCourseStructure() {
     var structure = [];
-    var selectors = [
-      '[class*="category"]',
-      '[class*="module"]',
-      '[class*="section"]',
-      '[class*="chapter"]',
-      '[class*="curriculum"]'
-    ];
-    var categoryEls = document.querySelectorAll(selectors.join(','));
-    categoryEls.forEach(function(el) {
-      var heading = el.querySelector('h2,h3,h4,[class*="title"],[class*="name"],[class*="heading"]');
+    var seenUrls = {};
+    // Walk every element — find ones with a heading + post links
+    var allEls = document.querySelectorAll('div,section,li,nav,aside,ul');
+    allEls.forEach(function(el) {
       var links = Array.from(el.querySelectorAll('a[href*="/posts/"]'));
-      if (links.length) {
-        structure.push({
-          module: heading ? heading.innerText.trim().replace(/\\n+/g,' ') : 'Uncategorised',
-          lessons: links.map(function(a) { return { url: a.href, text: a.innerText.trim().replace(/\\n+/g,' ') }; })
-        });
-      }
+      if (links.length < 1) return;
+      // Must have a text-only heading child (not just inherited from body)
+      var heading = el.querySelector('h2,h3,h4,h5,[class*="category"],[class*="module"],[class*="section-title"],[class*="chapter-title"]');
+      if (!heading) return;
+      var moduleName = heading.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ');
+      if (moduleName.length < 2 || moduleName.length > 120) return;
+      var uniqueLinks = links.filter(function(a) {
+        if (seenUrls[a.href] || a.href.indexOf('undefined') !== -1) return false;
+        seenUrls[a.href] = true;
+        return true;
+      });
+      if (!uniqueLinks.length) return;
+      structure.push({
+        module: moduleName,
+        lessons: uniqueLinks.map(function(a) {
+          return { url: a.href, sidebarText: a.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ') };
+        })
+      });
     });
     return structure;
   }
 
-  setStatus('Scanning course structure...');
+  setStatus('Scanning sidebar...');
   var courseStructure = getCourseStructure();
 
-  // Deduplicate lessons that appear in multiple parent containers
-  var seenUrls = {};
-  courseStructure = courseStructure.map(function(s) {
-    var unique = s.lessons.filter(function(l) {
-      if (seenUrls[l.url]) return false;
-      seenUrls[l.url] = true;
-      return true;
-    });
-    return { module: s.module, lessons: unique };
-  }).filter(function(s) { return s.lessons.length > 0; });
-
-  // Flat fallback
   if (!courseStructure.length) {
-    addLog('No sidebar structure — using flat scan');
-    var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
     var seen2 = {};
-    var flat = [];
-    allLinks.forEach(function(a) {
-      if (!seen2[a.href] && !a.href.includes('undefined')) {
-        seen2[a.href] = true;
-        flat.push({ url: a.href, text: a.innerText.trim().replace(/\\n+/g,' ') });
-      }
-    });
+    var flat = Array.from(document.querySelectorAll('a[href*="/posts/"]')).filter(function(a) {
+      if (seen2[a.href] || a.href.indexOf('undefined') !== -1) return false;
+      seen2[a.href] = true; return true;
+    }).map(function(a) { return { url: a.href, sidebarText: a.innerText.trim().replace(/[\\n\\r]+/g,' ') }; });
     courseStructure = [{ module: 'Course Lessons', lessons: flat }];
+    addLog('Flat fallback: ' + flat.length + ' lessons');
   }
 
-  var totalLessons = courseStructure.reduce(function(n, s) { return n + s.lessons.length; }, 0);
-  setStatus('Found ' + totalLessons + ' lessons in ' + courseStructure.length + ' modules');
-  addLog('Modules: ' + courseStructure.map(function(s){ return s.module; }).join(', ').slice(0,80) + '...');
-  await new Promise(function(r) { setTimeout(r, 600); });
+  var courseName = 'Functional Neuro Approach Foundations';
+  var cnEl = document.querySelector('h1,[class*="course-title"],[class*="product-title"]');
+  if (cnEl) courseName = cnEl.innerText.trim().replace(/[\\n\\r]+/g,' ');
 
-  // --- IFRAME ---
+  var total = courseStructure.reduce(function(n,s){ return n+s.lessons.length; },0);
+  setStatus('Found ' + total + ' lessons in ' + courseStructure.length + ' modules');
+  addLog('Course: ' + courseName);
+  await new Promise(function(r){ setTimeout(r,500); });
+
+  // IFRAME
   var iframe = document.createElement('iframe');
-  iframe.setAttribute('style', 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;');
+  iframe.setAttribute('style','position:fixed;top:-9999px;left:-9999px;width:800px;height:600px;');
   document.body.appendChild(iframe);
 
-  function loadPage(url, waitMs) {
-    waitMs = waitMs || 2800;
+  function loadPage(url, ms) {
+    ms = ms || 5000;
     return new Promise(function(resolve) {
-      var done = false;
-      var finish = function() {
-        if (done) return;
-        done = true;
+      var settled = false;
+      function done() {
+        if (settled) return; settled = true;
         setTimeout(function() {
           resolve(iframe.contentDocument || (iframe.contentWindow && iframe.contentWindow.document) || null);
-        }, waitMs);
-      };
-      iframe.onload = finish;
-      iframe.onerror = function() { done = true; resolve(null); };
+        }, ms);
+      }
+      iframe.onload = done;
+      iframe.onerror = function(){ settled=true; resolve(null); };
       iframe.src = url;
-      setTimeout(function() { if (!done) { done = true; resolve(iframe.contentDocument || null); } }, waitMs + 4000);
+      setTimeout(function(){ if(!settled){ settled=true; resolve(iframe.contentDocument||null); } }, ms+6000);
     });
   }
 
-  // --- MP4 EXTRACTION ---
-  async function extractMp4(doc) {
-    if (!doc || !doc.body) return null;
-    var html = doc.body.innerHTML;
+  // TITLE — try many strategies, log what we find
+  function extractTitle(doc, url, sidebarText) {
+    if (!doc) return sidebarText || '(untitled)';
 
-    // S1: .bin delivery URLs in JSON → .mp4 (highest quality = last match)
-    var binRe = /"url"\\s*:\\s*"(https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-f0-9]+\\.bin)"/gi;
-    var binMatches = [];
-    var bm;
-    while ((bm = binRe.exec(html)) !== null) { binMatches.push(bm[1]); }
-    if (binMatches.length) {
-      return binMatches[binMatches.length - 1].replace('.bin', '.mp4');
+    // Strategy A: document.title — Kajabi sets this to the lesson name
+    // Format is usually "Lesson Name | Course Name" or just "Lesson Name"
+    var docTitle = '';
+    try { docTitle = doc.title || ''; } catch(e){}
+    if (docTitle) {
+      // Strip everything after | or — (course/site suffix)
+      var stripped = docTitle.split('|')[0].split(' — ')[0].split(' - ')[0].trim();
+      if (stripped.length > 2 && stripped.length < 150) {
+        console.log('[FNH] docTitle gave: ' + stripped + ' (url: ' + url + ')');
+        return stripped;
+      }
     }
 
-    // S2: direct .mp4 delivery URL in HTML
-    var mp4Re = /https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-f0-9]+\\.mp4/i;
-    var mp4m = html.match(mp4Re);
-    if (mp4m) return mp4m[0];
-
-    // S3: Wistia hashedId → JSON API
-    var idPatterns = [
-      /"hashedId"\\s*:\\s*"([a-z0-9]{8,})"/i,
-      /wistia\\.com\\/medias\\/([a-z0-9]{8,})/i,
-      /wistia_async_([a-z0-9]{8,})/i,
-      /embed\\/medias\\/([a-z0-9]{8,})/i
+    // Strategy B: known Kajabi lesson title selectors
+    var selectors = [
+      '[data-post-title]',
+      '[data-lesson-title]',
+      '.kjb-post-title',
+      '.kjb-lesson-title',
+      '[class*="kjb"][class*="title"]',
+      '[class*="post-title"]',
+      '[class*="lesson-title"]',
+      '[class*="post_title"]',
+      '[class*="lesson_title"]',
+      '[class*="content-title"]',
+      '[class*="entry-title"]',
+      '[class*="page-title"]',
+      'h1',
+      'h2'
     ];
-    var hashedId = null;
-    for (var i = 0; i < idPatterns.length; i++) {
-      var m = html.match(idPatterns[i]);
-      if (m) { hashedId = m[1]; break; }
-    }
-
-    if (hashedId) {
-      try {
-        var apiUrl = 'https://fast.wistia.com/embed/medias/' + hashedId + '.json';
-        var resp = await fetch(apiUrl);
-        var data = await resp.json();
-        var assets = (data && data.media && data.media.assets) ? data.media.assets : [];
-        var mp4s = assets
-          .filter(function(a) {
-            return a.type === 'original' || (a.contentType && a.contentType.indexOf('mp4') !== -1);
-          })
-          .sort(function(a, b) { return (b.bitrate || 0) - (a.bitrate || 0); });
-        if (mp4s.length && mp4s[0].url) {
-          return mp4s[0].url.replace('.bin', '.mp4');
+    for (var i = 0; i < selectors.length; i++) {
+      var el = doc.querySelector(selectors[i]);
+      if (el) {
+        var t = el.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ');
+        if (t.length > 2 && t.length < 200) {
+          console.log('[FNH] Selector ' + selectors[i] + ' gave: ' + t);
+          return t;
         }
-        var any = assets.find(function(a) { return a.url && a.url.indexOf('deliveries') !== -1; });
-        if (any) return any.url.replace('.bin', '.mp4');
-      } catch(e) {}
-      return 'https://fast.wistia.com/embed/medias/' + hashedId + '.m3u8  (stream fallback)';
+      }
     }
 
+    console.log('[FNH] All selectors failed, using sidebarText: ' + sidebarText + ' (url: ' + url + ')');
+    return sidebarText || '(untitled)';
+  }
+
+  // MP4 EXTRACTION
+  async function extractMp4(doc) {
+    if (!doc || !doc.body) return 'NO VIDEO FOUND';
+    var html = doc.body.innerHTML;
+    // S1: .bin -> .mp4
+    var binRe = /"url"\\s*:\\s*"(https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-f0-9]+\\.bin)"/gi;
+    var bins = []; var bm;
+    while ((bm = binRe.exec(html)) !== null) bins.push(bm[1]);
+    if (bins.length) return bins[bins.length-1].replace('.bin','.mp4');
+    // S2: direct mp4
+    var m = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-f0-9]+\\.mp4/i);
+    if (m) return m[0];
+    // S3: hashedId -> Wistia API
+    var idRe = [/"hashedId"\\s*:\\s*"([a-z0-9]{8,})"/i,/wistia\\.com\\/medias\\/([a-z0-9]{8,})/i,/wistia_async_([a-z0-9]{8,})/i,/embed\\/medias\\/([a-z0-9]{8,})/i];
+    var hid = null;
+    for (var j=0;j<idRe.length;j++){ var mm=html.match(idRe[j]); if(mm){ hid=mm[1]; break; } }
+    if (hid) {
+      try {
+        var r = await fetch('https://fast.wistia.com/embed/medias/'+hid+'.json');
+        var d = await r.json();
+        var assets = (d&&d.media&&d.media.assets)?d.media.assets:[];
+        var mp4s = assets.filter(function(a){ return a.type==='original'||(a.contentType&&a.contentType.indexOf('mp4')!==-1); }).sort(function(a,b){ return (b.bitrate||0)-(a.bitrate||0); });
+        if (mp4s.length&&mp4s[0].url) return mp4s[0].url.replace('.bin','.mp4');
+        var any=assets.find(function(a){ return a.url&&a.url.indexOf('deliveries')!==-1; });
+        if (any) return any.url.replace('.bin','.mp4');
+      } catch(e){}
+      return 'https://fast.wistia.com/embed/medias/'+hid+'.m3u8  [stream]';
+    }
     return 'NO VIDEO FOUND';
   }
 
-  // --- SCRAPE ---
-  var outputLines = [];
-  var lessonCount = 0;
-  var sep = Array(73).join('=');
+  // MAIN LOOP
+  var lines = [];
+  var count = 0;
+  var sep = Array(80).join('=');
 
-  for (var si = 0; si < courseStructure.length; si++) {
-    var section = courseStructure[si];
-    outputLines.push('');
-    outputLines.push(sep);
-    outputLines.push(section.module.toUpperCase());
-    outputLines.push(sep);
-    outputLines.push('');
+  for (var si=0; si<courseStructure.length; si++) {
+    var sec = courseStructure[si];
+    lines.push(''); lines.push(sep); lines.push(sec.module.toUpperCase()); lines.push(sep); lines.push('');
 
-    for (var li = 0; li < section.lessons.length; li++) {
-      var lesson = section.lessons[li];
-      lessonCount++;
-      setStatus('Scanning ' + lessonCount + '/' + totalLessons + ': ' + (lesson.text || '').slice(0,35), '#7ec8ff');
-      addLog('[' + lessonCount + '/' + totalLessons + '] ' + (lesson.text || 'loading...').slice(0,45));
+    for (var li=0; li<sec.lessons.length; li++) {
+      var lesson = sec.lessons[li];
+      count++;
+      setStatus('Loading ' + count + ' / ' + total, '#7ec8ff');
+      setPath(sec.module + ' > ' + (lesson.sidebarText||'').slice(0,50));
+      addLog('['+count+'/'+total+'] '+((lesson.sidebarText||'').slice(0,50)));
 
-      var doc = null;
-      var attempts = 0;
-      while (!doc && attempts < 2) {
-        doc = await loadPage(lesson.url, attempts === 0 ? 2800 : 4500);
-        attempts++;
+      // First attempt: 5s wait
+      var doc = await loadPage(lesson.url, 5000);
+      // If title extraction would fail, retry with 7s
+      var titleTest = extractTitle(doc, lesson.url, lesson.sidebarText);
+      if (titleTest === lesson.sidebarText && doc) {
+        addLog('Retrying for better title...');
+        doc = await loadPage(lesson.url, 7000);
       }
 
-      var title = lesson.text || '(untitled)';
-      if (doc) {
-        var titleEl = doc.querySelector('h1, h2, [class*="post-title"], [class*="lesson-title"], [class*="post_title"]');
-        if (titleEl) title = titleEl.innerText.trim().replace(/\\n+/g, ' ');
-      }
-
+      var title = extractTitle(doc, lesson.url, lesson.sidebarText);
       var mp4 = await extractMp4(doc);
+      var breadcrumb = courseName + ' / Modules / ' + sec.module + ' / ' + title;
 
-      outputLines.push(title);
-      outputLines.push('  Page:  ' + lesson.url);
-      outputLines.push('  Video: ' + (mp4 || 'NO VIDEO FOUND'));
-      outputLines.push('');
+      lines.push(breadcrumb);
+      lines.push('  Page:  ' + lesson.url);
+      lines.push('  Video: ' + mp4);
+      lines.push('');
     }
   }
 
   document.body.removeChild(iframe);
 
-  var now = new Date().toLocaleString();
-  var header = [
-    'FNH KAJABI COURSE — FULL VIDEO EXTRACT',
-    'Generated: ' + now,
-    'Total lessons scanned: ' + lessonCount,
-    sep,
-    ''
-  ].join('\\n');
-
-  var output = header + outputLines.join('\\n');
-  var blob = new Blob([output], { type: 'text/plain' });
+  var header = ['FNH KAJABI COURSE — FULL VIDEO EXTRACT','Generated: '+new Date().toLocaleString(),'Lessons: '+count,sep,''].join('\\n');
+  var blob = new Blob([header+lines.join('\\n')],{type:'text/plain'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'FNH_Course_MP4s_' + Date.now() + '.txt';
+  a.download = 'FNH_v6_'+Date.now()+'.txt';
   a.click();
 
-  setStatus('Done! ' + lessonCount + ' lessons. File downloading...', '#4caf50');
-  addLog('TXT saved to Downloads folder');
-  setTimeout(function() { if (document.getElementById('_fnh_ui')) ui.remove(); }, 10000);
-
+  setStatus('Done! ' + count + ' lessons.', '#4caf50');
+  setPath('Check Downloads folder');
+  setTimeout(function(){ ui.remove(); }, 15000);
 })();`;
 
 const Scraper = () => {
   const navigate = useNavigate();
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(SCRAPER_SCRIPT);
-    showSuccess("Script copied to clipboard!");
+  const handleCopyV6 = () => {
+    navigator.clipboard.writeText(SCRAPER_V6_SCRIPT);
+    showSuccess("v6 Scraper script copied!");
+  };
+
+  const handleCopyDiag = () => {
+    navigator.clipboard.writeText(DIAGNOSTIC_SCRIPT);
+    showSuccess("Diagnostic script copied!");
   };
 
   return (
@@ -286,46 +337,73 @@ const Scraper = () => {
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Extraction Tools</p>
           </div>
         </div>
-        <Button onClick={handleCopy} className="bg-primary hover:bg-primary/90 rounded-xl h-11 font-bold">
-          <Copy className="w-4 h-4 mr-2" />
-          Copy Script
-        </Button>
       </header>
 
       <main className="space-y-8">
-        <Card className="border-none bg-primary/10 rounded-[2.5rem] p-8 text-white">
-          <h2 className="text-sm font-black uppercase tracking-widest text-primary mb-6 flex items-center">
-            <Info className="w-5 h-5 mr-2" />
-            How to use
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { step: 1, text: 'Open the FNH Foundations course page in your browser.' },
-              { step: 2, text: 'Press F12 to open the Console.' },
-              { step: 3, text: 'Paste the script and press Enter. Wait for "DONE!".' }
-            ].map((item) => (
-              <div key={item.step} className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                <span className="font-black text-primary block mb-2">Step {item.step}</span>
-                <p className="text-sm text-slate-400">{item.text}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
+        {/* Step 1: Diagnostic */}
         <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
           <CardHeader className="border-b border-white/5 py-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center">
-                <FileCode className="w-5 h-5 mr-2 text-primary" />
-                Extraction Script
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center">
+                <SearchCode className="w-5 h-5 mr-2" />
+                Step 1: Title Diagnostic
               </CardTitle>
-              <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 text-[10px]">v4.0</Badge>
+              <Button onClick={handleCopyDiag} size="sm" className="bg-amber-600 hover:bg-amber-700 rounded-xl font-bold">
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Diagnostic
+              </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px] w-full bg-black/20">
-              <pre className="p-8 text-primary/70 font-mono text-[11px] leading-relaxed">
-                {SCRAPER_SCRIPT}
+          <CardContent className="p-8 space-y-4">
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Run this <strong>FIRST</strong> on a single lesson page to see what Kajabi actually renders. It dumps every possible title candidate so we know exactly what selector to use.
+            </p>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-[11px] text-amber-200/70 leading-relaxed">
+              <Info className="w-4 h-4 mb-2 text-amber-500" />
+              Navigate to ONE lesson page, paste this into the console, and copy the output back to your AI assistant if titles are missing.
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Step 2: v6 Scraper */}
+        <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+          <CardHeader className="border-b border-white/5 py-6">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center">
+                <Zap className="w-5 h-5 mr-2" />
+                Step 2: Full Scraper v6
+              </CardTitle>
+              <Button onClick={handleCopyV6} size="sm" className="bg-primary hover:bg-primary/90 rounded-xl font-bold">
+                <Copy className="w-4 h-4 mr-2" />
+                Copy v6 Script
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">What's New in v6</h4>
+                <ul className="text-[11px] text-slate-500 space-y-2 list-disc pl-4">
+                  <li>5s wait for full JS rendering</li>
+                  <li>Direct <code className="text-slate-300">document.title</code> fallback</li>
+                  <li>Improved Kajabi selector list</li>
+                  <li>Automatic retry for better titles</li>
+                </ul>
+              </div>
+              <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-2">Instructions</h4>
+                <ul className="text-[11px] text-slate-500 space-y-2 list-disc pl-4">
+                  <li>Open course main page</li>
+                  <li>Open Console (F12)</li>
+                  <li>Paste script & press Enter</li>
+                  <li>Wait for TXT download</li>
+                </ul>
+              </div>
+            </div>
+            
+            <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
+              <pre className="p-6 text-primary/50 font-mono text-[10px] leading-relaxed">
+                {SCRAPER_V6_SCRIPT}
               </pre>
             </ScrollArea>
           </CardContent>
@@ -333,9 +411,9 @@ const Scraper = () => {
 
         <div className="flex items-center justify-center p-12 border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/5">
           <div className="text-center">
-            <Zap className="w-8 h-8 text-amber-400 mx-auto mb-4" />
+            <FileCode className="w-8 h-8 text-slate-700 mx-auto mb-4" />
             <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">
-              Extracts direct MP4 links from Wistia metadata automatically.
+              v6 uses a longer wait + reads the iframe title directly via window.frames
             </p>
           </div>
         </div>
