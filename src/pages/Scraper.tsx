@@ -16,7 +16,8 @@ import {
   Upload,
   CheckCircle2,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  Search
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,7 +29,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V16_SCRIPT = `(async function() {
+const SCRAPER_V17_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
   var LIMIT = 5; // Set to 0 for unlimited
   // ---------------------
@@ -38,11 +39,11 @@ const SCRAPER_V16_SCRIPT = `(async function() {
 
   var ui = document.createElement('div');
   ui.id = 'fnh-scraper-ui';
-  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #3b82f6;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
+  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #6366f1;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
   
   var hdr = document.createElement('div');
-  hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#3b82f6;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Titan v16</span>';
+  hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#6366f1;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
+  hdr.innerHTML = '<span>FNH Architect v17</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -73,65 +74,62 @@ const SCRAPER_V16_SCRIPT = `(async function() {
     var structure = [];
     var seenUrls = new Set();
     
-    // Smarter category detection: Look for containers that have post links inside them
-    var containers = document.querySelectorAll('.syllabus__category, [data-category-id], .panel, .syllabus-section, .course-section, .category-card, .section');
+    // 1. Find all lesson links first
+    var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
     
-    if (containers.length === 0) {
-      addLog('No containers found, scanning all links...', '#f59e0b');
-      var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
-      var lessons = allLinks.map(a => ({ url: a.href.split('?')[0], title: a.innerText.trim().split(/[\\r\\n]+/)[0] }))
-                           .filter(l => { if(seenUrls.has(l.url)) return false; seenUrls.add(l.url); return true; });
-      if (lessons.length > 0) structure.push({ module: 'General', lessons: lessons });
-    } else {
-      containers.forEach(container => {
-        // Try to find a title in or near the container
-        var titleEl = container.querySelector('.syllabus__category-title, h2, h3, h4, .category-title, .section-title, .title, [data-role="title"]');
-        
-        // If no title inside, check the previous sibling (common in some Kajabi themes)
-        if (!titleEl && container.previousElementSibling) {
-            var prev = container.previousElementSibling;
-            if (prev.tagName.match(/H[1-6]/) || prev.classList.contains('section-header')) titleEl = prev;
+    // 2. Group them by their nearest preceding heading
+    var currentModule = "General";
+    var moduleMap = new Map();
+
+    allLinks.forEach(a => {
+        var url = a.href.split('?')[0];
+        if (seenUrls.has(url) || a.classList.contains('next-post')) return;
+        seenUrls.add(url);
+
+        // Find the closest heading ABOVE this link
+        var parent = a.parentElement;
+        var foundHeading = null;
+        while (parent && parent !== document.body) {
+            // Look for siblings that are headings
+            var prev = parent.previousElementSibling;
+            while (prev) {
+                var h = prev.querySelector('h1,h2,h3,h4,h5') || (prev.tagName.match(/H[1-6]/) ? prev : null);
+                if (h && h.innerText.trim().length > 2) {
+                    foundHeading = h.innerText.trim();
+                    break;
+                }
+                prev = prev.previousElementSibling;
+            }
+            if (foundHeading) break;
+            parent = parent.parentElement;
         }
 
-        var moduleName = titleEl ? titleEl.innerText.trim() : 'Uncategorized';
-        var links = Array.from(container.querySelectorAll('a[href*="/posts/"]'));
-        var moduleLessons = [];
-        
-        links.forEach(a => {
-          var url = a.href.split('?')[0];
-          if (!seenUrls.has(url) && !a.classList.contains('next-post')) {
-            seenUrls.add(url);
-            var lessonTitle = a.innerText.trim().split(/[\\r\\n]+/)[0];
-            moduleLessons.push({ url: url, title: lessonTitle });
-          }
+        var moduleName = foundHeading || "General";
+        // Filter out the course title if it's being picked up as a module
+        if (moduleName.includes("Foundations") && moduleName.length > 30) moduleName = "General";
+
+        if (!moduleMap.has(moduleName)) moduleMap.set(moduleName, []);
+        moduleMap.get(moduleName).push({
+            url: url,
+            title: a.innerText.trim().split(/[\\r\\n]+/)[0]
         });
-        
-        if (moduleLessons.length > 0) {
-            // If we found "Uncategorized" but there's a heading right above the first link, use that
-            if (moduleName === 'Uncategorized') {
-                var firstLink = container.querySelector('a[href*="/posts/"]');
-                var parent = firstLink.parentElement;
-                while (parent && parent !== container) {
-                    var h = parent.querySelector('h1,h2,h3,h4');
-                    if (h) { moduleName = h.innerText.trim(); break; }
-                    parent = parent.parentElement;
-                }
-            }
-            structure.push({ module: moduleName, lessons: moduleLessons });
-        }
-      });
-    }
+    });
+
+    moduleMap.forEach((lessons, module) => {
+        structure.push({ module: module, lessons: lessons });
+    });
+
     return structure;
   }
 
   async function extractVideo(html) {
     if (!html) return null;
 
-    // 1. Direct Delivery Link (Fastest)
+    // 1. Direct Delivery Link (Fastest & Most Reliable)
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
-    // 2. Wistia ID Search (Restored robust v14 logic)
+    // 2. Wistia ID Search
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
@@ -144,20 +142,23 @@ const SCRAPER_V16_SCRIPT = `(async function() {
       try {
         var r = await fetch('https://fast.wistia.com/embed/medias/' + wistiaId + '.json');
         var d = await r.json();
-        var asset = d.media.assets.find(a => a.slug === 'mp4_h264_2950k' || a.display_name === '1080p') ||
-                    d.media.assets.find(a => a.slug === 'mp4_h264_1271k' || a.display_name === '720p') ||
-                    d.media.assets.find(a => a.type === 'original' || a.ext === 'mp4');
+        // Look for 1080p or 720p specifically
+        var asset = d.media.assets.find(a => a.display_name === '1080p' || a.slug === 'mp4_h264_2950k') ||
+                    d.media.assets.find(a => a.display_name === '720p' || a.slug === 'mp4_h264_1271k') ||
+                    d.media.assets.find(a => a.ext === 'mp4' || a.type === 'original');
         if (asset) return asset.url.replace('.bin', '.mp4');
-      } catch(e) {}
+      } catch(e) {
+          addLog('   API Blocked for ' + wistiaId, '#f59e0b');
+      }
     }
 
-    // 3. Kajabi Data Props (Restored v14 logic)
+    // 3. Kajabi Data Props Deep Scan
     var propsMatch = html.match(/data-props="([^"]+)"/);
     if (propsMatch) {
       try {
         var decoded = propsMatch[1].replace(/&quot;/g, '"');
         var props = JSON.parse(decoded);
-        var vidId = props.video_id || (props.video && props.video.wistia_id);
+        var vidId = props.video_id || (props.video && props.video.wistia_id) || (props.post && props.post.video_wistia_id);
         if (vidId) return await extractVideo('wistia-id-' + vidId);
       } catch(e) {}
     }
@@ -165,7 +166,7 @@ const SCRAPER_V16_SCRIPT = `(async function() {
     return null;
   }
 
-  setStatus('Scanning curriculum...');
+  setStatus('Architecting curriculum...');
   var fullStructure = getCleanStructure();
   var totalAvailable = fullStructure.reduce((n, s) => n + s.lessons.length, 0);
   var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, totalAvailable) : totalAvailable;
@@ -181,7 +182,7 @@ const SCRAPER_V16_SCRIPT = `(async function() {
       if (LIMIT > 0 && count >= LIMIT) break;
       count++;
       setStatus('Processing ' + count + ' / ' + totalToProcess + '...');
-      addLog('-> ' + lesson.title);
+      addLog('-> [' + mod.module + '] ' + lesson.title);
       
       try {
         var response = await fetch(lesson.url);
@@ -201,7 +202,7 @@ const SCRAPER_V16_SCRIPT = `(async function() {
   setStatus('COMPLETE!', '#10b981');
   var btn = document.createElement('button');
   btn.innerText = 'COPY FINAL JSON';
-  btn.setAttribute('style', 'width:100%;margin-top:12px;padding:14px;background:#3b82f6;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
+  btn.setAttribute('style', 'width:100%;margin-top:12px;padding:14px;background:#6366f1;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
   btn.onclick = function() { 
     navigator.clipboard.writeText(JSON.stringify(results, null, 2)); 
     btn.innerText = 'COPIED!';
@@ -321,64 +322,65 @@ const Scraper = () => {
             <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
           
-          <Tabs defaultValue="v16" className="w-full">
+          <Tabs defaultValue="v17" className="w-full">
             <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+              <TabsTrigger value="v17" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
                 <Zap className="w-4 h-4 mr-2" />
-                Titan v16
+                Architect v17
               </TabsTrigger>
-              <TabsTrigger value="v15" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
-                Collector v15
+              <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+                <Bug className="w-4 h-4 mr-2" />
+                Titan v16
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="v16">
-              <Card className="border-blue-500/20 bg-blue-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
-                <CardHeader className="border-b border-blue-500/10 py-6">
+            <TabsContent value="v17">
+              <Card className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
+                <CardHeader className="border-b border-indigo-500/10 py-6">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-black uppercase tracking-widest text-blue-400 flex items-center">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Titan v16 (Robust Mode)
+                      FNH Architect v17 (Limited Test)
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V16_SCRIPT, 'v16')} size="sm" className="bg-blue-600 hover:bg-blue-500 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V17_SCRIPT, 'v17')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy v17 Script
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                  <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v17 Improvements</h4>
+                    <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Aggressive Categories:</strong> Looks for headings above links to fix "Uncategorized".</li>
+                      <li><strong className="text-slate-200">Direct Delivery Scan:</strong> Finds video URLs directly in HTML without needing the Wistia API.</li>
+                      <li><strong className="text-slate-200">Limit Variable:</strong> Set to 5. Change to 0 for full course.</li>
+                    </ul>
+                  </div>
+                  <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V17_SCRIPT}</pre>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="v16">
+              <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                <CardHeader className="border-b border-white/5 py-6">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center">
+                      <Bug className="w-5 h-5 mr-2" />
+                      Titan v16
+                    </CardTitle>
+                    <Button onClick={() => handleCopy(SCRAPER_V17_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy v16 Script
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
-                  <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">v16 Titan Improvements</h4>
-                    <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                      <li><strong className="text-slate-200">Restored Extraction:</strong> Re-added the deep-scan logic that found videos in v14.</li>
-                      <li><strong className="text-slate-200">Aggressive Categories:</strong> Now searches for headings above containers to fix "Uncategorized" issues.</li>
-                      <li><strong className="text-slate-200">Limit Variable:</strong> Still set to 5 for testing. Change to 0 for full course.</li>
-                    </ul>
-                  </div>
-                  <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-blue-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V16_SCRIPT}</pre>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="v15">
-              <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-                <CardHeader className="border-b border-white/5 py-6">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center">
-                      <Bug className="w-5 h-5 mr-2" />
-                      Collector v15
-                    </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V16_SCRIPT, 'v15')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy v15 Script
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-8 space-y-6">
                   <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V16_SCRIPT}</pre>
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V17_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
