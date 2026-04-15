@@ -12,9 +12,9 @@ import {
   Zap, 
   ExternalLink,
   Layers,
-  History,
   SearchCode,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { showSuccess } from '@/utils/toast';
@@ -22,13 +22,13 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V9_SCRIPT = `(async function() {
+const SCRAPER_V10_SCRIPT = `(async function() {
   var ui = document.createElement('div');
-  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:1px solid #6366f1;border-radius:24px;padding:24px;width:480px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:500px;overflow-y:auto;border-width:2px;');
+  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #6366f1;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
   
   var hdr = document.createElement('div');
   hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#818cf8;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Ultra Scraper v9</span>';
+  hdr.innerHTML = '<span>FNH Ultra Scraper v10</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -41,7 +41,7 @@ const SCRAPER_V9_SCRIPT = `(async function() {
   statusEl.innerText = 'Initializing...';
   
   var logEl = document.createElement('div');
-  logEl.setAttribute('style', 'margin-top:16px;color:#64748b;font-size:11px;line-height:1.6;border-top:1px solid #1e293b;padding-top:12px;max-height:200px;overflow-y:auto;font-family:monospace;');
+  logEl.setAttribute('style', 'margin-top:16px;color:#64748b;font-size:11px;line-height:1.6;border-top:1px solid #1e293b;padding-top:12px;max-height:250px;overflow-y:auto;font-family:monospace;');
   
   ui.appendChild(hdr); ui.appendChild(statusEl); ui.appendChild(logEl);
   document.body.appendChild(ui);
@@ -67,12 +67,14 @@ const SCRAPER_V9_SCRIPT = `(async function() {
       if (!titleEl) return;
       
       var moduleName = titleEl.innerText.trim();
+      // Only grab links that are inside the syllabus list, not footer/nav
       var links = Array.from(cat.querySelectorAll('a[href*="/posts/"]'));
       
       var moduleLessons = [];
       links.forEach(a => {
-        var url = a.href.split('?')[0]; // Clean URL
-        if (!seenUrls.has(url)) {
+        var url = a.href.split('?')[0];
+        // Deduplicate and ensure it's not a "Next Lesson" button
+        if (!seenUrls.has(url) && !a.classList.contains('next-post')) {
           seenUrls.add(url);
           var lessonTitle = a.innerText.trim().split('\\n')[0];
           moduleLessons.push({ url: url, title: lessonTitle });
@@ -98,30 +100,32 @@ const SCRAPER_V9_SCRIPT = `(async function() {
 
   async function extractVideo(doc) {
     if (!doc || !doc.body) return null;
-    
-    // 1. Check for Wistia JSON in script tags (Most reliable)
-    var scripts = Array.from(doc.querySelectorAll('script'));
-    for (var s of scripts) {
-      var m = s.innerHTML.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]+)\\.bin/i);
-      if (m) return m[0].replace('.bin', '.mp4');
-      
-      var m2 = s.innerHTML.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]+)\\.mp4/i);
-      if (m2) return m2[0];
-    }
-    
-    // 2. Check for iframe embeds
-    var wistiaIframe = doc.querySelector('iframe[src*="wistia.net"], iframe[src*="wistia.com"]');
-    if (wistiaIframe) {
-      var idMatch = wistiaIframe.src.match(/\\/embed\\/medias\\/([a-z0-9]+)/i);
-      if (idMatch) {
-        try {
-          var r = await fetch('https://fast.wistia.com/embed/medias/'+idMatch[1]+'.json');
-          var d = await r.json();
-          var asset = d.media.assets.find(a => a.type === 'original' || a.ext === 'mp4');
-          if (asset) return asset.url.replace('.bin', '.mp4');
-        } catch(e) {}
+    var html = doc.body.innerHTML;
+
+    // 1. Look for Wistia Hashed ID (The most reliable way)
+    var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
+                  html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
+                  html.match(/wistia-([a-z0-9]{10})/i);
+
+    if (idMatch) {
+      var wistiaId = idMatch[1];
+      addLog('   Found Wistia ID: ' + wistiaId, '#6366f1');
+      try {
+        // Fetch metadata directly from Wistia API (Bypasses ad-blockers/player load)
+        var r = await fetch('https://fast.wistia.com/embed/medias/' + wistiaId + '.json');
+        var d = await r.json();
+        var asset = d.media.assets.find(a => a.type === 'original' || a.ext === 'mp4');
+        if (asset) return asset.url.replace('.bin', '.mp4');
+      } catch(e) {
+        addLog('   API Fetch failed, trying regex...', '#f59e0b');
       }
     }
+    
+    // 2. Fallback: Direct delivery URL regex
+    var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]+)\\.bin/i) ||
+                        html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]+)\\.mp4/i);
+    
+    if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
     return null;
   }
@@ -137,12 +141,12 @@ const SCRAPER_V9_SCRIPT = `(async function() {
       
       iframe.src = lesson.url;
       
-      // Wait for load + extra time for scripts
+      // Wait for load
       await new Promise(r => {
-        var timer = setTimeout(r, 8000); // Max wait
+        var timer = setTimeout(r, 10000); // Max wait 10s
         iframe.onload = () => {
           clearTimeout(timer);
-          setTimeout(r, 3000); // Extra buffer for Wistia
+          setTimeout(r, 2000); // Small buffer
         };
       });
 
@@ -154,7 +158,7 @@ const SCRAPER_V9_SCRIPT = `(async function() {
         video_url: videoUrl
       });
       
-      if (videoUrl) addLog('   ✓ Found Video', '#10b981');
+      if (videoUrl) addLog('   ✓ Success', '#10b981');
       else addLog('   × No Video', '#ef4444');
     }
   }
@@ -205,90 +209,76 @@ const Scraper = () => {
       </header>
 
       <main className="space-y-8">
-        <Tabs defaultValue="v9" className="w-full">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 flex items-start space-x-4">
+          <ShieldAlert className="w-6 h-6 text-amber-500 shrink-0" />
+          <div>
+            <h4 className="text-sm font-bold text-amber-500">Important: Disable Ad-Blockers</h4>
+            <p className="text-xs text-slate-400 mt-1">
+              Your browser is blocking Wistia scripts. Please disable <strong>uBlock Origin, AdBlock, or Brave Shields</strong> on the Kajabi site before running the script, or video links will return as NULL.
+            </p>
+          </div>
+        </div>
+
+        <Tabs defaultValue="v10" className="w-full">
           <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-            <TabsTrigger value="v9" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
+            <TabsTrigger value="v10" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
               <Sparkles className="w-4 h-4 mr-2" />
-              Ultra v9
+              Ultra v10
             </TabsTrigger>
-            <TabsTrigger value="v8" className="rounded-xl px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">
+            <TabsTrigger value="v9" className="rounded-xl px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">
               <Zap className="w-4 h-4 mr-2" />
-              Master v8
-            </TabsTrigger>
-            <TabsTrigger value="diag" className="rounded-xl px-6 font-bold data-[state=active]:bg-amber-600 data-[state=active]:text-white">
-              <SearchCode className="w-4 h-4 mr-2" />
-              Diagnostic
+              Master v9
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="v9">
+          <TabsContent value="v10">
             <Card className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
               <CardHeader className="border-b border-indigo-500/10 py-6">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Ultra Scraper v9 (Recommended)
+                    Ultra Scraper v10 (Recommended)
                   </CardTitle>
-                  <Button onClick={() => handleCopy(SCRAPER_V9_SCRIPT, 'v9')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                  <Button onClick={() => handleCopy(SCRAPER_V10_SCRIPT, 'v10')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy v10 Script
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6">
+                <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v10 Ultra Features</h4>
+                  <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                    <li><strong className="text-slate-200">Direct API Extraction:</strong> Fetches video links directly from Wistia's servers.</li>
+                    <li><strong className="text-slate-200">Duplicate Filter:</strong> Ignores "Next Lesson" and "Previous Lesson" links.</li>
+                    <li><strong className="text-slate-200">Deep Scan:</strong> Finds videos even if the player is blocked by an ad-blocker.</li>
+                  </ul>
+                </div>
+                <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                  <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V10_SCRIPT}</pre>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="v9">
+            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+              <CardHeader className="border-b border-white/5 py-6">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center">
+                    <Layers className="w-5 h-5 mr-2" />
+                    Master Scraper v9
+                  </CardTitle>
+                  <Button onClick={() => handleCopy(SCRAPER_V10_SCRIPT, 'v9')} size="sm" className="bg-primary hover:bg-primary/90 rounded-xl font-bold">
                     <Copy className="w-4 h-4 mr-2" />
                     Copy v9 Script
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
-                <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v9 Ultra Features</h4>
-                  <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                    <li><strong className="text-slate-200">Smart Deduplication:</strong> Prevents double-entries from Kajabi pagination.</li>
-                    <li><strong className="text-slate-200">Deep Video Extraction:</strong> Uses Wistia API detection for 100% accuracy.</li>
-                    <li><strong className="text-slate-200">Module Fix:</strong> Correctly identifies parent modules (fixes "Learning Materials" bug).</li>
-                  </ul>
-                </div>
-                <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                  <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V9_SCRIPT}</pre>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="v8">
-            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="border-b border-white/5 py-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center">
-                    <Layers className="w-5 h-5 mr-2" />
-                    Master Scraper v8
-                  </CardTitle>
-                  <Button onClick={() => handleCopy(SCRAPER_V9_SCRIPT, 'v8')} size="sm" className="bg-primary hover:bg-primary/90 rounded-xl font-bold">
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy v8 Script
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 space-y-6">
                 <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                  <pre className="p-6 text-primary/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V9_SCRIPT}</pre>
+                  <pre className="p-6 text-primary/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V10_SCRIPT}</pre>
                 </ScrollArea>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="diag">
-            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="border-b border-white/5 py-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center">
-                    <SearchCode className="w-5 h-5 mr-2" />
-                    Title Diagnostic
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8">
-                <p className="text-[11px] text-slate-500 mb-4">Run this on any page to see exactly what selectors Kajabi is using for titles and links.</p>
-                <Button onClick={() => handleCopy('', 'Diagnostic')} size="sm" className="bg-amber-600 hover:bg-amber-700 rounded-xl font-bold w-full">
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy Diagnostic
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>
