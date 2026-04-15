@@ -31,7 +31,7 @@ const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functi
 
 const SCRAPER_V17_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
-  var LIMIT = 5; // Set to 0 for unlimited
+  var LIMIT = 0; // Set to 0 for unlimited (Full Course)
   // ---------------------
 
   var old = document.getElementById('fnh-scraper-ui');
@@ -340,7 +340,7 @@ const Scraper = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Architect v17 (Limited Test)
+                      FNH Architect v17 (Full Course)
                     </CardTitle>
                     <Button onClick={() => handleCopy(SCRAPER_V17_SCRIPT, 'v17')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
@@ -352,9 +352,9 @@ const Scraper = () => {
                   <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v17 Improvements</h4>
                     <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Full Course Mode:</strong> LIMIT is set to 0. It will process every lesson found.</li>
                       <li><strong className="text-slate-200">Aggressive Categories:</strong> Looks for headings above links to fix "Uncategorized".</li>
-                      <li><strong className="text-slate-200">Direct Delivery Scan:</strong> Finds video URLs directly in HTML without needing the Wistia API.</li>
-                      <li><strong className="text-slate-200">Limit Variable:</strong> Set to 5. Change to 0 for full course.</li>
+                      <li><strong className="text-slate-200">Direct Delivery Scan:</strong> Finds video URLs directly in HTML.</li>
                     </ul>
                   </div>
                   <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
