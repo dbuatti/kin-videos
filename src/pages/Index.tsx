@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import SyllabusClipboard from "@/components/SyllabusClipboard";
 import VoiceSearch from "@/components/VoiceSearch";
 import PriorityLessons from "@/components/PriorityLessons";
+import SmartSuggestions from "@/components/SmartSuggestions";
 import { showSuccess } from "@/utils/toast";
 
 const Index = () => {
@@ -114,6 +115,9 @@ const Index = () => {
           </Link>
         ))}
       </section>
+
+      {/* Smart Suggestions Section */}
+      <SmartSuggestions />
 
       {/* Priority Focus Section */}
       <PriorityLessons />
