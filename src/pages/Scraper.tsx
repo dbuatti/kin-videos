@@ -18,7 +18,9 @@ import {
   Loader2,
   ShieldCheck,
   Search,
-  Sparkles
+  Sparkles,
+  Download,
+  FileJson
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,7 +33,7 @@ import { useJobLessons } from '@/hooks/use-job-lessons';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V22_SCRIPT = `(async function() {
+const SCRAPER_V23_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
   var LIMIT = 0; // Set to 0 for unlimited
   var DELAY = 1000; // 1 second delay to prevent network errors
@@ -46,7 +48,7 @@ const SCRAPER_V22_SCRIPT = `(async function() {
   
   var hdr = document.createElement('div');
   hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#6366f1;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Architect v22</span>';
+  hdr.innerHTML = '<span>FNH Architect v23</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -78,7 +80,8 @@ const SCRAPER_V22_SCRIPT = `(async function() {
     var allLinks = Array.from(doc.querySelectorAll('a[href*="/posts/"]'));
     var seenUrls = new Set();
 
-    var pageTitle = doc.querySelector('h1, .category-header h1, .section-header h1')?.innerText.trim();
+    // Try to find the category title from the page itself
+    var pageCategory = doc.querySelector('h1, .category-header h1, .section-header h1')?.innerText.trim();
 
     allLinks.forEach(a => {
         var url = a.href.split('?')[0];
@@ -101,7 +104,8 @@ const SCRAPER_V22_SCRIPT = `(async function() {
             parent = parent.parentElement;
         }
 
-        var moduleName = foundHeading || pageTitle || defaultModule || "General";
+        // V23 FIX: Prioritize the category name from the list view over the individual page title
+        var moduleName = defaultModule || foundHeading || pageCategory || "General";
         if (moduleName.includes("Foundations") && moduleName.length > 35) moduleName = "General";
 
         links.push({
@@ -118,28 +122,34 @@ const SCRAPER_V22_SCRIPT = `(async function() {
     var allLessonData = [];
     var processedUrls = new Set([window.location.href]);
     
-    var initialLinks = extractLinksFromDoc(document, "General");
+    // 1. Get links from current page
+    var initialLinks = extractLinksFromDoc(document, null);
     allLessonData.push(...initialLinks);
 
+    // 2. Find all category links
     var categoryLinks = Array.from(document.querySelectorAll('a[href*="/categories/"]'))
-        .map(a => a.href.split('?')[0])
-        .filter(href => !processedUrls.has(href));
+        .map(a => ({
+          url: a.href.split('?')[0],
+          name: a.innerText.trim().split(/[\\r\\n]+/)[0]
+        }))
+        .filter(item => !processedUrls.has(item.url));
 
     addLog('Found ' + categoryLinks.length + ' categories to explore.', '#6366f1');
 
-    for (var catUrl of categoryLinks) {
-        if (processedUrls.has(catUrl)) continue;
-        processedUrls.add(catUrl);
-        addLog('Exploring category: ' + catUrl.split('/').pop(), '#6366f1');
+    for (var cat of categoryLinks) {
+        if (processedUrls.has(cat.url)) continue;
+        processedUrls.add(cat.url);
+        addLog('Exploring category: ' + cat.name, '#6366f1');
         
         try {
-            var res = await fetch(catUrl);
+            var res = await fetch(cat.url);
             if (!res.ok) continue;
             var html = await res.text();
             var parser = new DOMParser();
             var doc = parser.parseFromString(html, 'text/html');
             
-            allLessonData.push(...extractLinksFromDoc(doc, "General"));
+            // Pass the category name explicitly to ensure grouping
+            allLessonData.push(...extractLinksFromDoc(doc, cat.name));
 
             // Find pagination links
             var pageLinks = Array.from(doc.querySelectorAll('a[href*="page="]'))
@@ -154,10 +164,10 @@ const SCRAPER_V22_SCRIPT = `(async function() {
                 if (!pRes.ok) continue;
                 var pHtml = await pRes.text();
                 var pDoc = parser.parseFromString(pHtml, 'text/html');
-                allLessonData.push(...extractLinksFromDoc(pDoc, "General"));
+                allLessonData.push(...extractLinksFromDoc(pDoc, cat.name));
             }
         } catch (e) {
-            addLog('Failed to fetch category: ' + catUrl, '#ef4444');
+            addLog('Failed to fetch category: ' + cat.url, '#ef4444');
         }
         await new Promise(r => setTimeout(r, 500));
     }
@@ -176,12 +186,9 @@ const SCRAPER_V22_SCRIPT = `(async function() {
 
   async function extractVideo(html) {
     if (!html) return null;
-    
-    // 1. Direct delivery link
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
-    // 2. Wistia ID detection (more robust)
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
@@ -204,17 +211,6 @@ const SCRAPER_V22_SCRIPT = `(async function() {
     return null;
   }
 
-  async function extractTitle(html, fallback) {
-    if (!html) return fallback;
-    var parser = new DOMParser();
-    var doc = parser.parseFromString(html, 'text/html');
-    var h1 = doc.querySelector('h1, .post-header h1, .post-title');
-    if (h1 && h1.innerText.trim().length > 2 && !/^\\d+$/.test(h1.innerText.trim())) {
-      return h1.innerText.trim();
-    }
-    return fallback;
-  }
-
   var lessons = await getFullStructure();
   var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, lessons.length) : lessons.length;
 
@@ -235,9 +231,8 @@ const SCRAPER_V22_SCRIPT = `(async function() {
       }
       var html = await response.text();
       var videoUrl = await extractVideo(html);
-      var finalTitle = await extractTitle(html, lesson.title);
       
-      results.push({ category: lesson.module, title: finalTitle, page_url: lesson.url, video_url: videoUrl });
+      results.push({ category: lesson.module, title: lesson.title, page_url: lesson.url, video_url: videoUrl });
       if (videoUrl) addLog('   ✓ Success', '#10b981');
       else addLog('   × No Video', '#ef4444');
       await new Promise(r => setTimeout(r, DELAY));
@@ -262,13 +257,30 @@ const Scraper = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { cleanJunk, isCleaning } = useJobLessons();
+  const { data: lessons, cleanJunk, isCleaning } = useJobLessons();
   const [importJson, setImportJson] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
   const handleCopy = (script: string, version: string) => {
     navigator.clipboard.writeText(script);
     showSuccess(`${version} script copied!`);
+  };
+
+  const handleExportLibrary = () => {
+    if (!lessons || lessons.length === 0) {
+      showError("No lessons to export.");
+      return;
+    }
+    
+    const exportData = lessons.map(l => ({
+      category: l.category,
+      title: l.title,
+      page_url: l.lesson_url,
+      video_url: l.video_url
+    }));
+
+    navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
+    showSuccess("Full library JSON copied to clipboard!");
   };
 
   const handleManualImport = async () => {
@@ -283,7 +295,6 @@ const Scraper = () => {
       const data = JSON.parse(importJson);
       if (!Array.isArray(data)) throw new Error("Invalid format: Expected an array of lessons.");
 
-      // Filter out junk links (REPLY buttons, comment sections, empty titles, 404 pages)
       const filteredData = data.filter((item: any) => {
         const title = (item.title || "").toUpperCase();
         const category = (item.category || "").toUpperCase();
@@ -341,6 +352,14 @@ const Scraper = () => {
         <div className="flex items-center space-x-3">
           <Button 
             variant="outline" 
+            onClick={handleExportLibrary}
+            className="border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 rounded-xl h-12 px-6 font-bold"
+          >
+            <FileJson className="w-4 h-4 mr-2" />
+            Export JSON
+          </Button>
+          <Button 
+            variant="outline" 
             onClick={() => cleanJunk()} 
             disabled={isCleaning}
             className="border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-xl h-12 px-6 font-bold"
@@ -395,11 +414,11 @@ const Scraper = () => {
             <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
           
-          <Tabs defaultValue="v22" className="w-full">
+          <Tabs defaultValue="v23" className="w-full">
             <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v22" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
+              <TabsTrigger value="v23" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
                 <Zap className="w-4 h-4 mr-2" />
-                Architect v22
+                Architect v23
               </TabsTrigger>
               <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
                 <Bug className="w-4 h-4 mr-2" />
@@ -407,31 +426,31 @@ const Scraper = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="v22">
+            <TabsContent value="v23">
               <Card className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
                 <CardHeader className="border-b border-indigo-500/10 py-6">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Architect v22 (Deep Scan)
+                      FNH Architect v23 (Deep Scan)
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V22_SCRIPT, 'v22')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V23_SCRIPT, 'v23')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
-                      Copy v22 Script
+                      Copy v23 Script
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v22 Improvements</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v23 Improvements</h4>
                     <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Fixed Grouping:</strong> Ensures lessons are grouped under their correct module name.</li>
                       <li><strong className="text-slate-200">Enhanced Wistia Detection:</strong> Finds videos hidden in data attributes and script tags.</li>
                       <li><strong className="text-slate-200">Pagination Support:</strong> Better handling of multi-page categories (e.g. ?page=2).</li>
-                      <li><strong className="text-slate-200">Network Throttling:</strong> 1s delay between pages to prevent "Internet Disconnected" errors.</li>
                     </ul>
                   </div>
                   <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V22_SCRIPT}</pre>
+                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V23_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
@@ -445,7 +464,7 @@ const Scraper = () => {
                       <Bug className="w-5 h-5 mr-2" />
                       Titan v16
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V22_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V23_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy v16 Script
                     </Button>
@@ -453,7 +472,7 @@ const Scraper = () => {
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V22_SCRIPT}</pre>
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V23_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
