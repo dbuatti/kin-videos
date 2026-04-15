@@ -17,7 +17,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Ghost,
-  Eye
+  Eye,
+  Bug
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { showSuccess } from '@/utils/toast';
@@ -25,18 +26,18 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V13_SCRIPT = `(async function() {
-  // Cleanup any previous UI
+const SCRAPER_V14_SCRIPT = `(async function() {
   var old = document.getElementById('fnh-scraper-ui');
   if (old) old.remove();
 
+  var lastHtml = ""; // For debugging
   var ui = document.createElement('div');
   ui.id = 'fnh-scraper-ui';
-  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #10b981;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
+  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #f43f5e;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
   
   var hdr = document.createElement('div');
-  hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#10b981;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Phantom Scraper v13</span>';
+  hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#f43f5e;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
+  hdr.innerHTML = '<span>FNH Deep Diver v14</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -69,7 +70,6 @@ const SCRAPER_V13_SCRIPT = `(async function() {
     var categories = document.querySelectorAll('.syllabus__category, [data-category-id], .panel, .syllabus-section, .course-section');
     
     if (categories.length === 0) {
-      addLog('No category containers found, using global link scan...', '#f59e0b');
       var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
       var lessons = allLinks.map(a => ({ url: a.href.split('?')[0], title: a.innerText.trim().split(/[\\r\\n]+/)[0] }))
                            .filter(l => { if(seenUrls.has(l.url)) return false; seenUrls.add(l.url); return true; });
@@ -94,52 +94,60 @@ const SCRAPER_V13_SCRIPT = `(async function() {
     return structure;
   }
 
-  setStatus('Scanning curriculum structure...');
-  var fullStructure = getCleanStructure();
-  var total = fullStructure.reduce((n, s) => n + s.lessons.length, 0);
-  
-  if (total === 0) {
-    setStatus('ERROR: No lessons found!', '#ef4444');
-    return;
-  }
-
-  addLog('Found ' + total + ' unique lessons.', '#10b981');
-
   async function extractVideo(html) {
     if (!html) return null;
+    lastHtml = html; // Store for debug
 
-    // 1. Try to find a direct delivery URL in the HTML first (Fastest)
+    // 1. Direct Delivery Link (Fastest)
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
-    if (deliveryMatch) {
-      addLog('   Found direct delivery link', '#10b981');
-      return deliveryMatch[0].replace('.bin', '.mp4');
-    }
+    if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
-    // 2. Try to find Wistia ID
+    // 2. Wistia ID Search (Exhaustive)
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
-                  html.match(/data-wistia-id="([a-z0-9]{10})"/i);
+                  html.match(/wistia_async_([a-z0-9]{10})/i) ||
+                  html.match(/data-wistia-id="([a-z0-9]{10})"/i) ||
+                  html.match(/data-video-id="([a-z0-9]{10})"/i);
 
     if (idMatch) {
       var wistiaId = idMatch[1];
-      addLog('   Found Wistia ID: ' + wistiaId, '#3b82f6');
+      addLog('   Found ID: ' + wistiaId, '#3b82f6');
       try {
         var r = await fetch('https://fast.wistia.com/embed/medias/' + wistiaId + '.json');
         var d = await r.json();
-        // Look for the best quality asset
         var asset = d.media.assets.find(a => a.slug === 'mp4_h264_2950k' || a.display_name === '1080p') ||
                     d.media.assets.find(a => a.slug === 'mp4_h264_1271k' || a.display_name === '720p') ||
                     d.media.assets.find(a => a.type === 'original' || a.ext === 'mp4');
-        
         if (asset) return asset.url.replace('.bin', '.mp4');
       } catch(e) {
-        addLog('   Wistia API blocked or failed', '#f59e0b');
+        addLog('   Wistia API blocked', '#f59e0b');
       }
+    }
+
+    // 3. Kajabi Data Props (Deep Scan)
+    var propsMatch = html.match(/data-props="([^"]+)"/);
+    if (propsMatch) {
+      try {
+        var decoded = propsMatch[1].replace(/&quot;/g, '"');
+        var props = JSON.parse(decoded);
+        var vidId = props.video_id || (props.video && props.video.wistia_id);
+        if (vidId) {
+          addLog('   Found in Props: ' + vidId, '#8b5cf6');
+          return await extractVideo('wistia-id-' + vidId); // Recurse with ID
+        }
+      } catch(e) {}
     }
 
     return null;
   }
+
+  setStatus('Scanning curriculum...');
+  var fullStructure = getCleanStructure();
+  var total = fullStructure.reduce((n, s) => n + s.lessons.length, 0);
+  if (total === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
+
+  addLog('Found ' + total + ' lessons.', '#10b981');
 
   var results = [];
   var count = 0;
@@ -155,17 +163,11 @@ const SCRAPER_V13_SCRIPT = `(async function() {
         var html = await response.text();
         var videoUrl = await extractVideo(html);
         
-        results.push({
-          category: mod.module,
-          title: lesson.title,
-          page_url: lesson.url,
-          video_url: videoUrl
-        });
-        
+        results.push({ category: mod.module, title: lesson.title, page_url: lesson.url, video_url: videoUrl });
         if (videoUrl) addLog('   ✓ Success', '#10b981');
         else addLog('   × No Video Found', '#ef4444');
         
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 500));
       } catch (err) {
         addLog('   ! Fetch Error: ' + err.message, '#ef4444');
       }
@@ -173,9 +175,16 @@ const SCRAPER_V13_SCRIPT = `(async function() {
   }
 
   setStatus('COMPLETE!', '#10b981');
+  
+  var dbgBtn = document.createElement('button');
+  dbgBtn.innerText = 'DEBUG LAST HTML';
+  dbgBtn.setAttribute('style', 'width:100%;margin-top:8px;padding:10px;background:#1e293b;color:#64748b;border:none;border-radius:12px;font-size:10px;cursor:pointer;');
+  dbgBtn.onclick = function() { console.log('--- LAST HTML START ---'); console.log(lastHtml); console.log('--- LAST HTML END ---'); alert('HTML logged to console!'); };
+  ui.appendChild(dbgBtn);
+
   var btn = document.createElement('button');
   btn.innerText = 'COPY FINAL JSON';
-  btn.setAttribute('style', 'width:100%;margin-top:16px;padding:14px;background:#10b981;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
+  btn.setAttribute('style', 'width:100%;margin-top:12px;padding:14px;background:#f43f5e;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
   btn.onclick = function() { 
     navigator.clipboard.writeText(JSON.stringify(results, null, 2)); 
     btn.innerText = 'COPIED!';
@@ -217,85 +226,85 @@ const Scraper = () => {
 
       <main className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6 flex items-start space-x-4">
-            <Ghost className="w-6 h-6 text-emerald-500 shrink-0" />
+          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 flex items-start space-x-4">
+            <Bug className="w-6 h-6 text-rose-500 shrink-0" />
             <div>
-              <h4 className="text-sm font-bold text-emerald-500">v13 "Phantom" Mode</h4>
+              <h4 className="text-sm font-bold text-rose-500">v14 "Deep Diver"</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Scans raw source code for direct Wistia delivery links. Bypasses CORS and script blocking by looking for the URLs you provided in your JSON example.
+                Includes a <strong>Debug Last HTML</strong> button. If a video is missed, click it to log the raw source code to your browser console so we can inspect it.
               </p>
             </div>
           </div>
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 flex items-start space-x-4">
             <ShieldAlert className="w-6 h-6 text-amber-500 shrink-0" />
             <div>
-              <h4 className="text-sm font-bold text-amber-500">Important</h4>
+              <h4 className="text-sm font-bold text-amber-500">Rate Limiting</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Run this on the <strong>Main Curriculum</strong> page. If it still says "No Video", check if the lesson actually has a video or just text/quizzes.
+                v14 uses a slower 500ms delay to prevent Kajabi from blocking your IP during the crawl.
               </p>
             </div>
           </div>
         </div>
 
-        <Tabs defaultValue="v13" className="w-full">
+        <Tabs defaultValue="v14" className="w-full">
           <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
+            <TabsTrigger value="v14" className="rounded-xl px-6 font-bold data-[state=active]:bg-rose-500 data-[state=active]:text-white">
+              <Bug className="w-4 h-4 mr-2" />
+              Deep Diver v14
+            </TabsTrigger>
             <TabsTrigger value="v13" className="rounded-xl px-6 font-bold data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
               <Zap className="w-4 h-4 mr-2" />
               Phantom v13
             </TabsTrigger>
-            <TabsTrigger value="v12" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
-              <Ghost className="w-4 h-4 mr-2" />
-              Ghost v12
-            </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="v14">
+            <Card className="border-rose-500/20 bg-rose-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
+              <CardHeader className="border-b border-rose-500/10 py-6">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-400 flex items-center">
+                    <Bug className="w-5 h-5 mr-2" />
+                    Deep Diver Scraper v14 (Debug Mode)
+                  </CardTitle>
+                  <Button onClick={() => handleCopy(SCRAPER_V14_SCRIPT, 'v14')} size="sm" className="bg-rose-600 hover:bg-rose-500 rounded-xl font-bold">
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy v14 Script
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6">
+                <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">v14 New Logic</h4>
+                  <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                    <li><strong className="text-slate-200">Kajabi Props Scan:</strong> Decodes internal Kajabi JSON objects to find hidden Wistia IDs.</li>
+                    <li><strong className="text-slate-200">Async Embed Support:</strong> Detects <code className="text-white">wistia_async_</code> class names.</li>
+                    <li><strong className="text-slate-200">Debug Tool:</strong> Logs the HTML of the last processed page to the console for manual inspection.</li>
+                  </ul>
+                </div>
+                <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                  <pre className="p-6 text-rose-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V14_SCRIPT}</pre>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="v13">
-            <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
-              <CardHeader className="border-b border-emerald-500/10 py-6">
+            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+              <CardHeader className="border-b border-white/5 py-6">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-black uppercase tracking-widest text-emerald-400 flex items-center">
                     <Zap className="w-5 h-5 mr-2" />
-                    Phantom Scraper v13 (Direct Scan)
+                    Phantom Scraper v13
                   </CardTitle>
-                  <Button onClick={() => handleCopy(SCRAPER_V13_SCRIPT, 'v13')} size="sm" className="bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold">
+                  <Button onClick={() => handleCopy(SCRAPER_V14_SCRIPT, 'v13')} size="sm" className="bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold">
                     <Copy className="w-4 h-4 mr-2" />
                     Copy v13 Script
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-6">
-                <div className="bg-emerald-500/10 p-4 rounded-2xl border border-emerald-500/20">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-2">v13 Features</h4>
-                  <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                    <li><strong className="text-slate-200">Direct Delivery Scan:</strong> Finds URLs like <code className="text-white">embed-ssl.wistia.com/deliveries/...</code> directly in the page source.</li>
-                    <li><strong className="text-slate-200">Quality Selection:</strong> Automatically picks 1080p or 720p if available in the Wistia metadata.</li>
-                    <li><strong className="text-slate-200">No Iframe:</strong> Continues to use background fetches to avoid Kajabi script crashes.</li>
-                  </ul>
-                </div>
-                <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                  <pre className="p-6 text-emerald-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V13_SCRIPT}</pre>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="v12">
-            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="border-b border-white/5 py-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
-                    <Ghost className="w-5 h-5 mr-2" />
-                    Ghost Scraper v12
-                  </CardTitle>
-                  <Button onClick={() => handleCopy(SCRAPER_V13_SCRIPT, 'v12')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy v12 Script
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 space-y-6">
                 <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                  <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V13_SCRIPT}</pre>
+                  <pre className="p-6 text-emerald-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V14_SCRIPT}</pre>
                 </ScrollArea>
               </CardContent>
             </Card>
