@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   Loader2,
   ShieldCheck,
-  Trash2,
+  Search,
   Sparkles
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,9 +31,10 @@ import { useJobLessons } from '@/hooks/use-job-lessons';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V21_SCRIPT = `(async function() {
+const SCRAPER_V22_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
-  var LIMIT = 0; // Set to 0 for unlimited (Full Course)
+  var LIMIT = 0; // Set to 0 for unlimited
+  var DELAY = 1000; // 1 second delay to prevent network errors
   // ---------------------
 
   var old = document.getElementById('fnh-scraper-ui');
@@ -45,7 +46,7 @@ const SCRAPER_V21_SCRIPT = `(async function() {
   
   var hdr = document.createElement('div');
   hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#6366f1;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Architect v21</span>';
+  hdr.innerHTML = '<span>FNH Architect v22</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -77,11 +78,10 @@ const SCRAPER_V21_SCRIPT = `(async function() {
     var allLinks = Array.from(doc.querySelectorAll('a[href*="/posts/"]'));
     var seenUrls = new Set();
 
-    var pageTitle = doc.querySelector('h1, .category-header h1')?.innerText.trim();
+    var pageTitle = doc.querySelector('h1, .category-header h1, .section-header h1')?.innerText.trim();
 
     allLinks.forEach(a => {
         var url = a.href.split('?')[0];
-        // V21: Explicitly ignore comment links and duplicates
         if (seenUrls.has(url) || a.classList.contains('next-post') || url.includes('/comments/')) return;
         seenUrls.add(url);
 
@@ -102,7 +102,7 @@ const SCRAPER_V21_SCRIPT = `(async function() {
         }
 
         var moduleName = foundHeading || pageTitle || defaultModule || "General";
-        if (moduleName.includes("Foundations") && moduleName.length > 30) moduleName = "General";
+        if (moduleName.includes("Foundations") && moduleName.length > 35) moduleName = "General";
 
         links.push({
             url: url,
@@ -139,9 +139,9 @@ const SCRAPER_V21_SCRIPT = `(async function() {
             var parser = new DOMParser();
             var doc = parser.parseFromString(html, 'text/html');
             
-            var moreLinks = extractLinksFromDoc(doc, "General");
-            allLessonData.push(...moreLinks);
+            allLessonData.push(...extractLinksFromDoc(doc, "General"));
 
+            // Find pagination links
             var pageLinks = Array.from(doc.querySelectorAll('a[href*="page="]'))
                 .map(a => a.href)
                 .filter(href => !processedUrls.has(href));
@@ -159,6 +159,7 @@ const SCRAPER_V21_SCRIPT = `(async function() {
         } catch (e) {
             addLog('Failed to fetch category: ' + catUrl, '#ef4444');
         }
+        await new Promise(r => setTimeout(r, 500));
     }
 
     var unique = [];
@@ -175,15 +176,19 @@ const SCRAPER_V21_SCRIPT = `(async function() {
 
   async function extractVideo(html) {
     if (!html) return null;
+    
+    // 1. Direct delivery link
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
+    // 2. Wistia ID detection (more robust)
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
                   html.match(/wistia_async_([a-z0-9]{10})/i) ||
                   html.match(/data-wistia-id="([a-z0-9]{10})"/i) ||
-                  html.match(/data-video-id="([a-z0-9]{10})"/i);
+                  html.match(/data-video-id="([a-z0-9]{10})"/i) ||
+                  html.match(/embed\\/medias\\/([a-z0-9]{10})/i);
 
     if (idMatch) {
       var wistiaId = idMatch[1];
@@ -214,7 +219,7 @@ const SCRAPER_V21_SCRIPT = `(async function() {
   var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, lessons.length) : lessons.length;
 
   if (lessons.length === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
-  addLog('Found ' + lessons.length + ' total lessons across all pages.', '#10b981');
+  addLog('Found ' + lessons.length + ' total lessons. Starting extraction...', '#10b981');
 
   var results = [];
   for (var i = 0; i < totalToProcess; i++) {
@@ -235,7 +240,7 @@ const SCRAPER_V21_SCRIPT = `(async function() {
       results.push({ category: lesson.module, title: finalTitle, page_url: lesson.url, video_url: videoUrl });
       if (videoUrl) addLog('   ✓ Success', '#10b981');
       else addLog('   × No Video', '#ef4444');
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, DELAY));
     } catch (err) {
       addLog('   ! Error: ' + err.message, '#ef4444');
     }
@@ -390,11 +395,11 @@ const Scraper = () => {
             <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
           
-          <Tabs defaultValue="v21" className="w-full">
+          <Tabs defaultValue="v22" className="w-full">
             <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v21" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
+              <TabsTrigger value="v22" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
                 <Zap className="w-4 h-4 mr-2" />
-                Architect v21
+                Architect v22
               </TabsTrigger>
               <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
                 <Bug className="w-4 h-4 mr-2" />
@@ -402,31 +407,31 @@ const Scraper = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="v21">
+            <TabsContent value="v22">
               <Card className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
                 <CardHeader className="border-b border-indigo-500/10 py-6">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Architect v21 (Smart Filter)
+                      FNH Architect v22 (Deep Scan)
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V21_SCRIPT, 'v21')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V22_SCRIPT, 'v22')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
-                      Copy v21 Script
+                      Copy v22 Script
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v21 Improvements</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v22 Improvements</h4>
                     <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                      <li><strong className="text-slate-200">Comment Filter:</strong> Automatically ignores "New Comment" and "Reply" links.</li>
-                      <li><strong className="text-slate-200">404 Protection:</strong> Skips pages that return errors to prevent "Page not found" entries.</li>
-                      <li><strong className="text-slate-200">Deep Title Extraction:</strong> Still looks inside the page for the real lesson name if the link is just a number.</li>
+                      <li><strong className="text-slate-200">Enhanced Wistia Detection:</strong> Finds videos hidden in data attributes and script tags.</li>
+                      <li><strong className="text-slate-200">Pagination Support:</strong> Better handling of multi-page categories (e.g. ?page=2).</li>
+                      <li><strong className="text-slate-200">Network Throttling:</strong> 1s delay between pages to prevent "Internet Disconnected" errors.</li>
                     </ul>
                   </div>
                   <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V21_SCRIPT}</pre>
+                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V22_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
@@ -440,7 +445,7 @@ const Scraper = () => {
                       <Bug className="w-5 h-5 mr-2" />
                       Titan v16
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V21_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V22_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy v16 Script
                     </Button>
@@ -448,7 +453,7 @@ const Scraper = () => {
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V21_SCRIPT}</pre>
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V22_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
