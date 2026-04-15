@@ -4,10 +4,11 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSmartSuggestions } from '@/hooks/use-smart-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
-import { Sparkles, Play, ArrowRight, Brain } from 'lucide-react';
+import { Sparkles, Play, ArrowRight, Brain, ShieldCheck, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const SmartSuggestions = () => {
   const navigate = useNavigate();
@@ -31,33 +32,51 @@ const SmartSuggestions = () => {
       <div className="flex items-center justify-between px-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center">
           <Sparkles className="w-3 h-3 mr-2 fill-indigo-400" />
-          Smart Recommendations
+          Personalized Review
         </h2>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {suggestions.map((item, idx) => (
+        {suggestions.map((item) => (
           <Card 
             key={item.lesson.id} 
-            className="border-none rounded-[2rem] bg-indigo-500/5 hover:bg-indigo-500/10 transition-all border border-indigo-500/10 group overflow-hidden"
+            className={cn(
+              "border-none rounded-[2rem] transition-all border group overflow-hidden",
+              item.type === 'foundational' 
+                ? "bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10" 
+                : "bg-indigo-500/5 border-indigo-500/10 hover:bg-indigo-500/10"
+            )}
           >
             <CardContent className="p-6 flex flex-col h-full justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0">
-                    <Brain className="w-4 h-4 text-indigo-400" />
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                    item.type === 'foundational' ? "bg-amber-500/20" : "bg-indigo-500/20"
+                  )}>
+                    {item.type === 'foundational' ? (
+                      <ShieldCheck className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Brain className="w-4 h-4 text-indigo-400" />
+                    )}
                   </div>
-                  <Badge variant="outline" className="text-[8px] border-indigo-500/30 text-indigo-400 uppercase font-black">
-                    Insight
+                  <Badge variant="outline" className={cn(
+                    "text-[8px] uppercase font-black border-none px-2 py-0.5",
+                    item.type === 'foundational' ? "bg-amber-500/20 text-amber-500" : "bg-indigo-500/20 text-indigo-400"
+                  )}>
+                    {item.type === 'foundational' ? 'Confidence' : 'Technical'}
                   </Badge>
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white line-clamp-1 group-hover:text-indigo-400 transition-colors">
+                  <h3 className="text-sm font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
                     {item.lesson.title}
                   </h3>
-                  <p className="text-[10px] text-slate-500 mt-1 italic line-clamp-2">
-                    "{item.reason}"
-                  </p>
+                  <div className="flex items-start mt-2 space-x-2">
+                    <Lightbulb className="w-3 h-3 text-slate-500 mt-0.5 shrink-0" />
+                    <p className="text-[10px] text-slate-500 italic line-clamp-2 leading-relaxed">
+                      {item.reason}
+                    </p>
+                  </div>
                 </div>
               </div>
               
@@ -65,7 +84,12 @@ const SmartSuggestions = () => {
                 variant="ghost" 
                 size="sm"
                 onClick={() => navigate(`/master-player?mode=video`)}
-                className="w-full justify-between text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-xl h-9 px-4 font-bold text-xs"
+                className={cn(
+                  "w-full justify-between rounded-xl h-9 px-4 font-bold text-xs",
+                  item.type === 'foundational' 
+                    ? "text-amber-500 hover:text-amber-400 hover:bg-amber-500/10" 
+                    : "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                )}
               >
                 Watch Now
                 <ArrowRight className="w-4 h-4 ml-2" />

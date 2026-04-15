@@ -10,18 +10,52 @@ interface Suggestion {
   lesson: Lesson;
   reason: string;
   keyword: string;
+  type: 'technical' | 'foundational';
 }
 
-const KEYWORD_MAP: Record<string, string[]> = {
-  'lymphatic': ['lymph', 'lymphatic', 'drainage', 'suture'],
-  'Vagus Nerve': ['vagus', 'cranial nerve x', 'parasympathetic'],
-  'Direct Muscle Tests': ['muscle test', 'testing', 'clunky', 'indicator', 'tva', 'quads'],
-  'Primitive Reflexes': ['reflex', 'moro', 'atnr', 'spinal gallant', 'babinski'],
-  'Cranial Nerves': ['cranial', 'optic', 'olfactory', 'facial nerve'],
-  'Finishing Procedures and Home Reinforcement': ['gait', 'integration', 'home reinforcement', 'finishing'],
-  'Beginning Procedures - Sympathetic Down Regulation': ['stress', 'sympathetic', 'down regulation', 'harmonic rocking', 'phrenic'],
-  'Functional Anatomy and Biomechanics': ['anatomy', 'biomechanics', 'sagittal', 'frontal', 'transverse']
-};
+// Mapping specific keywords to either categories or specific lesson titles
+const SMART_MAP = [
+  { 
+    keywords: ['lymphatic', 'lymph'], 
+    target: 'Lymphatic System Assessment and Correction', 
+    type: 'technical' as const 
+  },
+  { 
+    keywords: ['t1', 'sympathetic chain'], 
+    target: 'T1 - Sympathetic Chain', 
+    type: 'technical' as const 
+  },
+  { 
+    keywords: ['diaphragm', 'phrenic'], 
+    target: 'Phrenic Nerve', 
+    type: 'technical' as const 
+  },
+  { 
+    keywords: ['vagus', 'parasympathetic'], 
+    target: 'Vagus Nerve', 
+    type: 'technical' as const 
+  },
+  { 
+    keywords: ['muscle test', 'testing', 'indicator'], 
+    target: 'Clinical Assessments', 
+    type: 'technical' as const 
+  },
+  { 
+    keywords: ['diagnostics', 'tests', 'looking for'], 
+    target: 'Clinical Assessments', 
+    type: 'technical' as const 
+  },
+  { 
+    keywords: ['clunky', 'doubts', 'useful', 'understand', 'not sure'], 
+    target: 'Course Introduction & Foundational Knowledge', 
+    type: 'foundational' as const 
+  },
+  { 
+    keywords: ['gait', 'walking'], 
+    target: 'Finishing Procedures and Home Reinforcement', 
+    type: 'technical' as const 
+  }
+];
 
 export const useSmartSuggestions = () => {
   const { user } = useAuth();
@@ -32,13 +66,12 @@ export const useSmartSuggestions = () => {
     queryFn: async () => {
       if (!user || !lessons) return [];
 
-      // Fetch the 5 most recent reflections
       const { data: reflections, error } = await supabase
         .from('practitioner_reflections')
         .select('content, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(3);
 
       if (error) throw error;
       if (!reflections || reflections.length === 0) return [];
@@ -46,35 +79,37 @@ export const useSmartSuggestions = () => {
       const suggestions: Suggestion[] = [];
       const seenLessonIds = new Set<string>();
 
-      reflections.forEach(reflection => {
-        const content = reflection.content.toLowerCase();
+      // Combine recent reflections to get a broader context
+      const fullContext = reflections.map(r => r.content.toLowerCase()).join(' ');
+      
+      for (const mapping of SMART_MAP) {
+        const match = mapping.keywords.find(k => fullContext.includes(k));
         
-        for (const [category, keywords] of Object.entries(KEYWORD_MAP)) {
-          for (const keyword of keywords) {
-            if (content.includes(keyword)) {
-              // Find a lesson in this category that hasn't been suggested yet
-              const matchingLesson = lessons.find(l => 
-                l.category === category && 
-                l.video_url && 
-                !seenLessonIds.has(l.id)
-              );
+        if (match) {
+          // Try to find a specific lesson title first, then fallback to category
+          const matchingLesson = lessons.find(l => 
+            (l.title?.includes(mapping.target) || l.category === mapping.target) && 
+            l.video_url && 
+            !seenLessonIds.has(l.id)
+          );
 
-              if (matchingLesson) {
-                suggestions.push({
-                  lesson: matchingLesson,
-                  keyword: keyword,
-                  reason: `Based on your reflection mentioning "${keyword}"`
-                });
-                seenLessonIds.add(matchingLesson.id);
-                break; // Move to next category for this reflection
-              }
-            }
+          if (matchingLesson) {
+            suggestions.push({
+              lesson: matchingLesson,
+              keyword: match,
+              type: mapping.type,
+              reason: mapping.type === 'foundational' 
+                ? `To help with those feelings of "${match}"`
+                : `Reviewing the ${match} procedure`
+            });
+            seenLessonIds.add(matchingLesson.id);
           }
         }
-      });
+        
+        if (suggestions.length >= 3) break;
+      }
 
-      // Return top 3 unique suggestions
-      return suggestions.slice(0, 3);
+      return suggestions;
     },
     enabled: !!user && !!lessons,
   });
