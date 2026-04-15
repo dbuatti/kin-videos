@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,37 +11,37 @@ import {
   Copy, 
   Zap, 
   ExternalLink,
-  Layers,
-  SearchCode,
-  Sparkles,
-  ShieldAlert,
-  ShieldCheck,
-  Ghost,
-  Eye,
-  Bug
+  Bug,
+  Database,
+  Upload,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { showSuccess } from '@/utils/toast';
+import { Textarea } from '@/components/ui/textarea';
+import { showSuccess, showError } from '@/utils/toast';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/integrations/supabase/auth-context';
+import { useQueryClient } from '@tanstack/react-query';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V14_SCRIPT = `(async function() {
+const SCRAPER_V15_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
-  var LIMIT = 5; // Set to 0 for unlimited, or a number to test just a few
+  var LIMIT = 5; // Set to 0 for unlimited
   // ---------------------
 
   var old = document.getElementById('fnh-scraper-ui');
   if (old) old.remove();
 
-  var lastHtml = ""; 
   var ui = document.createElement('div');
   ui.id = 'fnh-scraper-ui';
   ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #f43f5e;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
   
   var hdr = document.createElement('div');
   hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#f43f5e;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Deep Diver v14</span>';
+  hdr.innerHTML = '<span>FNH Collector v15</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -71,7 +71,9 @@ const SCRAPER_V14_SCRIPT = `(async function() {
   function getCleanStructure() {
     var structure = [];
     var seenUrls = new Set();
-    var categories = document.querySelectorAll('.syllabus__category, [data-category-id], .panel, .syllabus-section, .course-section');
+    
+    // Improved category detection for Kajabi
+    var categories = document.querySelectorAll('.syllabus__category, [data-category-id], .panel, .syllabus-section, .course-section, .category-card');
     
     if (categories.length === 0) {
       var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
@@ -80,7 +82,7 @@ const SCRAPER_V14_SCRIPT = `(async function() {
       if (lessons.length > 0) structure.push({ module: 'General', lessons: lessons });
     } else {
       categories.forEach(cat => {
-        var titleEl = cat.querySelector('.syllabus__category-title, h2, h3, h4, .category-title, .section-title');
+        var titleEl = cat.querySelector('.syllabus__category-title, h2, h3, h4, .category-title, .section-title, .title');
         var moduleName = titleEl ? titleEl.innerText.trim() : 'Uncategorized';
         var links = Array.from(cat.querySelectorAll('a[href*="/posts/"]'));
         var moduleLessons = [];
@@ -100,21 +102,16 @@ const SCRAPER_V14_SCRIPT = `(async function() {
 
   async function extractVideo(html) {
     if (!html) return null;
-    lastHtml = html;
-
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
-                  html.match(/wistia_async_([a-z0-9]{10})/i) ||
-                  html.match(/data-wistia-id="([a-z0-9]{10})"/i) ||
-                  html.match(/data-video-id="([a-z0-9]{10})"/i);
+                  html.match(/data-wistia-id="([a-z0-9]{10})"/i);
 
     if (idMatch) {
       var wistiaId = idMatch[1];
-      addLog('   Found ID: ' + wistiaId, '#3b82f6');
       try {
         var r = await fetch('https://fast.wistia.com/embed/medias/' + wistiaId + '.json');
         var d = await r.json();
@@ -122,24 +119,8 @@ const SCRAPER_V14_SCRIPT = `(async function() {
                     d.media.assets.find(a => a.slug === 'mp4_h264_1271k' || a.display_name === '720p') ||
                     d.media.assets.find(a => a.type === 'original' || a.ext === 'mp4');
         if (asset) return asset.url.replace('.bin', '.mp4');
-      } catch(e) {
-        addLog('   Wistia API blocked', '#f59e0b');
-      }
-    }
-
-    var propsMatch = html.match(/data-props="([^"]+)"/);
-    if (propsMatch) {
-      try {
-        var decoded = propsMatch[1].replace(/&quot;/g, '"');
-        var props = JSON.parse(decoded);
-        var vidId = props.video_id || (props.video && props.video.wistia_id);
-        if (vidId) {
-          addLog('   Found in Props: ' + vidId, '#8b5cf6');
-          return await extractVideo('wistia-id-' + vidId);
-        }
       } catch(e) {}
     }
-
     return null;
   }
 
@@ -149,7 +130,6 @@ const SCRAPER_V14_SCRIPT = `(async function() {
   var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, totalAvailable) : totalAvailable;
 
   if (totalAvailable === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
-
   addLog('Found ' + totalAvailable + ' lessons. Processing ' + totalToProcess + '.', '#10b981');
 
   var results = [];
@@ -166,27 +146,18 @@ const SCRAPER_V14_SCRIPT = `(async function() {
         var response = await fetch(lesson.url);
         var html = await response.text();
         var videoUrl = await extractVideo(html);
-        
         results.push({ category: mod.module, title: lesson.title, page_url: lesson.url, video_url: videoUrl });
         if (videoUrl) addLog('   ✓ Success', '#10b981');
-        else addLog('   × No Video Found', '#ef4444');
-        
+        else addLog('   × No Video', '#ef4444');
         await new Promise(r => setTimeout(r, 500));
       } catch (err) {
-        addLog('   ! Fetch Error: ' + err.message, '#ef4444');
+        addLog('   ! Error: ' + err.message, '#ef4444');
       }
     }
     if (LIMIT > 0 && count >= LIMIT) break;
   }
 
   setStatus('COMPLETE!', '#10b981');
-  
-  var dbgBtn = document.createElement('button');
-  dbgBtn.innerText = 'DEBUG LAST HTML';
-  dbgBtn.setAttribute('style', 'width:100%;margin-top:8px;padding:10px;background:#1e293b;color:#64748b;border:none;border-radius:12px;font-size:10px;cursor:pointer;');
-  dbgBtn.onclick = function() { console.log('--- LAST HTML START ---'); console.log(lastHtml); console.log('--- LAST HTML END ---'); alert('HTML logged to console!'); };
-  ui.appendChild(dbgBtn);
-
   var btn = document.createElement('button');
   btn.innerText = 'COPY FINAL JSON';
   btn.setAttribute('style', 'width:100%;margin-top:12px;padding:14px;background:#f43f5e;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
@@ -200,14 +171,57 @@ const SCRAPER_V14_SCRIPT = `(async function() {
 
 const Scraper = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [importJson, setImportJson] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   const handleCopy = (script: string, version: string) => {
     navigator.clipboard.writeText(script);
     showSuccess(`${version} script copied!`);
   };
 
+  const handleManualImport = async () => {
+    if (!user) return;
+    if (!importJson.trim()) {
+      showError("Please paste the JSON first.");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const data = JSON.parse(importJson);
+      if (!Array.isArray(data)) throw new Error("Invalid format: Expected an array of lessons.");
+
+      const lessonsToInsert = data.map((item: any) => ({
+        user_id: user.id,
+        lesson_url: item.page_url,
+        title: item.title,
+        video_url: item.video_url,
+        status: item.video_url ? 'completed' : 'failed',
+        category: item.category || 'Uncategorized',
+      }));
+
+      // Upsert lessons (using lesson_url as a unique-ish identifier for the user)
+      const { error } = await supabase
+        .from('lessons')
+        .upsert(lessonsToInsert, { onConflict: 'user_id,lesson_url' });
+
+      if (error) throw error;
+
+      showSuccess(`Successfully imported ${lessonsToInsert.length} lessons!`);
+      setImportJson('');
+      queryClient.invalidateQueries({ queryKey: ['allLessons'] });
+      navigate('/gallery');
+    } catch (err: any) {
+      showError("Import failed: " + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background p-6 sm:p-12 max-w-4xl mx-auto w-full">
+    <div className="min-h-screen bg-background p-6 sm:p-12 max-w-5xl mx-auto w-full">
       <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
         <div className="flex items-center space-x-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="rounded-full hover:bg-white/5 text-slate-400">
@@ -229,93 +243,109 @@ const Scraper = () => {
         </Button>
       </header>
 
-      <main className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 flex items-start space-x-4">
-            <Bug className="w-6 h-6 text-rose-500 shrink-0" />
-            <div>
-              <h4 className="text-sm font-bold text-rose-500">v14 "Deep Diver"</h4>
-              <p className="text-xs text-slate-400 mt-1">
-                Now with a <strong>LIMIT</strong> variable at the top of the script. Set to 5 by default for quick testing.
-              </p>
-            </div>
+      <main className="space-y-12">
+        {/* 1. Manual Import Section */}
+        <section className="space-y-6">
+          <div className="flex items-center space-x-2 text-emerald-400">
+            <Database className="w-5 h-5" />
+            <h2 className="text-sm font-black uppercase tracking-widest">Step 2: Import to App</h2>
           </div>
-          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 flex items-start space-x-4">
-            <ShieldAlert className="w-6 h-6 text-amber-500 shrink-0" />
-            <div>
-              <h4 className="text-sm font-bold text-amber-500">Testing Mode</h4>
-              <p className="text-xs text-slate-400 mt-1">
-                This script will stop after 5 lessons. Once you confirm it works, change <code className="text-white">LIMIT = 5</code> to <code className="text-white">LIMIT = 0</code> in the code.
-              </p>
-            </div>
+          <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
+            <CardContent className="p-8 space-y-6">
+              <div className="space-y-2">
+                <p className="text-xs text-slate-400">Paste the JSON results from the scraper here to update your library.</p>
+                <Textarea 
+                  placeholder='[ { "category": "...", "title": "...", "video_url": "..." }, ... ]'
+                  className="min-h-[150px] font-mono text-[10px] bg-black/40 border-white/5 rounded-2xl focus-visible:ring-emerald-500"
+                  value={importJson}
+                  onChange={(e) => setImportJson(e.target.value)}
+                />
+              </div>
+              <Button 
+                onClick={handleManualImport} 
+                disabled={isImporting || !importJson.trim()}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-14 font-black text-lg shadow-lg shadow-emerald-500/20"
+              >
+                {isImporting ? (
+                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Importing...</>
+                ) : (
+                  <><Upload className="w-5 h-5 mr-2" /> Sync to My Library</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* 2. Scraper Scripts Section */}
+        <section className="space-y-6">
+          <div className="flex items-center space-x-2 text-rose-400">
+            <Bug className="w-5 h-5" />
+            <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
-        </div>
+          
+          <Tabs defaultValue="v15" className="w-full">
+            <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
+              <TabsTrigger value="v15" className="rounded-xl px-6 font-bold data-[state=active]:bg-rose-500 data-[state=active]:text-white">
+                <Zap className="w-4 h-4 mr-2" />
+                Collector v15
+              </TabsTrigger>
+              <TabsTrigger value="v14" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+                Deep Diver v14
+              </TabsTrigger>
+            </TabsList>
 
-        <Tabs defaultValue="v14" className="w-full">
-          <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-            <TabsTrigger value="v14" className="rounded-xl px-6 font-bold data-[state=active]:bg-rose-500 data-[state=active]:text-white">
-              <Bug className="w-4 h-4 mr-2" />
-              Deep Diver v14
-            </TabsTrigger>
-            <TabsTrigger value="v13" className="rounded-xl px-6 font-bold data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-              <Zap className="w-4 h-4 mr-2" />
-              Phantom v13
-            </TabsTrigger>
-          </TabsList>
+            <TabsContent value="v15">
+              <Card className="border-rose-500/20 bg-rose-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
+                <CardHeader className="border-b border-rose-500/10 py-6">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-400 flex items-center">
+                      <Zap className="w-5 h-5 mr-2" />
+                      FNH Collector v15 (Limited Test)
+                    </CardTitle>
+                    <Button onClick={() => handleCopy(SCRAPER_V15_SCRIPT, 'v15')} size="sm" className="bg-rose-600 hover:bg-rose-500 rounded-xl font-bold">
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy v15 Script
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                  <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">v15 Improvements</h4>
+                    <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Better Categories:</strong> Detects module names more reliably.</li>
+                      <li><strong className="text-slate-200">Limit Variable:</strong> Set to 5 by default. Change <code className="text-white">LIMIT = 0</code> for the full course.</li>
+                    </ul>
+                  </div>
+                  <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                    <pre className="p-6 text-rose-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V15_SCRIPT}</pre>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <TabsContent value="v14">
-            <Card className="border-rose-500/20 bg-rose-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
-              <CardHeader className="border-b border-rose-500/10 py-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-400 flex items-center">
-                    <Bug className="w-5 h-5 mr-2" />
-                    Deep Diver Scraper v14 (Limited Test)
-                  </CardTitle>
-                  <Button onClick={() => handleCopy(SCRAPER_V14_SCRIPT, 'v14')} size="sm" className="bg-rose-600 hover:bg-rose-500 rounded-xl font-bold">
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy v14 Script
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 space-y-6">
-                <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">How to test</h4>
-                  <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                    <li>Copy the script and run it in the Kajabi console.</li>
-                    <li>It will process only the first 5 lessons.</li>
-                    <li>If it works, you'll see "✓ Success" in the logs.</li>
-                    <li>If it fails, click **DEBUG LAST HTML** and paste the console output here.</li>
-                  </ul>
-                </div>
-                <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                  <pre className="p-6 text-rose-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V14_SCRIPT}</pre>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="v13">
-            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-              <CardHeader className="border-b border-white/5 py-6">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-black uppercase tracking-widest text-emerald-400 flex items-center">
-                    <Zap className="w-5 h-5 mr-2" />
-                    Phantom Scraper v13
-                  </CardTitle>
-                  <Button onClick={() => handleCopy(SCRAPER_V14_SCRIPT, 'v13')} size="sm" className="bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold">
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy v13 Script
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-8 space-y-6">
-                <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                  <pre className="p-6 text-emerald-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V14_SCRIPT}</pre>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="v14">
+              <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                <CardHeader className="border-b border-white/5 py-6">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center">
+                      <Bug className="w-5 h-5 mr-2" />
+                      Deep Diver v14
+                    </CardTitle>
+                    <Button onClick={() => handleCopy(SCRAPER_V15_SCRIPT, 'v14')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy v14 Script
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                  <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V15_SCRIPT}</pre>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </section>
       </main>
 
       <footer className="mt-24 opacity-30">
