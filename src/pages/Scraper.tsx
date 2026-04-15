@@ -261,7 +261,21 @@ const Scraper = () => {
       const data = JSON.parse(importJson);
       if (!Array.isArray(data)) throw new Error("Invalid format: Expected an array of lessons.");
 
-      const lessonsToInsert = data.map((item: any) => ({
+      // Filter out junk links (REPLY buttons, comment sections, empty titles)
+      const filteredData = data.filter((item: any) => {
+        const title = (item.title || "").toUpperCase();
+        const category = (item.category || "").toUpperCase();
+        const url = (item.page_url || "").toLowerCase();
+
+        if (title === "REPLY") return false;
+        if (category.includes("COMMENT")) return false;
+        if (url.includes("/comments/")) return false;
+        if (!item.title || item.title.trim() === "") return false;
+        
+        return true;
+      });
+
+      const lessonsToInsert = filteredData.map((item: any) => ({
         user_id: user.id,
         lesson_url: item.page_url,
         title: item.title,
