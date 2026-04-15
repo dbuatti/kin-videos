@@ -29,7 +29,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V19_SCRIPT = `(async function() {
+const SCRAPER_V20_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
   var LIMIT = 0; // Set to 0 for unlimited (Full Course)
   // ---------------------
@@ -43,7 +43,7 @@ const SCRAPER_V19_SCRIPT = `(async function() {
   
   var hdr = document.createElement('div');
   hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#6366f1;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Architect v19</span>';
+  hdr.innerHTML = '<span>FNH Architect v20</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -75,7 +75,6 @@ const SCRAPER_V19_SCRIPT = `(async function() {
     var allLinks = Array.from(doc.querySelectorAll('a[href*="/posts/"]'));
     var seenUrls = new Set();
 
-    // Try to find the page title as a fallback module name
     var pageTitle = doc.querySelector('h1, .category-header h1')?.innerText.trim();
 
     allLinks.forEach(a => {
@@ -116,11 +115,9 @@ const SCRAPER_V19_SCRIPT = `(async function() {
     var allLessonData = [];
     var processedUrls = new Set([window.location.href]);
     
-    // 1. Get links from current page
     var initialLinks = extractLinksFromDoc(document, "General");
     allLessonData.push(...initialLinks);
 
-    // 2. Find all Category links (including "Show More")
     var categoryLinks = Array.from(document.querySelectorAll('a[href*="/categories/"]'))
         .map(a => a.href.split('?')[0])
         .filter(href => !processedUrls.has(href));
@@ -138,11 +135,9 @@ const SCRAPER_V19_SCRIPT = `(async function() {
             var parser = new DOMParser();
             var doc = parser.parseFromString(html, 'text/html');
             
-            // Get lessons from this category page
             var moreLinks = extractLinksFromDoc(doc, "General");
             allLessonData.push(...moreLinks);
 
-            // Check for pagination on this category page
             var pageLinks = Array.from(doc.querySelectorAll('a[href*="page="]'))
                 .map(a => a.href)
                 .filter(href => !processedUrls.has(href));
@@ -161,7 +156,6 @@ const SCRAPER_V19_SCRIPT = `(async function() {
         }
     }
 
-    // Deduplicate by URL
     var unique = [];
     var seen = new Set();
     allLessonData.forEach(l => {
@@ -200,6 +194,18 @@ const SCRAPER_V19_SCRIPT = `(async function() {
     return null;
   }
 
+  async function extractTitle(html, fallback) {
+    if (!html) return fallback;
+    var parser = new DOMParser();
+    var doc = parser.parseFromString(html, 'text/html');
+    // Kajabi titles are usually in h1 or .post-header h1
+    var h1 = doc.querySelector('h1, .post-header h1, .post-title');
+    if (h1 && h1.innerText.trim().length > 2 && !/^\\d+$/.test(h1.innerText.trim())) {
+      return h1.innerText.trim();
+    }
+    return fallback;
+  }
+
   var lessons = await getFullStructure();
   var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, lessons.length) : lessons.length;
 
@@ -216,7 +222,9 @@ const SCRAPER_V19_SCRIPT = `(async function() {
       var response = await fetch(lesson.url);
       var html = await response.text();
       var videoUrl = await extractVideo(html);
-      results.push({ category: lesson.module, title: lesson.title, page_url: lesson.url, video_url: videoUrl });
+      var finalTitle = await extractTitle(html, lesson.title);
+      
+      results.push({ category: lesson.module, title: finalTitle, page_url: lesson.url, video_url: videoUrl });
       if (videoUrl) addLog('   ✓ Success', '#10b981');
       else addLog('   × No Video', '#ef4444');
       await new Promise(r => setTimeout(r, 400));
@@ -362,11 +370,11 @@ const Scraper = () => {
             <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
           
-          <Tabs defaultValue="v19" className="w-full">
+          <Tabs defaultValue="v20" className="w-full">
             <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v19" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
+              <TabsTrigger value="v20" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
                 <Zap className="w-4 h-4 mr-2" />
-                Architect v19
+                Architect v20
               </TabsTrigger>
               <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
                 <Bug className="w-4 h-4 mr-2" />
@@ -374,31 +382,31 @@ const Scraper = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="v19">
+            <TabsContent value="v20">
               <Card className="border-indigo-500/20 bg-indigo-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
                 <CardHeader className="border-b border-indigo-500/10 py-6">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Architect v19 (Deep Scan)
+                      FNH Architect v20 (Deep Title Extraction)
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V19_SCRIPT, 'v19')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V20_SCRIPT, 'v20')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
-                      Copy v19 Script
+                      Copy v20 Script
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <div className="bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v19 Improvements</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-2">v20 Improvements</h4>
                     <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Deep Title Extraction:</strong> If a link title is just a number (e.g. "11"), the scraper now looks inside the page for the real lesson name.</li>
                       <li><strong className="text-slate-200">Deep Category Scan:</strong> Follows "Show More" links to visit category pages directly.</li>
-                      <li><strong className="text-slate-200">Multi-Level Pagination:</strong> Handles pagination on both the main page and individual category pages.</li>
                       <li><strong className="text-slate-200">Smart Deduplication:</strong> Ensures no duplicate lessons if you run it multiple times.</li>
                     </ul>
                   </div>
                   <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V19_SCRIPT}</pre>
+                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V20_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
@@ -412,7 +420,7 @@ const Scraper = () => {
                       <Bug className="w-5 h-5 mr-2" />
                       Titan v16
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V19_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V20_SCRIPT, 'v16')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy v16 Script
                     </Button>
@@ -420,7 +428,7 @@ const Scraper = () => {
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
                   <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V19_SCRIPT}</pre>
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V20_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
