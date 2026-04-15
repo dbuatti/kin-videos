@@ -12,11 +12,14 @@ import {
   Info,
   FileCode,
   SearchCode,
-  CheckCircle2
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { showSuccess } from '@/utils/toast';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+
+const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
 const DIAGNOSTIC_SCRIPT = `// TITLE DIAGNOSTIC — paste on a single Kajabi lesson page
 (function() {
@@ -97,7 +100,7 @@ const SCRAPER_V7_SCRIPT = `(async function() {
       if (links.length < 1) return;
       var heading = el.querySelector('h2,h3,h4,h5,[class*="category"],[class*="module"],[class*="section-title"],[class*="chapter-title"]');
       if (!heading) return;
-      var moduleName = heading.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ');
+      var moduleName = heading.innerText.trim().replace(/[\\\\n\\\\r]+/g,' ').replace(/\\\\s+/g,' ');
       if (moduleName.length < 2 || moduleName.length > 120) return;
       var uniqueLinks = links.filter(function(a) {
         if (seenUrls[a.href] || a.href.indexOf('undefined') !== -1) return false;
@@ -108,7 +111,7 @@ const SCRAPER_V7_SCRIPT = `(async function() {
       structure.push({
         module: moduleName,
         lessons: uniqueLinks.map(function(a) {
-          return { url: a.href, sidebarText: a.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ') };
+          return { url: a.href, sidebarText: a.innerText.trim().replace(/[\\\\n\\\\r]+/g,' ').replace(/\\\\s+/g,' ') };
         })
       });
     });
@@ -123,14 +126,14 @@ const SCRAPER_V7_SCRIPT = `(async function() {
     var flat = Array.from(document.querySelectorAll('a[href*="/posts/"]')).filter(function(a) {
       if (seen2[a.href] || a.href.indexOf('undefined') !== -1) return false;
       seen2[a.href] = true; return true;
-    }).map(function(a) { return { url: a.href, sidebarText: a.innerText.trim().replace(/[\\n\\r]+/g,' ') }; });
+    }).map(function(a) { return { url: a.href, sidebarText: a.innerText.trim().replace(/[\\\\n\\\\r]+/g,' ') }; });
     courseStructure = [{ module: 'Course Lessons', lessons: flat }];
     addLog('Flat fallback: ' + flat.length + ' lessons');
   }
 
   var courseName = 'Functional Neuro Approach Foundations';
   var cnEl = document.querySelector('h1,[class*="course-title"],[class*="product-title"],[class*="product__title"]');
-  if (cnEl) courseName = cnEl.innerText.trim().replace(/[\\n\\r]+/g,' ');
+  if (cnEl) courseName = cnEl.innerText.trim().replace(/[\\\\n\\\\r]+/g,' ');
 
   var total = courseStructure.reduce(function(n,s){ return n+s.lessons.length; },0);
   setStatus('Found ' + total + ' lessons', '#6366f1');
@@ -166,7 +169,7 @@ const SCRAPER_V7_SCRIPT = `(async function() {
     // Strategy A: Specific Kajabi post title class (from diagnostic)
     var postTitle = doc.querySelector('.post__title, .post-title, .lesson-title, [data-post-title]');
     if (postTitle) {
-      var t = postTitle.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ');
+      var t = postTitle.innerText.trim().replace(/[\\\\n\\\\r]+/g,' ').replace(/\\\\s+/g,' ');
       if (t.length > 2) return t;
     }
 
@@ -181,7 +184,7 @@ const SCRAPER_V7_SCRIPT = `(async function() {
     // Strategy C: Any H1
     var h1 = doc.querySelector('h1');
     if (h1) {
-      var t1 = h1.innerText.trim().replace(/[\\n\\r]+/g,' ').replace(/\\s+/g,' ');
+      var t1 = h1.innerText.trim().replace(/[\\\\n\\\\r]+/g,' ').replace(/\\\\s+/g,' ');
       if (t1.length > 2) return t1;
     }
 
@@ -193,15 +196,15 @@ const SCRAPER_V7_SCRIPT = `(async function() {
     if (!doc || !doc.body) return 'NO VIDEO FOUND';
     var html = doc.body.innerHTML;
     // S1: .bin -> .mp4
-    var binRe = /"url"\\s*:\\s*"(https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-f0-9]+\\.bin)"/gi;
+    var binRe = /"url"\\\\s*:\\\\s*"(https:\\\\/\\\\/embed-ssl\\\\.wistia\\\\.com\\\\/deliveries\\\\/[a-f0-9]+\\\\.bin)"/gi;
     var bins = []; var bm;
     while ((bm = binRe.exec(html)) !== null) bins.push(bm[1]);
     if (bins.length) return bins[bins.length-1].replace('.bin','.mp4');
     // S2: direct mp4
-    var m = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-f0-9]+\\.mp4/i);
+    var m = html.match(/https:\\\\/\\\\/embed-ssl\\\\.wistia\\\\.com\\\\/deliveries\\\\/[a-f0-9]+\\\\.mp4/i);
     if (m) return m[0];
     // S3: hashedId -> Wistia API
-    var idRe = [/"hashedId"\\s*:\\s*"([a-z0-9]{8,})"/i,/wistia\\.com\\/medias\\/([a-z0-9]{8,})/i,/wistia_async_([a-z0-9]{8,})/i,/embed\\/medias\\/([a-z0-9]{8,})/i];
+    var idRe = [/"hashedId"\\\\s*:\\\\s*"([a-z0-9]{8,})"/i,/wistia\\\\.com\\\\/medias\\\\/([a-z0-9]{8,})/i,/wistia_async_([a-z0-9]{8,})/i,/embed\\\\/medias\\\\/([a-z0-9]{8,})/i];
     var hid = null;
     for (var j=0;j<idRe.length;j++){ var mm=html.match(idRe[j]); if(mm){ hid=mm[1]; break; } }
     if (hid) {
@@ -263,8 +266,8 @@ const SCRAPER_V7_SCRIPT = `(async function() {
   dlTxt.innerText = 'Download TXT';
   dlTxt.setAttribute('style', 'flex:1;padding:10px;background:#6366f1;color:white;border:none;border-radius:8px;font-weight:bold;cursor:pointer;');
   dlTxt.onclick = function() {
-    var header = ['FNH KAJABI COURSE — FULL VIDEO EXTRACT','Generated: '+new Date().toLocaleString(),'Lessons: '+count,sep,''].join('\\n');
-    var blob = new Blob([header+lines.join('\\n')],{type:'text/plain'});
+    var header = ['FNH KAJABI COURSE — FULL VIDEO EXTRACT','Generated: '+new Date().toLocaleString(),'Lessons: '+count,sep,''].join('\\\\n');
+    var blob = new Blob([header+lines.join('\\\\n')],{type:'text/plain'});
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'FNH_v7_'+Date.now()+'.txt';
@@ -313,6 +316,12 @@ const Scraper = () => {
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Extraction Tools</p>
           </div>
         </div>
+        <Button asChild className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-12 px-6 font-bold shadow-lg shadow-indigo-500/20">
+          <a href={COURSE_URL} target="_blank" rel="noopener noreferrer">
+            Go to Kajabi Course
+            <ExternalLink className="w-4 h-4 ml-2" />
+          </a>
+        </Button>
       </header>
 
       <main className="space-y-8">
