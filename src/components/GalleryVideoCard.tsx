@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Play, Download, ExternalLink, Star } from 'lucide-react';
+import { Play, Download, ExternalLink, Star, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { downloadFile } from '@/utils/download';
+import { useJobLessons } from '@/hooks/use-job-lessons';
 
 interface GalleryVideoCardProps {
   video: any;
@@ -16,6 +17,7 @@ interface GalleryVideoCardProps {
 
 const GalleryVideoCard: React.FC<GalleryVideoCardProps> = ({ video }) => {
   const [isPlayerActive, setIsPlayerActive] = useState(false);
+  const { deleteLesson } = useJobLessons();
 
   const getThumbnailUrl = (videoUrl: string | null) => {
     if (!videoUrl) return "/placeholder.svg";
@@ -89,6 +91,17 @@ const GalleryVideoCard: React.FC<GalleryVideoCardProps> = ({ video }) => {
               <a href={video.lesson_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                 <ExternalLink className="h-4 w-4" />
               </a>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-slate-500 hover:text-red-400"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Delete "${video.title}"?`)) deleteLesson(video.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         </div>

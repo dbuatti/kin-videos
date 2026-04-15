@@ -13,14 +13,12 @@ import {
   Library as LibraryIcon, 
   CheckCircle2, 
   Circle, 
-  AlertCircle,
   Search,
   Terminal,
   PlayCircle,
   Download,
   RefreshCw,
-  CloudDownload,
-  X,
+  Trash2,
   Command
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -28,25 +26,23 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
 import { MadeWithDyad } from '@/components/made-with-dyad';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { downloadFile } from '@/utils/download';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const VIDEO_PATH = "/Users/danielebuatti/Library/CloudStorage/Dropbox/Wellness, Meditation and Kinesiology/FNH/Videos";
 
 const Library = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: lessons, isLoading: lessonsLoading, refetch: refetchLessons } = useJobLessons();
+  const { data: lessons, isLoading: lessonsLoading, refetch: refetchLessons, deleteLesson } = useJobLessons();
   const { data: localFiles, syncInventory, isSyncing } = useLocalInventory();
   
   const [pasteValue, setPasteValue] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
 
   const handleSync = () => {
     const lines = pasteValue.split('\n');
@@ -70,12 +66,11 @@ const Library = () => {
   };
 
   const processedData = useMemo(() => {
-    if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 }, remainingLessons: [] };
+    if (!lessons || !localFiles) return { groups: [], stats: { total: 0, downloaded: 0 } };
 
     const localFileNames = new Set(localFiles.map(f => f.file_name.toLowerCase()));
-    const validLessons = lessons.filter(l => l.title && l.title !== 'Untitled' && l.video_url);
-
-    const grouped = validLessons.reduce((acc, lesson) => {
+    
+    const grouped = lessons.reduce((acc, lesson) => {
       const category = lesson.category || 'Uncategorized';
       if (!acc[category]) acc[category] = [];
       acc[category].push(lesson);
@@ -90,16 +85,14 @@ const Library = () => {
 
     let total = 0;
     let downloaded = 0;
-    const remainingLessons: any[] = [];
 
     const groups = sortedCategories.map((category, catIdx) => {
       const categoryLessons = grouped[category].map((lesson, lesIdx) => {
-        const expectedFilename = generateLessonFilename(catIdx + 1, lesIdx + 1, category, lesson.title);
+        const expectedFilename = generateLessonFilename(catIdx + 1, lesIdx + 1, category, lesson.title || 'Untitled');
         const isDownloaded = localFileNames.has(expectedFilename.toLowerCase());
         
         total++;
         if (isDownloaded) downloaded++;
-        else remainingLessons.push({ ...lesson, expectedFilename, displayIndex: `${catIdx + 1}.${lesIdx + 1}` });
 
         return { ...lesson, expectedFilename, isDownloaded, displayIndex: `${catIdx + 1}.${lesIdx + 1}` };
       });
@@ -107,7 +100,7 @@ const Library = () => {
       return { category, categoryNumber: catIdx + 1, lessons: categoryLessons, downloadedCount: categoryLessons.filter(l => l.isDownloaded).length, totalCount: categoryLessons.length };
     });
 
-    return { groups, stats: { total, downloaded }, remainingLessons };
+    return { groups, stats: { total, downloaded } };
   }, [lessons, localFiles]);
 
   const filteredGroups = useMemo(() => {
@@ -166,7 +159,7 @@ const Library = () => {
               </div>
               <Textarea 
                 placeholder="Paste terminal output here..."
-                className="min-h-[150px] font-mono text-[10px] bg-white/5 border-white/5 rounded-xl focus-visible:ring-primary"
+                className="min-h-[150px] font-mono text-[10px] bg-black/40 border-white/5 rounded-xl focus-visible:ring-primary"
                 value={pasteValue}
                 onChange={(e) => setPasteValue(e.target.value)}
               />
@@ -188,7 +181,7 @@ const Library = () => {
                   <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total</p>
                 </div>
               </div>
-              <Progress value={(processedData.stats.downloaded / processedData.stats.total) * 100} className="h-2 bg-white/5" />
+              <Progress value={processedData.stats.total > 0 ? (processedData.stats.downloaded / processedData.stats.total) * 100 : 0} className="h-2 bg-white/5" />
             </CardContent>
           </Card>
         </div>
@@ -235,9 +228,21 @@ const Library = () => {
                             {lesson.title}
                           </p>
                         </div>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-white" onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}>
-                          <Download className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-white" onClick={() => downloadFile(lesson.video_url!, lesson.expectedFilename)}>
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-slate-500 hover:text-red-400" 
+                            onClick={() => {
+                              if (confirm(`Delete "${lesson.title}"?`)) deleteLesson(lesson.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="pl-7 pr-8">
                         <VideoProgressIndicator videoId={lesson.id} />

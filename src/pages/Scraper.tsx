@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   Loader2,
   ShieldCheck,
-  Search
+  Trash2,
+  Sparkles
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +27,7 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/integrations/supabase/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
+import { useJobLessons } from '@/hooks/use-job-lessons';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
@@ -255,6 +257,7 @@ const Scraper = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { cleanJunk, isCleaning } = useJobLessons();
   const [importJson, setImportJson] = useState('');
   const [isImporting, setIsImporting] = useState(false);
 
@@ -330,12 +333,23 @@ const Scraper = () => {
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Extraction Tools</p>
           </div>
         </div>
-        <Button asChild className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-12 px-6 font-bold shadow-lg shadow-indigo-500/20">
-          <a href={COURSE_URL} target="_blank" rel="noopener noreferrer">
-            Go to Kajabi Course
-            <ExternalLink className="w-4 h-4 ml-2" />
-          </a>
-        </Button>
+        <div className="flex items-center space-x-3">
+          <Button 
+            variant="outline" 
+            onClick={() => cleanJunk()} 
+            disabled={isCleaning}
+            className="border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-xl h-12 px-6 font-bold"
+          >
+            {isCleaning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+            Clean Junk
+          </Button>
+          <Button asChild className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-12 px-6 font-bold shadow-lg shadow-indigo-500/20">
+            <a href={COURSE_URL} target="_blank" rel="noopener noreferrer">
+              Go to Kajabi Course
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </a>
+          </Button>
+        </div>
       </header>
 
       <main className="space-y-12">
