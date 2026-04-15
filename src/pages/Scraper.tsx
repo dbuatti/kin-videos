@@ -27,10 +27,14 @@ import { MadeWithDyad } from '@/components/made-with-dyad';
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
 const SCRAPER_V14_SCRIPT = `(async function() {
+  // --- CONFIGURATION ---
+  var LIMIT = 5; // Set to 0 for unlimited, or a number to test just a few
+  // ---------------------
+
   var old = document.getElementById('fnh-scraper-ui');
   if (old) old.remove();
 
-  var lastHtml = ""; // For debugging
+  var lastHtml = ""; 
   var ui = document.createElement('div');
   ui.id = 'fnh-scraper-ui';
   ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #f43f5e;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
@@ -96,13 +100,11 @@ const SCRAPER_V14_SCRIPT = `(async function() {
 
   async function extractVideo(html) {
     if (!html) return null;
-    lastHtml = html; // Store for debug
+    lastHtml = html;
 
-    // 1. Direct Delivery Link (Fastest)
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
-    // 2. Wistia ID Search (Exhaustive)
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
@@ -125,7 +127,6 @@ const SCRAPER_V14_SCRIPT = `(async function() {
       }
     }
 
-    // 3. Kajabi Data Props (Deep Scan)
     var propsMatch = html.match(/data-props="([^"]+)"/);
     if (propsMatch) {
       try {
@@ -134,7 +135,7 @@ const SCRAPER_V14_SCRIPT = `(async function() {
         var vidId = props.video_id || (props.video && props.video.wistia_id);
         if (vidId) {
           addLog('   Found in Props: ' + vidId, '#8b5cf6');
-          return await extractVideo('wistia-id-' + vidId); // Recurse with ID
+          return await extractVideo('wistia-id-' + vidId);
         }
       } catch(e) {}
     }
@@ -144,18 +145,21 @@ const SCRAPER_V14_SCRIPT = `(async function() {
 
   setStatus('Scanning curriculum...');
   var fullStructure = getCleanStructure();
-  var total = fullStructure.reduce((n, s) => n + s.lessons.length, 0);
-  if (total === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
+  var totalAvailable = fullStructure.reduce((n, s) => n + s.lessons.length, 0);
+  var totalToProcess = LIMIT > 0 ? Math.min(LIMIT, totalAvailable) : totalAvailable;
 
-  addLog('Found ' + total + ' lessons.', '#10b981');
+  if (totalAvailable === 0) { setStatus('ERROR: No lessons!', '#ef4444'); return; }
+
+  addLog('Found ' + totalAvailable + ' lessons. Processing ' + totalToProcess + '.', '#10b981');
 
   var results = [];
   var count = 0;
 
   for (var mod of fullStructure) {
     for (var lesson of mod.lessons) {
+      if (LIMIT > 0 && count >= LIMIT) break;
       count++;
-      setStatus('Processing ' + count + ' / ' + total + '...');
+      setStatus('Processing ' + count + ' / ' + totalToProcess + '...');
       addLog('-> ' + lesson.title);
       
       try {
@@ -172,6 +176,7 @@ const SCRAPER_V14_SCRIPT = `(async function() {
         addLog('   ! Fetch Error: ' + err.message, '#ef4444');
       }
     }
+    if (LIMIT > 0 && count >= LIMIT) break;
   }
 
   setStatus('COMPLETE!', '#10b981');
@@ -231,16 +236,16 @@ const Scraper = () => {
             <div>
               <h4 className="text-sm font-bold text-rose-500">v14 "Deep Diver"</h4>
               <p className="text-xs text-slate-400 mt-1">
-                Includes a <strong>Debug Last HTML</strong> button. If a video is missed, click it to log the raw source code to your browser console so we can inspect it.
+                Now with a <strong>LIMIT</strong> variable at the top of the script. Set to 5 by default for quick testing.
               </p>
             </div>
           </div>
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 flex items-start space-x-4">
             <ShieldAlert className="w-6 h-6 text-amber-500 shrink-0" />
             <div>
-              <h4 className="text-sm font-bold text-amber-500">Rate Limiting</h4>
+              <h4 className="text-sm font-bold text-amber-500">Testing Mode</h4>
               <p className="text-xs text-slate-400 mt-1">
-                v14 uses a slower 500ms delay to prevent Kajabi from blocking your IP during the crawl.
+                This script will stop after 5 lessons. Once you confirm it works, change <code className="text-white">LIMIT = 5</code> to <code className="text-white">LIMIT = 0</code> in the code.
               </p>
             </div>
           </div>
@@ -264,7 +269,7 @@ const Scraper = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-400 flex items-center">
                     <Bug className="w-5 h-5 mr-2" />
-                    Deep Diver Scraper v14 (Debug Mode)
+                    Deep Diver Scraper v14 (Limited Test)
                   </CardTitle>
                   <Button onClick={() => handleCopy(SCRAPER_V14_SCRIPT, 'v14')} size="sm" className="bg-rose-600 hover:bg-rose-500 rounded-xl font-bold">
                     <Copy className="w-4 h-4 mr-2" />
@@ -274,11 +279,12 @@ const Scraper = () => {
               </CardHeader>
               <CardContent className="p-8 space-y-6">
                 <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">v14 New Logic</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">How to test</h4>
                   <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                    <li><strong className="text-slate-200">Kajabi Props Scan:</strong> Decodes internal Kajabi JSON objects to find hidden Wistia IDs.</li>
-                    <li><strong className="text-slate-200">Async Embed Support:</strong> Detects <code className="text-white">wistia_async_</code> class names.</li>
-                    <li><strong className="text-slate-200">Debug Tool:</strong> Logs the HTML of the last processed page to the console for manual inspection.</li>
+                    <li>Copy the script and run it in the Kajabi console.</li>
+                    <li>It will process only the first 5 lessons.</li>
+                    <li>If it works, you'll see "✓ Success" in the logs.</li>
+                    <li>If it fails, click **DEBUG LAST HTML** and paste the console output here.</li>
                   </ul>
                 </div>
                 <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
