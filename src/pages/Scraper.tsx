@@ -12,13 +12,47 @@ import {
   Zap, 
   ExternalLink,
   Layers,
-  History
+  History,
+  SearchCode
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { showSuccess } from '@/utils/toast';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
+
+const DIAGNOSTIC_SCRIPT = `(function() {
+  var results = [];
+  results.push('=== PAGE URL ===');
+  results.push(window.location.href);
+  results.push('');
+  results.push('=== document.title ===');
+  results.push(document.title);
+  results.push('');
+  results.push('=== All H1 elements ===');
+  document.querySelectorAll('h1').forEach(function(el, i) {
+    results.push('h1[' + i + ']: ' + JSON.stringify(el.innerText.trim().slice(0,100)));
+  });
+  results.push('');
+  results.push('=== Elements with "title" in class ===');
+  document.querySelectorAll('[class*="title"]').forEach(function(el, i) {
+    var t = el.innerText.trim().slice(0,80);
+    if (t) results.push('[' + i + '] .' + el.className.split(' ').join('.') + ': ' + JSON.stringify(t));
+  });
+  var out = results.join('\\n');
+  console.log(out);
+  var ta = document.createElement('textarea');
+  ta.value = out;
+  ta.setAttribute('style', 'position:fixed;top:10px;left:10px;width:90vw;height:80vh;z-index:999999;font-family:monospace;font-size:11px;background:#111;color:#0f0;border:1px solid #333;padding:12px;');
+  document.body.appendChild(ta);
+  ta.select();
+  var closeX = document.createElement('button');
+  closeX.innerText = 'Close';
+  closeX.setAttribute('style', 'position:fixed;top:10px;right:10px;z-index:9999999;padding:8px 16px;background:#c00;color:#fff;border:none;cursor:pointer;font-size:13px;');
+  closeX.onclick = function() { ta.remove(); closeX.remove(); };
+  document.body.appendChild(closeX);
+  alert('Diagnostic output shown. Copy all text.');
+})();`;
 
 const SCRAPER_V7_SCRIPT = `(async function() {
   var ui = document.createElement('div');
@@ -216,7 +250,8 @@ const SCRAPER_V8_SCRIPT = `(async function() {
       links.forEach(function(a) {
         if (!seenUrls[a.href]) {
           seenUrls[a.href] = true;
-          uniqueLessons.push({ url: a.href, sidebarText: a.innerText.trim() });
+          var lessonTitle = a.querySelector('.syllabus__title') ? a.querySelector('.syllabus__title').innerText.trim() : a.innerText.trim();
+          uniqueLessons.push({ url: a.href, sidebarText: lessonTitle });
         }
       });
       if (uniqueLessons.length > 0) structure.push({ module: moduleName, lessons: uniqueLessons });
@@ -276,6 +311,7 @@ const SCRAPER_V8_SCRIPT = `(async function() {
       count++;
       setStatus('Extracting ' + count + ' / ' + totalLessons, '#6366f1');
       setPath(sec.module + ' > ' + lesson.sidebarText);
+      addLog('['+count+'/'+totalLessons+'] ' + lesson.sidebarText);
       var doc = await loadPage(lesson.url, 6000);
       var mp4 = await extractMp4(doc);
       jsonResults.push({ category: sec.module, title: lesson.sidebarText, page_url: lesson.url, video_url: mp4 === 'NO VIDEO FOUND' ? null : mp4 });
@@ -330,11 +366,15 @@ const Scraper = () => {
           <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
             <TabsTrigger value="v8" className="rounded-xl px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">
               <Zap className="w-4 h-4 mr-2" />
-              Master v8 (Multi-Page)
+              Master v8
             </TabsTrigger>
             <TabsTrigger value="v7" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
               <History className="w-4 h-4 mr-2" />
               Legacy v7
+            </TabsTrigger>
+            <TabsTrigger value="diag" className="rounded-xl px-6 font-bold data-[state=active]:bg-amber-600 data-[state=active]:text-white">
+              <SearchCode className="w-4 h-4 mr-2" />
+              Diagnostic
             </TabsTrigger>
           </TabsList>
 
@@ -388,6 +428,31 @@ const Scraper = () => {
                 </div>
                 <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
                   <pre className="p-6 text-slate-600 font-mono text-[10px] leading-relaxed">{SCRAPER_V7_SCRIPT}</pre>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="diag">
+            <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+              <CardHeader className="border-b border-white/5 py-6">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm font-black uppercase tracking-widest text-amber-500 flex items-center">
+                    <SearchCode className="w-5 h-5 mr-2" />
+                    Title Diagnostic
+                  </CardTitle>
+                  <Button onClick={() => handleCopy(DIAGNOSTIC_SCRIPT, 'Diagnostic')} size="sm" className="bg-amber-600 hover:bg-amber-700 rounded-xl font-bold">
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Diagnostic
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 space-y-6">
+                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                  <p className="text-[11px] text-slate-500">Run this on any page to see exactly what selectors Kajabi is using for titles and links.</p>
+                </div>
+                <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
+                  <pre className="p-6 text-amber-500/50 font-mono text-[10px] leading-relaxed">{DIAGNOSTIC_SCRIPT}</pre>
                 </ScrollArea>
               </CardContent>
             </Card>
