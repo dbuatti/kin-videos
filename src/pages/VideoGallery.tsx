@@ -11,11 +11,13 @@ import {
   Video,
   Download,
   X,
-  ExternalLink
+  ExternalLink,
+  Star
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, generateLessonFilename } from '@/utils/filenames';
+import { isPriorityLesson } from '@/utils/priority';
 import { MadeWithDyad } from '@/components/made-with-dyad';
 import { cn } from '@/lib/utils';
 import VideoPlayer from '@/components/VideoPlayer';
@@ -65,6 +67,7 @@ const VideoGallery = () => {
         category.toLowerCase().includes(searchQuery.toLowerCase())
       ).map((v, lesIdx) => ({
         ...v,
+        isPriority: isPriorityLesson(v.title),
         expectedFilename: generateLessonFilename(catIdx + 1, lesIdx + 1, category, v.title || 'Untitled')
       }))
     })).filter(group => group.videos.length > 0);
@@ -130,7 +133,18 @@ const VideoGallery = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {group.videos.map((video) => (
-                  <Card key={video.id} className="overflow-hidden border-white/5 bg-slate-900/40 hover:bg-slate-900/60 transition-all group rounded-2xl">
+                  <Card key={video.id} className={cn(
+                    "overflow-hidden border-white/5 bg-slate-900/40 hover:bg-slate-900/60 transition-all group rounded-2xl relative",
+                    video.isPriority && "ring-1 ring-amber-500/30 bg-amber-500/[0.02]"
+                  )}>
+                    {video.isPriority && (
+                      <div className="absolute top-3 left-3 z-10">
+                        <Badge className="bg-amber-500 text-white border-none text-[9px] font-black uppercase tracking-widest px-2 py-0.5 shadow-lg">
+                          <Star className="w-2.5 h-2.5 mr-1 fill-white" />
+                          Priority
+                        </Badge>
+                      </div>
+                    )}
                     <VideoPlayer 
                       videoUrl={video.video_url!}
                       videoId={video.id}
@@ -141,7 +155,10 @@ const VideoGallery = () => {
                     />
                     <CardHeader className="p-5">
                       <div className="flex justify-between items-start gap-4 mb-4">
-                        <CardTitle className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                        <CardTitle className={cn(
+                          "text-sm font-bold line-clamp-2 leading-snug transition-colors",
+                          video.isPriority ? "text-amber-400" : "text-white group-hover:text-primary"
+                        )}>
                           {video.title}
                         </CardTitle>
                         <div className="flex items-center space-x-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">

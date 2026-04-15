@@ -25,6 +25,7 @@ import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { cn } from "@/lib/utils";
 import SyllabusClipboard from "@/components/SyllabusClipboard";
 import VoiceSearch from "@/components/VoiceSearch";
+import PriorityLessons from "@/components/PriorityLessons";
 import { showSuccess } from "@/utils/toast";
 
 const Index = () => {
@@ -113,6 +114,9 @@ const Index = () => {
           </Link>
         ))}
       </section>
+
+      {/* Priority Focus Section */}
+      <PriorityLessons />
 
       {/* 2. Secondary: Resume & Progress */}
       <section className="space-y-6">
