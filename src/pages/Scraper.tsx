@@ -15,7 +15,8 @@ import {
   Database,
   Upload,
   CheckCircle2,
-  Loader2
+  Loader2,
+  ShieldCheck
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +28,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
 
-const SCRAPER_V15_SCRIPT = `(async function() {
+const SCRAPER_V16_SCRIPT = `(async function() {
   // --- CONFIGURATION ---
   var LIMIT = 5; // Set to 0 for unlimited
   // ---------------------
@@ -37,11 +38,11 @@ const SCRAPER_V15_SCRIPT = `(async function() {
 
   var ui = document.createElement('div');
   ui.id = 'fnh-scraper-ui';
-  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #f43f5e;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
+  ui.setAttribute('style', 'position:fixed;bottom:20px;right:20px;z-index:999999;background:#0f172a;border:2px solid #3b82f6;border-radius:24px;padding:24px;width:500px;font-family:sans-serif;color:#f8fafc;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);max-height:600px;overflow-y:auto;');
   
   var hdr = document.createElement('div');
-  hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#f43f5e;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
-  hdr.innerHTML = '<span>FNH Collector v15</span>';
+  hdr.setAttribute('style', 'font-size:16px;font-weight:900;color:#3b82f6;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:0.15em;');
+  hdr.innerHTML = '<span>FNH Titan v16</span>';
   
   var xBtn = document.createElement('span');
   xBtn.setAttribute('style', 'cursor:pointer;color:#64748b;font-size:12px;padding:4px 8px;background:#1e293b;border-radius:8px;');
@@ -72,20 +73,30 @@ const SCRAPER_V15_SCRIPT = `(async function() {
     var structure = [];
     var seenUrls = new Set();
     
-    // Improved category detection for Kajabi
-    var categories = document.querySelectorAll('.syllabus__category, [data-category-id], .panel, .syllabus-section, .course-section, .category-card');
+    // Smarter category detection: Look for containers that have post links inside them
+    var containers = document.querySelectorAll('.syllabus__category, [data-category-id], .panel, .syllabus-section, .course-section, .category-card, .section');
     
-    if (categories.length === 0) {
+    if (containers.length === 0) {
+      addLog('No containers found, scanning all links...', '#f59e0b');
       var allLinks = Array.from(document.querySelectorAll('a[href*="/posts/"]'));
       var lessons = allLinks.map(a => ({ url: a.href.split('?')[0], title: a.innerText.trim().split(/[\\r\\n]+/)[0] }))
                            .filter(l => { if(seenUrls.has(l.url)) return false; seenUrls.add(l.url); return true; });
       if (lessons.length > 0) structure.push({ module: 'General', lessons: lessons });
     } else {
-      categories.forEach(cat => {
-        var titleEl = cat.querySelector('.syllabus__category-title, h2, h3, h4, .category-title, .section-title, .title');
+      containers.forEach(container => {
+        // Try to find a title in or near the container
+        var titleEl = container.querySelector('.syllabus__category-title, h2, h3, h4, .category-title, .section-title, .title, [data-role="title"]');
+        
+        // If no title inside, check the previous sibling (common in some Kajabi themes)
+        if (!titleEl && container.previousElementSibling) {
+            var prev = container.previousElementSibling;
+            if (prev.tagName.match(/H[1-6]/) || prev.classList.contains('section-header')) titleEl = prev;
+        }
+
         var moduleName = titleEl ? titleEl.innerText.trim() : 'Uncategorized';
-        var links = Array.from(cat.querySelectorAll('a[href*="/posts/"]'));
+        var links = Array.from(container.querySelectorAll('a[href*="/posts/"]'));
         var moduleLessons = [];
+        
         links.forEach(a => {
           var url = a.href.split('?')[0];
           if (!seenUrls.has(url) && !a.classList.contains('next-post')) {
@@ -94,7 +105,20 @@ const SCRAPER_V15_SCRIPT = `(async function() {
             moduleLessons.push({ url: url, title: lessonTitle });
           }
         });
-        if (moduleLessons.length > 0) structure.push({ module: moduleName, lessons: moduleLessons });
+        
+        if (moduleLessons.length > 0) {
+            // If we found "Uncategorized" but there's a heading right above the first link, use that
+            if (moduleName === 'Uncategorized') {
+                var firstLink = container.querySelector('a[href*="/posts/"]');
+                var parent = firstLink.parentElement;
+                while (parent && parent !== container) {
+                    var h = parent.querySelector('h1,h2,h3,h4');
+                    if (h) { moduleName = h.innerText.trim(); break; }
+                    parent = parent.parentElement;
+                }
+            }
+            structure.push({ module: moduleName, lessons: moduleLessons });
+        }
       });
     }
     return structure;
@@ -102,13 +126,18 @@ const SCRAPER_V15_SCRIPT = `(async function() {
 
   async function extractVideo(html) {
     if (!html) return null;
+
+    // 1. Direct Delivery Link (Fastest)
     var deliveryMatch = html.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/([a-f0-9]{30,})\\.(bin|mp4)/i);
     if (deliveryMatch) return deliveryMatch[0].replace('.bin', '.mp4');
 
+    // 2. Wistia ID Search (Restored robust v14 logic)
     var idMatch = html.match(/wistia\\.com\\/medias\\/([a-z0-9]{10})/i) || 
                   html.match(/"hashedId"\\s*:\\s*"([a-z0-9]{10})"/i) ||
                   html.match(/wistia-([a-z0-9]{10})/i) ||
-                  html.match(/data-wistia-id="([a-z0-9]{10})"/i);
+                  html.match(/wistia_async_([a-z0-9]{10})/i) ||
+                  html.match(/data-wistia-id="([a-z0-9]{10})"/i) ||
+                  html.match(/data-video-id="([a-z0-9]{10})"/i);
 
     if (idMatch) {
       var wistiaId = idMatch[1];
@@ -121,6 +150,18 @@ const SCRAPER_V15_SCRIPT = `(async function() {
         if (asset) return asset.url.replace('.bin', '.mp4');
       } catch(e) {}
     }
+
+    // 3. Kajabi Data Props (Restored v14 logic)
+    var propsMatch = html.match(/data-props="([^"]+)"/);
+    if (propsMatch) {
+      try {
+        var decoded = propsMatch[1].replace(/&quot;/g, '"');
+        var props = JSON.parse(decoded);
+        var vidId = props.video_id || (props.video && props.video.wistia_id);
+        if (vidId) return await extractVideo('wistia-id-' + vidId);
+      } catch(e) {}
+    }
+
     return null;
   }
 
@@ -160,7 +201,7 @@ const SCRAPER_V15_SCRIPT = `(async function() {
   setStatus('COMPLETE!', '#10b981');
   var btn = document.createElement('button');
   btn.innerText = 'COPY FINAL JSON';
-  btn.setAttribute('style', 'width:100%;margin-top:12px;padding:14px;background:#f43f5e;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
+  btn.setAttribute('style', 'width:100%;margin-top:12px;padding:14px;background:#3b82f6;color:white;border:none;border-radius:12px;font-weight:900;cursor:pointer;');
   btn.onclick = function() { 
     navigator.clipboard.writeText(JSON.stringify(results, null, 2)); 
     btn.innerText = 'COPIED!';
@@ -202,7 +243,6 @@ const Scraper = () => {
         category: item.category || 'Uncategorized',
       }));
 
-      // Upsert lessons (using lesson_url as a unique-ish identifier for the user)
       const { error } = await supabase
         .from('lessons')
         .upsert(lessonsToInsert, { onConflict: 'user_id,lesson_url' });
@@ -244,7 +284,6 @@ const Scraper = () => {
       </header>
 
       <main className="space-y-12">
-        {/* 1. Manual Import Section */}
         <section className="space-y-6">
           <div className="flex items-center space-x-2 text-emerald-400">
             <Database className="w-5 h-5" />
@@ -276,70 +315,70 @@ const Scraper = () => {
           </Card>
         </section>
 
-        {/* 2. Scraper Scripts Section */}
         <section className="space-y-6">
-          <div className="flex items-center space-x-2 text-rose-400">
-            <Bug className="w-5 h-5" />
+          <div className="flex items-center space-x-2 text-blue-400">
+            <ShieldCheck className="w-5 h-5" />
             <h2 className="text-sm font-black uppercase tracking-widest">Step 1: Run Scraper</h2>
           </div>
           
-          <Tabs defaultValue="v15" className="w-full">
+          <Tabs defaultValue="v16" className="w-full">
             <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v15" className="rounded-xl px-6 font-bold data-[state=active]:bg-rose-500 data-[state=active]:text-white">
+              <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                 <Zap className="w-4 h-4 mr-2" />
-                Collector v15
+                Titan v16
               </TabsTrigger>
-              <TabsTrigger value="v14" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
-                Deep Diver v14
+              <TabsTrigger value="v15" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+                Collector v15
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="v15">
-              <Card className="border-rose-500/20 bg-rose-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
-                <CardHeader className="border-b border-rose-500/10 py-6">
+            <TabsContent value="v16">
+              <Card className="border-blue-500/20 bg-blue-500/5 backdrop-blur-xl rounded-[2rem] overflow-hidden border-2">
+                <CardHeader className="border-b border-blue-500/10 py-6">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-black uppercase tracking-widest text-rose-400 flex items-center">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-blue-400 flex items-center">
                       <Zap className="w-5 h-5 mr-2" />
-                      FNH Collector v15 (Limited Test)
+                      FNH Titan v16 (Robust Mode)
                     </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V15_SCRIPT, 'v15')} size="sm" className="bg-rose-600 hover:bg-rose-500 rounded-xl font-bold">
+                    <Button onClick={() => handleCopy(SCRAPER_V16_SCRIPT, 'v16')} size="sm" className="bg-blue-600 hover:bg-blue-500 rounded-xl font-bold">
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy v16 Script
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 space-y-6">
+                  <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">v16 Titan Improvements</h4>
+                    <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
+                      <li><strong className="text-slate-200">Restored Extraction:</strong> Re-added the deep-scan logic that found videos in v14.</li>
+                      <li><strong className="text-slate-200">Aggressive Categories:</strong> Now searches for headings above containers to fix "Uncategorized" issues.</li>
+                      <li><strong className="text-slate-200">Limit Variable:</strong> Still set to 5 for testing. Change to 0 for full course.</li>
+                    </ul>
+                  </div>
+                  <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                    <pre className="p-6 text-blue-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V16_SCRIPT}</pre>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="v15">
+              <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+                <CardHeader className="border-b border-white/5 py-6">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center">
+                      <Bug className="w-5 h-5 mr-2" />
+                      Collector v15
+                    </CardTitle>
+                    <Button onClick={() => handleCopy(SCRAPER_V16_SCRIPT, 'v15')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
                       <Copy className="w-4 h-4 mr-2" />
                       Copy v15 Script
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 space-y-6">
-                  <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-400 mb-2">v15 Improvements</h4>
-                    <ul className="text-[11px] text-slate-400 space-y-2 list-disc pl-4">
-                      <li><strong className="text-slate-200">Better Categories:</strong> Detects module names more reliably.</li>
-                      <li><strong className="text-slate-200">Limit Variable:</strong> Set to 5 by default. Change <code className="text-white">LIMIT = 0</code> for the full course.</li>
-                    </ul>
-                  </div>
-                  <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-rose-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V15_SCRIPT}</pre>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="v14">
-              <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-                <CardHeader className="border-b border-white/5 py-6">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 flex items-center">
-                      <Bug className="w-5 h-5 mr-2" />
-                      Deep Diver v14
-                    </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V15_SCRIPT, 'v14')} size="sm" className="bg-slate-700 hover:bg-slate-600 rounded-xl font-bold">
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy v14 Script
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-8 space-y-6">
                   <ScrollArea className="h-[200px] w-full bg-black/20 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V15_SCRIPT}</pre>
+                    <pre className="p-6 text-slate-500 font-mono text-[10px] leading-relaxed">{SCRAPER_V16_SCRIPT}</pre>
                   </ScrollArea>
                 </CardContent>
               </Card>
