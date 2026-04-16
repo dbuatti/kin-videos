@@ -57,9 +57,11 @@ const MasterPlayer = () => {
   useEffect(() => {
     const mode = isAudioOnly ? 'audio' : 'video';
     if (searchParams.get('mode') !== mode) {
-      setSearchParams({ mode });
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('mode', mode);
+      setSearchParams(newParams);
     }
-  }, [isAudioOnly, setSearchParams]);
+  }, [isAudioOnly, setSearchParams, searchParams]);
 
   const masterStateKey = isAudioOnly ? 'master-player-audio-index' : 'master-player-video-index';
   const { progress: savedIndex, saveProgress: saveMasterIndex, isLoading: isStateLoading } = useVideoProgress(masterStateKey);
@@ -82,6 +84,23 @@ const MasterPlayer = () => {
       return (a.title || '').localeCompare(b.title || '');
     });
   }, [lessons]);
+
+  // Handle direct lesson navigation via URL
+  useEffect(() => {
+    const lessonId = searchParams.get('lessonId');
+    if (lessonId && playlist.length > 0) {
+      const index = playlist.findIndex(l => l.id === lessonId);
+      if (index !== -1) {
+        log(`[MasterPlayer] Direct navigation to lesson: ${lessonId} at index ${index}`);
+        setCurrentIndex(index);
+        setAutoPlay(true);
+        // Clear the param to prevent re-triggering
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('lessonId');
+        setSearchParams(newParams);
+      }
+    }
+  }, [searchParams, playlist, setSearchParams]);
 
   const handleVoiceResult = (text: string) => {
     const query = text.toLowerCase()
@@ -116,15 +135,20 @@ const MasterPlayer = () => {
     const voiceQuery = searchParams.get('voiceQuery');
     if (voiceQuery && playlist.length > 0 && !isInitialLoad) {
       handleVoiceResult(voiceQuery);
-      // Clear the query from URL
       const newParams = new URLSearchParams(searchParams);
       newParams.delete('voiceQuery');
       setSearchParams(newParams);
     }
-  }, [searchParams, playlist, isInitialLoad]);
+  }, [searchParams, playlist, isInitialLoad, setSearchParams]);
 
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
+      // If we have a lessonId in URL, it's handled by the other effect
+      if (searchParams.get('lessonId')) {
+        setIsInitialLoad(false);
+        return;
+      }
+
       const indexToLoad = Math.floor(Number(savedIndex));
       log(`[MasterPlayer] Initial load for ${masterStateKey}. Saved index: ${savedIndex}, Loading index: ${indexToLoad}, Playlist size: ${playlist.length}`);
       
@@ -136,7 +160,7 @@ const MasterPlayer = () => {
       }
       setIsInitialLoad(false);
     }
-  }, [isStateLoading, savedIndex, playlist, isInitialLoad, masterStateKey]);
+  }, [isStateLoading, savedIndex, playlist, isInitialLoad, masterStateKey, searchParams]);
 
   const lastSavedIndex = useRef<number>(-1);
   useEffect(() => {

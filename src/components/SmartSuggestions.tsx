@@ -4,7 +4,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSmartSuggestions } from '@/hooks/use-smart-suggestions';
 import { Card, CardContent } from '@/components/ui/card';
-import { Sparkles, Play, ArrowRight, Brain, ShieldCheck, Lightbulb } from 'lucide-react';
+import { Sparkles, Play, ArrowRight, Brain, ShieldCheck, Lightbulb, Zap, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,12 +27,30 @@ const SmartSuggestions = () => {
 
   if (!suggestions || suggestions.length === 0) return null;
 
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'foundational': return <ShieldCheck className="w-4 h-4 text-amber-500" />;
+      case 'next-up': return <Zap className="w-4 h-4 text-emerald-400" />;
+      case 'refresher': return <RotateCcw className="w-4 h-4 text-blue-400" />;
+      default: return <Brain className="w-4 h-4 text-indigo-400" />;
+    }
+  };
+
+  const getColors = (type: string) => {
+    switch (type) {
+      case 'foundational': return "bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10 text-amber-500";
+      case 'next-up': return "bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10 text-emerald-500";
+      case 'refresher': return "bg-blue-500/5 border-blue-500/10 hover:bg-blue-500/10 text-blue-500";
+      default: return "bg-indigo-500/5 border-indigo-500/10 hover:bg-indigo-500/10 text-indigo-500";
+    }
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between px-4">
         <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 flex items-center">
           <Sparkles className="w-3 h-3 mr-2 fill-indigo-400" />
-          Personalized Review
+          Smart Recommendations
         </h2>
       </div>
 
@@ -42,9 +60,7 @@ const SmartSuggestions = () => {
             key={item.lesson.id} 
             className={cn(
               "border-none rounded-[2rem] transition-all border group overflow-hidden",
-              item.type === 'foundational' 
-                ? "bg-amber-500/5 border-amber-500/10 hover:bg-amber-500/10" 
-                : "bg-indigo-500/5 border-indigo-500/10 hover:bg-indigo-500/10"
+              getColors(item.type).split(' ').slice(0, 3).join(' ')
             )}
           >
             <CardContent className="p-6 flex flex-col h-full justify-between space-y-4">
@@ -52,19 +68,19 @@ const SmartSuggestions = () => {
                 <div className="flex items-center justify-between">
                   <div className={cn(
                     "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                    item.type === 'foundational' ? "bg-amber-500/20" : "bg-indigo-500/20"
+                    item.type === 'foundational' ? "bg-amber-500/20" : 
+                    item.type === 'next-up' ? "bg-emerald-500/20" :
+                    item.type === 'refresher' ? "bg-blue-500/20" : "bg-indigo-500/20"
                   )}>
-                    {item.type === 'foundational' ? (
-                      <ShieldCheck className="w-4 h-4 text-amber-500" />
-                    ) : (
-                      <Brain className="w-4 h-4 text-indigo-400" />
-                    )}
+                    {getIcon(item.type)}
                   </div>
                   <Badge variant="outline" className={cn(
                     "text-[8px] uppercase font-black border-none px-2 py-0.5",
-                    item.type === 'foundational' ? "bg-amber-500/20 text-amber-500" : "bg-indigo-500/20 text-indigo-400"
+                    item.type === 'foundational' ? "bg-amber-500/20 text-amber-500" : 
+                    item.type === 'next-up' ? "bg-emerald-500/20 text-emerald-500" :
+                    item.type === 'refresher' ? "bg-blue-500/20 text-blue-500" : "bg-indigo-500/20 text-indigo-400"
                   )}>
-                    {item.type === 'foundational' ? 'Confidence' : 'Technical'}
+                    {item.type.replace('-', ' ')}
                   </Badge>
                 </div>
                 <div>
@@ -83,12 +99,12 @@ const SmartSuggestions = () => {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => navigate(`/master-player?mode=video`)}
+                onClick={() => navigate(`/master-player?mode=video&lessonId=${item.lesson.id}`)}
                 className={cn(
                   "w-full justify-between rounded-xl h-9 px-4 font-bold text-xs",
-                  item.type === 'foundational' 
-                    ? "text-amber-500 hover:text-amber-400 hover:bg-amber-500/10" 
-                    : "text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10"
+                  item.type === 'foundational' ? "text-amber-500 hover:bg-amber-500/10" : 
+                  item.type === 'next-up' ? "text-emerald-500 hover:bg-emerald-500/10" :
+                  item.type === 'refresher' ? "text-blue-500 hover:bg-blue-500/10" : "text-indigo-400 hover:bg-indigo-500/10"
                 )}
               >
                 Watch Now
