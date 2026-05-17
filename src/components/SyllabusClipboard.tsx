@@ -28,6 +28,8 @@ Autonomic Nervous System Overview 🔗 Page: https://functional-neuro-health.myk
 Clinical Assessments
 BOLT Test 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167251417 🎥 Video: https://embed-ssl.wistia.com/deliveries/ce764cc10222173fa80c6d8c6a3d90210f4cf1a1.mp4
 
+Cogs Demo 🔗 Page: https://share.descript.com/view/RbM1PWQjiXA 🎥 Video: https://share.descript.com/view/RbM1PWQjiXA
+
 Breathing Assessment Quiz 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167619695 🎥 Video: No Video ID found on page
 
 Lecture: Muscle Testing Fundamentals 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2164865269 🎥 Video: https://embed-ssl.wistia.com/deliveries/e37292d9950da2bf0a17301a86271c77.mp4
@@ -43,9 +45,11 @@ Lecture: Intention Based Muscle Testing 🔗 Page: https://functional-neuro-heal
 Direct Muscle Tests
 Muscle Tests: Intrinsic Stabilisation System 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164756677 🎥 Video: https://embed-ssl.wistia.com/deliveries/364abce3a360a7845926d9d775c0b462.mp4
 
+COGS Muscle Testing 🔗 Page: https://share.descript.com/view/EzVZo3b5G0r 🎥 Video: https://share.descript.com/view/EzVZo3b5G0r
+
 Muscle Tests: Transverse Abdominals 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164655470 🎥 Video: https://embed-ssl.wistia.com/deliveries/6b766a1d79b608a860d8b0b4886befb7.mp4
 
-Demo: TVA Muscle Test 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166239953 🎥 Video: https://embed-ssl.wistia.com/deliveries/06654b19dfccfcb0bf7333a032825f4a.mp4
+Demo: TVA Muscle Test 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166239953 🎥 Video: https://embed-ssl.wistia.com/deliveries/9b7a8027aac01cf743b0cbaa06ae280b.mp4
 
 Diaphragm 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167833384 🎥 Video: https://embed-ssl.wistia.com/deliveries/9813e62a13a7ef09e17f7a16e5ca810b096b5ed2.mp4
 
@@ -139,6 +143,10 @@ Occular & Labrythine Righting Reflexes Assessment 🔗 Page: https://functional-
 
 Cranial Nerves
 Lecture: Cranial Nerves 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2164792486 🎥 Video: https://embed-ssl.wistia.com/deliveries/eff3c4639f49f29eba770402add63a63.mp4
+
+Cranial Nerve Full Screening 🔗 Page: https://www.loom.com/share/1583b5fa682c40189e27d405100d860b 🎥 Video: https://www.loom.com/share/1583b5fa682c40189e27d405100d860b
+
+Cranial Nerve Stimulation Sequence and Homework 🔗 Page: https://www.loom.com/share/eacd8444beee487fa22c03956ae01496 🎥 Video: https://www.loom.com/share/eacd8444beee487fa22c03956ae01496
 
 Cranial Nerve I (Olfactory) 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167205372 🎥 Video: https://embed-ssl.wistia.com/deliveries/aca41508634a068fbda3d10c96f150a9.mp4
 
