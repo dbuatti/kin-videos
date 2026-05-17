@@ -13,13 +13,11 @@ import {
   TrendingUp,
   Zap,
   Bookmark,
-  Mic,
-  Download,
-  Loader2
+  Mic
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import React, { useState } from 'react';
+import React from 'react';
 import { useLastWatched } from "@/hooks/use-last-watched";
 import { useCourseProgress } from "@/hooks/use-course-progress";
 import { Progress } from "@/components/ui/progress";
@@ -29,17 +27,12 @@ import SyllabusClipboard from "@/components/SyllabusClipboard";
 import VoiceSearch from "@/components/VoiceSearch";
 import PriorityLessons from "@/components/PriorityLessons";
 import SmartSuggestions from "@/components/SmartSuggestions";
-import { showSuccess, showError } from "@/utils/toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { showSuccess } from "@/utils/toast";
 
 const Index = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
   const { data: lastWatched, isLoading: isLastWatchedLoading } = useLastWatched();
   const { data: progress, isLoading: isProgressLoading } = useCourseProgress();
-  const [isArchiving, setIsArchiving] = useState(false);
 
   if (isProgressLoading || isLastWatchedLoading) {
     return (
@@ -49,27 +42,8 @@ const Index = () => {
     );
   }
 
-  const handleArchiveCourse = async () => {
-    if (!user) return;
-    setIsArchiving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-course', {
-        body: { user_id: user.id }
-      });
-
-      if (error) throw error;
-      
-      showSuccess("Course library updated with latest verified videos!");
-      queryClient.invalidateQueries({ queryKey: ['allLessons'] });
-      queryClient.invalidateQueries({ queryKey: ['courseCompletion'] });
-    } catch (err: any) {
-      showError("Failed to sync course: " + err.message);
-    } finally {
-      setIsArchiving(false);
-    }
-  };
-
   const handleVoiceResult = (text: string) => {
+    // Navigate to player and let it handle the search
     navigate(`/master-player?mode=video&voiceQuery=${encodeURIComponent(text)}`);
   };
 
@@ -106,39 +80,6 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col animate-in-fade max-w-5xl mx-auto w-full p-6 sm:p-12 space-y-12">
       
-      {/* Archive Hero Card */}
-      <section>
-        <Card className="border-none rounded-[2.5rem] bg-indigo-600 text-white shadow-2xl shadow-indigo-500/20 overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Download className="w-32 h-32" />
-          </div>
-          <CardContent className="p-8 sm:p-12 relative z-10">
-            <div className="max-w-xl space-y-6">
-              <Badge className="bg-white/20 text-white border-none px-3 py-1 text-[10px] font-black uppercase tracking-widest">
-                Foundations Course
-              </Badge>
-              <h2 className="text-3xl sm:text-5xl font-black tracking-tighter leading-tight">
-                Ready to update your library?
-              </h2>
-              <p className="text-indigo-100 text-sm sm:text-lg font-medium leading-relaxed">
-                Instantly sync the full course structure, including the latest verified video links and modules.
-              </p>
-              <Button 
-                onClick={handleArchiveCourse}
-                disabled={isArchiving}
-                className="bg-white text-indigo-600 hover:bg-indigo-50 rounded-2xl h-14 px-8 font-black text-lg shadow-xl transition-all transform hover:scale-105 active:scale-95"
-              >
-                {isArchiving ? (
-                  <><Loader2 className="w-6 h-6 mr-2 animate-spin" /> Archiving...</>
-                ) : (
-                  <><Zap className="w-6 h-6 mr-2 fill-current" /> Archive Course Now</>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
       {/* Voice Search Hero */}
       <section className="flex flex-col items-center text-center space-y-6 py-8">
         <div className="relative">
