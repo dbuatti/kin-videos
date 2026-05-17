@@ -9,7 +9,6 @@ const corsHeaders = {
 }
 
 const VERIFIED_MAP = [
-  { category: "General / Intro", title: "Resume Course", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099726/posts/2164655474", video_url: "https://embed-ssl.wistia.com/deliveries/fcd1fa9b2e0cd9585565ea43214d78d51e6d28ef.mp4" },
   { category: "Course Introduction & Foundational Knowledge", title: "Learning Materials", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2167681807", video_url: null },
   { category: "Course Introduction & Foundational Knowledge", title: "About Your Instructor", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2164655462", video_url: "https://embed-ssl.wistia.com/deliveries/e5a21ab718d5d38897b67e5198e4a4a0de7a8e2f.mp4" },
   { category: "Course Introduction & Foundational Knowledge", title: "Overview of the Approach", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099722/posts/2164655465", video_url: "https://embed-ssl.wistia.com/deliveries/5e942a70cbfc426869d23a830a97c2a40e039ff9.mp4" },
@@ -119,11 +118,13 @@ Deno.serve(async (req: Request) => {
 
   try {
     const { user_id } = await req.json();
+    console.log("[sync-course] Starting sync for user:", user_id);
     
-    // 1. Clear existing lessons for this user to avoid duplicates
-    await supabaseAdmin.from('lessons').delete().eq('user_id', user_id);
+    if (!user_id) {
+      throw new Error("user_id is required");
+    }
 
-    // 2. Map the verified data to the user's lessons table
+    // Map the verified data to the user's lessons table
     const lessonsToInsert = VERIFIED_MAP.map((item: any) => ({
       user_id: user_id,
       lesson_url: item.page_url,
@@ -133,8 +134,19 @@ Deno.serve(async (req: Request) => {
       category: item.category,
     }));
     
-    const { error: insertError } = await supabaseAdmin.from('lessons').insert(lessonsToInsert);
-    if (insertError) throw insertError;
+    console.log(`[sync-course] Upserting ${lessonsToInsert.length} lessons...`);
+
+    // Use upsert to handle existing records gracefully
+    const { error: upsertError } = await supabaseAdmin
+      .from('lessons')
+      .upsert(lessonsToInsert, { onConflict: 'user_id,lesson_url' });
+
+    if (upsertError) {
+      console.error("[sync-course] Upsert error:", upsertError);
+      throw upsertError;
+    }
+
+    console.log("[sync-course] Sync completed successfully.");
 
     return new Response(JSON.stringify({ message: 'Course data synced successfully from verified map.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -142,6 +154,7 @@ Deno.serve(async (req: Request) => {
     })
 
   } catch (error: any) {
+    console.error("[sync-course] Fatal error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
