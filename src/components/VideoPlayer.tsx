@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from 'react';
-import { PlayCircle, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
+import { PlayCircle, RotateCcw, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVideoProgress } from '@/hooks/use-video-progress';
@@ -52,6 +52,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const lastEndedTime = useRef<number>(0);
   const resumeAttemptCount = useRef<number>(0);
 
+  // Detect if this is an external embed (Loom, Descript, etc)
+  const isExternalEmbed = videoUrl.includes('loom.com') || videoUrl.includes('descript.com');
+  
+  const getEmbedUrl = (url: string) => {
+    if (url.includes('loom.com/share/')) {
+      return url.replace('/share/', '/embed/');
+    }
+    if (url.includes('share.descript.com/view/')) {
+      return url.replace('/view/', '/embed/');
+    }
+    return url;
+  };
+
   // Media Session API
   useEffect(() => {
     if ('mediaSession' in navigator && title) {
@@ -81,7 +94,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Speed Enforcement
   useEffect(() => {
     const media = mediaRef.current;
-    if (!media) return;
+    if (!media || isExternalEmbed) return;
     const enforceSpeed = () => {
       if (media.playbackRate !== speed) {
         log(`[VideoPlayer] Enforcing speed: ${speed}x`);
@@ -95,10 +108,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       media.removeEventListener('ratechange', enforceSpeed);
       media.removeEventListener('play', enforceSpeed);
     };
-  }, [speed, videoUrl]);
+  }, [speed, videoUrl, isExternalEmbed]);
 
   // Save progress on unmount, visibility change, or beforeunload
   useEffect(() => {
+    if (isExternalEmbed) return;
+
     const saveCurrentProgress = () => {
       if (mediaRef.current && isReady && mediaRef.current.currentTime > 0) {
         log(`[VideoPlayer] Saving progress for ${effectiveKey}: ${mediaRef.current.currentTime.toFixed(2)}s`);
@@ -124,7 +139,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       window.removeEventListener('beforeunload', handleBeforeUnload);
       saveCurrentProgress();
     };
-  }, [isReady, saveProgress, effectiveKey]);
+  }, [isReady, saveProgress, effectiveKey, isExternalEmbed]);
 
   useEffect(() => {
     log(`[VideoPlayer] Loading new media: ${effectiveKey}`, { url: videoUrl });
@@ -134,6 +149,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     resumeAttemptCount.current = 0;
     lastSavedTime.current = 0;
     
+    if (isExternalEmbed) {
+      setIsReady(true);
+      setHasStarted(true);
+      return;
+    }
+
     const media = mediaRef.current;
     if (media) {
       media.load();
@@ -143,14 +164,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         });
       }
     }
-  }, [videoUrl, autoPlay, effectiveKey]);
+  }, [videoUrl, autoPlay, effectiveKey, isExternalEmbed]);
 
   const attemptResume = (source: string) => {
     const media = mediaRef.current;
-    // Lowered threshold to 1s to be more aggressive with resuming
-    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 1) return;
+    if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 1 || isExternalEmbed) return;
 
-    // Don't resume if we're already past the progress point
     if (media.currentTime > progress + 1) {
       log(`[VideoPlayer] Skipping resume from ${source}, already past progress point`);
       hasSuccessfullyResumed.current = true;
@@ -166,7 +185,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       media.currentTime = seekTime;
       lastSavedTime.current = seekTime;
       
-      // Verify seek
       setTimeout(() => {
         if (media && Math.abs(media.currentTime - seekTime) < 2) {
           log(`[VideoPlayer] [Resume] Seek verified successful at ${media.currentTime.toFixed(2)}s`);
@@ -183,18 +201,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   useEffect(() => {
-    if (isReady && progress > 1 && !hasSuccessfullyResumed.current) {
+    if (isReady && progress > 1 && !hasSuccessfullyResumed.current && !isExternalEmbed) {
       const timer = setTimeout(() => attemptResume('isReady/progress effect'), 100);
       return () => clearTimeout(timer);
     }
-  }, [isReady, progress]);
+  }, [isReady, progress, isExternalEmbed]);
 
   const handleLoadedMetadata = () => {
     if (mediaRef.current) {
       log(`[VideoPlayer] Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
       mediaRef.current.playbackRate = speed;
       setIsReady(true);
-      // Small delay to ensure seekable range is populated
       setTimeout(() => attemptResume('handleLoadedMetadata'), 200);
     }
   };
@@ -212,7 +229,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const media = mediaRef.current;
     if (media && !media.paused && isReady) {
       const currentTime = media.currentTime;
-      // Lowered save interval to 3 seconds for better persistence
       if (currentTime > lastSavedTime.current + 3) {
         log(`[VideoPlayer] Periodic save for ${effectiveKey}: ${currentTime.toFixed(2)}s`);
         saveProgress(currentTime, media.duration);
@@ -227,7 +243,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsPlaying(true);
     if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
     
-    // Ensure we resume if we haven't yet
     if (!hasSuccessfullyResumed.current && progress > 1) {
       attemptResume('handlePlay');
     }
@@ -252,13 +267,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     
     log(`[VideoPlayer] Playback ended event. CurrentTime: ${media.currentTime.toFixed(2)}s, Duration: ${media.duration.toFixed(2)}s, Time since last end: ${timeSinceLastEnd}ms`);
 
-    // Prevent double-triggering within 3 seconds
     if (timeSinceLastEnd < 3000) {
       log(`[VideoPlayer] Ignoring duplicate ended event (too soon)`);
       return;
     }
 
-    // Safety check: only trigger if we are actually near the end
     if (media.duration > 0 && media.currentTime < media.duration - 5) {
       log(`[VideoPlayer] Ignoring premature ended event (currentTime ${media.currentTime.toFixed(2)}s is not near duration ${media.duration.toFixed(2)}s)`);
       return;
@@ -306,6 +319,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <p className="text-slate-400 text-sm mb-4">{error}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
         </div>
+      ) : isExternalEmbed ? (
+        <div className="w-full h-full flex flex-col">
+          <iframe
+            src={getEmbedUrl(videoUrl)}
+            className="w-full h-full border-none"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+          <div className="absolute bottom-4 right-4 z-20">
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              className="bg-black/60 hover:bg-black/80 text-white border-none backdrop-blur-md text-[10px] font-bold h-8"
+              asChild
+            >
+              <a href={videoUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-3 h-3 mr-2" />
+                Open Original
+              </a>
+            </Button>
+          </div>
+        </div>
       ) : (
         <>
           {isAudioOnly ? (
@@ -344,7 +379,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </>
       )}
       
-      {!error && (!hasStarted || (!isPlaying && hasStarted)) && (
+      {!error && !isExternalEmbed && (!hasStarted || (!isPlaying && hasStarted)) && (
         <div 
           className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity group-hover:bg-black/10 cursor-pointer z-20"
           onClick={togglePlay}
