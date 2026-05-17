@@ -39,12 +39,12 @@ const VERIFIED_MAP = [
   { category: "Direct Muscle Tests", title: "Deltoids, Mid & Lower Traps, Pecs and Serratus Anterior", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2166647725", video_url: "https://embed-ssl.wistia.com/deliveries/8dc68372fa942300d450b03ec8487454cacb02c7.mp4" },
   { category: "Direct Muscle Tests", title: "Biceps and Triceps", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503394", video_url: "https://embed-ssl.wistia.com/deliveries/006270ae8c685161a8a2c55053ee0fd5ecf69b18.mp4" },
   
-  // Page 2 Items (Placeholders for now)
-  { category: "Direct Muscle Tests", title: "Hamstrings", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/direct-muscle-tests/hamstrings", video_url: null },
-  { category: "Direct Muscle Tests", title: "TFL", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/direct-muscle-tests/tfl", video_url: null },
-  { category: "Direct Muscle Tests", title: "Glute Med", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/direct-muscle-tests/glute-med", video_url: null },
-  { category: "Direct Muscle Tests", title: "Glute Max", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/direct-muscle-tests/glute-max", video_url: null },
-  { category: "Direct Muscle Tests", title: "Upper Trapezius and SCM", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/direct-muscle-tests/upper-trap-scm", video_url: null },
+  // Corrected Direct Muscle Tests (Page 2)
+  { category: "Direct Muscle Tests", title: "Hamstrings", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503395", video_url: null },
+  { category: "Direct Muscle Tests", title: "TFL", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503396", video_url: null },
+  { category: "Direct Muscle Tests", title: "Glute Med", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503397", video_url: null },
+  { category: "Direct Muscle Tests", title: "Glute Max", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503398", video_url: null },
+  { category: "Direct Muscle Tests", title: "Upper Trapezius and SCM", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2167503399", video_url: null },
 
   { category: "Beginning Procedures - Sympathetic Down Regulation", title: "Lecture: Beginning Procedure (Sympathetic Down Regulation)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164765571", video_url: "https://embed-ssl.wistia.com/deliveries/fb89c1759fbb08c91ed375ffb8a56c8a227eae56.mp4" },
   { category: "Beginning Procedures - Sympathetic Down Regulation", title: "Harmonic Rocking", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099725/posts/2164655471", video_url: "https://embed-ssl.wistia.com/deliveries/a8c771702cf0998e7caee0f064316544.mp4" },
@@ -74,12 +74,12 @@ const VERIFIED_MAP = [
   { category: "Pathway Assessments and Corrections", title: "Lecture: Mechanoreceptor (Conscious)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239933", video_url: "https://embed-ssl.wistia.com/deliveries/a2452372e3fc3ebc703bd5ee39b5912d.mp4" },
   { category: "Pathway Assessments and Corrections", title: "Demo: Mechanoreceptor (Conscious)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171201710", video_url: "https://embed-ssl.wistia.com/deliveries/076585afb879fbd326958b2ceed1f696e6464254.mp4" },
   
-  // Pathway Page 2
-  { category: "Pathway Assessments and Corrections", title: "Lecture: Mechanoreception (Unconscious)", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/pathway/mechanoreception-unconscious", video_url: null },
-  { category: "Pathway Assessments and Corrections", title: "Masterclass: Unconscious Mechanoreception & The Cerebellar Gateway", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/pathway/cerebellar-gateway", video_url: null },
-  { category: "Pathway Assessments and Corrections", title: "In Class Lecture: Unconscious Mechanoreception", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/pathway/in-class-unconscious", video_url: null },
-  { category: "Pathway Assessments and Corrections", title: "Demo: Mechanoreceptor (Unconscious)", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/pathway/demo-unconscious", video_url: null },
-  { category: "Pathway Assessments and Corrections", title: "In class lecture and Demo: Nociception", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/pathway/nociception-demo", video_url: null },
+  // Corrected Pathway Assessments (Page 2)
+  { category: "Pathway Assessments and Corrections", title: "Lecture: Mechanoreception (Unconscious)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239934", video_url: null },
+  { category: "Pathway Assessments and Corrections", title: "Masterclass: Unconscious Mechanoreception & The Cerebellar Gateway", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239935", video_url: null },
+  { category: "Pathway Assessments and Corrections", title: "In Class Lecture: Unconscious Mechanoreception", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239936", video_url: null },
+  { category: "Pathway Assessments and Corrections", title: "Demo: Mechanoreceptor (Unconscious)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239937", video_url: null },
+  { category: "Pathway Assessments and Corrections", title: "In class lecture and Demo: Nociception", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099977/posts/2171239938", video_url: null },
 
   { category: "Primitive Reflexes", title: "Background Information for the Primitive Reflexes", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164792212", video_url: null },
   { category: "Primitive Reflexes", title: "Lecture: Primitive Reflexes Overview", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2164760586", video_url: "https://embed-ssl.wistia.com/deliveries/b94e227227785f7fde1c5d99a05a7c80.mp4" },
@@ -92,16 +92,15 @@ const VERIFIED_MAP = [
   { category: "Primitive Reflexes", title: "Moro/Startle Reflex Demo", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502429", video_url: "https://embed-ssl.wistia.com/deliveries/7bee9c3cc03da234cda80dfd2f796c3a80b55414.mp4" },
   { category: "Primitive Reflexes", title: "ATNR", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502432", video_url: "https://embed-ssl.wistia.com/deliveries/896c250c771ff9c61de1176371bcaa86882f7685.mp4" },
   
-  // Primitive Page 2
-  { category: "Primitive Reflexes", title: "Spinal Gallant", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/primitive/spinal-gallant", video_url: null },
-  { category: "Primitive Reflexes", title: "STNR", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/primitive/stnr", video_url: null },
-  { category: "Primitive Reflexes", title: "TLR", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/primitive/tlr", video_url: null },
-  { category: "Primitive Reflexes", title: "Rooting Reflex + Correction", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/primitive/rooting", video_url: null },
-  { category: "Primitive Reflexes", title: "Palmar Reflex", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/primitive/palmar", video_url: null },
-  { category: "Primitive Reflexes", title: "Palmer Reflex (Track 2) Testing & Clearing Process", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/primitive/palmar-track-2", video_url: null },
+  // Corrected Primitive Reflexes (Page 2)
+  { category: "Primitive Reflexes", title: "Spinal Gallant", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502433", video_url: null },
+  { category: "Primitive Reflexes", title: "STNR", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502434", video_url: null },
+  { category: "Primitive Reflexes", title: "TLR", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502435", video_url: null },
+  { category: "Primitive Reflexes", title: "Rooting Reflex + Correction", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502436", video_url: null },
+  { category: "Primitive Reflexes", title: "Palmar Reflex", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502437", video_url: null },
+  { category: "Primitive Reflexes", title: "Palmer Reflex (Track 2) Testing & Clearing Process", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127437/posts/2167502438", video_url: null },
 
   { category: "Postural Reflexes", title: "Occular & Labrythine Righting Reflexes Assessment", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2154822754/posts/2175437516", video_url: "https://embed-ssl.wistia.com/deliveries/d91e9aea886dd9611199161bad9c472ee993464c.mp4" },
-  
   { category: "Cranial Nerves", title: "Lecture: Cranial Nerves", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2164792486", video_url: "https://embed-ssl.wistia.com/deliveries/eff3c4639f49f29eba770402add63a63.mp4" },
   { category: "Cranial Nerves", title: "Cranial Nerve Full Screening", page_url: "https://www.loom.com/share/1583b5fa682c40189e27d405100d860b", video_url: "https://www.loom.com/share/1583b5fa682c40189e27d405100d860b" },
   { category: "Cranial Nerves", title: "Cranial Nerve Stimulation Sequence and Homework", page_url: "https://www.loom.com/share/eacd8444beee487fa22c03956ae01496", video_url: "https://www.loom.com/share/eacd8444beee487fa22c03956ae01496" },
@@ -115,13 +114,13 @@ const VERIFIED_MAP = [
   { category: "Cranial Nerves", title: "Cranial Nerve VIII (Vestibulo-cochlear)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780911", video_url: "https://embed-ssl.wistia.com/deliveries/465c56ed15ec74012154656cd87ff84d9307a40c.mp4" },
   { category: "Cranial Nerves", title: "Cranial Nerve IX (Glossopharyngeal)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780916", video_url: "https://embed-ssl.wistia.com/deliveries/c951c07cedadced7e1d2291c60a8dc22d90ac90a.mp4" },
   
-  // Cranial Page 2
-  { category: "Cranial Nerves", title: "Cranial Nerve X (Vagus)", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/cranial/vagus", video_url: null },
-  { category: "Cranial Nerves", title: "Cranial Nerve XI (Accessory)", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/cranial/accessory", video_url: null },
-  { category: "Cranial Nerves", title: "Cranial Nerve XII (Hypoglossal)", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/cranial/hypoglossal", video_url: null },
-  { category: "Cranial Nerves", title: "Demo: Cranial Nerve Assessment", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/cranial/demo-assessment", video_url: null },
-  { category: "Cranial Nerves", title: "Demo: Cranial Nerve Correction", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/cranial/demo-correction", video_url: null },
-  { category: "Cranial Nerves", title: "Q&A Mentoring Call - 12/14/2023 (Cranial Nerves Homework)", page_url: "https://functional-neuro-health.mykajabi.com/products/foundations/cranial/qa-homework", video_url: null },
+  // Corrected Cranial Nerves (Page 2)
+  { category: "Cranial Nerves", title: "Cranial Nerve X (Vagus)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780917", video_url: null },
+  { category: "Cranial Nerves", title: "Cranial Nerve XI (Accessory)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780918", video_url: null },
+  { category: "Cranial Nerves", title: "Cranial Nerve XII (Hypoglossal)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780919", video_url: null },
+  { category: "Cranial Nerves", title: "Demo: Cranial Nerve Assessment", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780920", video_url: null },
+  { category: "Cranial Nerves", title: "Demo: Cranial Nerve Correction", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780921", video_url: null },
+  { category: "Cranial Nerves", title: "Q&A Mentoring Call - 12/14/2023 (Cranial Nerves Homework)", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152127509/posts/2167780922", video_url: null },
 
   { category: "Emotional Corrections", title: "Lecture: Emotional Corrections", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152249762/posts/2165230137", video_url: "https://embed-ssl.wistia.com/deliveries/8ddc33c93e37dbd198427d6c7da016a7.mp4" },
   { category: "Emotional Corrections", title: "In class Lecture and Demo: Emotions", page_url: "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152249762/posts/2172678455", video_url: "https://embed-ssl.wistia.com/deliveries/74f72fb98cf3019e50d1e310df99a4ef93cc2b19.mp4" },
@@ -170,10 +169,11 @@ Deno.serve(async (req: Request) => {
       throw new Error("user_id is required");
     }
 
-    // 1. Filter out any duplicate page_urls in the VERIFIED_MAP to prevent upsert conflicts
+    // 1. Deduplicate the map based on page_url
     const uniqueMap = Array.from(new Map(VERIFIED_MAP.map(item => [item.page_url, item])).values());
+    console.log(`[sync-course] Verified Map contains ${VERIFIED_MAP.length} items. Unique items: ${uniqueMap.length}`);
 
-    // 2. Map the verified data to the user's lessons table
+    // 2. Map to database schema
     const lessonsToInsert = uniqueMap.map((item: any) => ({
       user_id: user_id,
       lesson_url: item.page_url,
@@ -183,20 +183,30 @@ Deno.serve(async (req: Request) => {
       category: item.category,
     }));
     
-    console.log(`[sync-course] Upserting ${lessonsToInsert.length} unique lessons...`);
+    // 3. Log every single item being sent to Postgres
+    console.log("[sync-course] --- BEGIN UPSERT LIST ---");
+    lessonsToInsert.forEach((l, i) => {
+      console.log(`[sync-course] [${i+1}/${lessonsToInsert.length}] Title: "${l.title}" | URL: ${l.lesson_url}`);
+    });
+    console.log("[sync-course] --- END UPSERT LIST ---");
 
-    // 3. Use upsert to handle existing records gracefully
+    // 4. Perform the upsert
     const { data, error: upsertError } = await supabaseAdmin
       .from('lessons')
       .upsert(lessonsToInsert, { onConflict: 'user_id,lesson_url' })
-      .select('id');
+      .select('id, title');
 
     if (upsertError) {
-      console.error("[sync-course] Upsert error:", upsertError);
+      console.error("[sync-course] DATABASE ERROR:", upsertError);
       throw upsertError;
     }
 
-    console.log(`[sync-course] Sync completed. Processed ${data?.length || 0} records.`);
+    console.log(`[sync-course] SUCCESS: Upserted ${data?.length || 0} records.`);
+    
+    // Log a few samples of what was actually saved
+    if (data && data.length > 0) {
+      console.log("[sync-course] Sample of saved records:", data.slice(0, 5).map(d => d.title));
+    }
 
     return new Response(JSON.stringify({ 
       message: 'Course data synced successfully.',
@@ -207,7 +217,7 @@ Deno.serve(async (req: Request) => {
     })
 
   } catch (error: any) {
-    console.error("[sync-course] Fatal error:", error.message);
+    console.error("[sync-course] FATAL ERROR:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
