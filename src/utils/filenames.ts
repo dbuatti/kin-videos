@@ -18,6 +18,7 @@ export const FOUNDATIONS_MODULE_ORDER = [
   "General / Intro",
   "Course Introduction & Foundational Knowledge",
   "Clinical Assessments",
+  "Cogs",
   "Direct Muscle Tests",
   "Beginning Procedures - Sympathetic Down Regulation",
   "Lymphatic System Assessment and Correction",

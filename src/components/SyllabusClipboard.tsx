@@ -28,8 +28,6 @@ Autonomic Nervous System Overview 🔗 Page: https://functional-neuro-health.myk
 Clinical Assessments
 BOLT Test 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167251417 🎥 Video: https://embed-ssl.wistia.com/deliveries/ce764cc10222173fa80c6d8c6a3d90210f4cf1a1.mp4
 
-Cogs Demo 🔗 Page: https://share.descript.com/view/RbM1PWQjiXA 🎥 Video: https://share.descript.com/view/RbM1PWQjiXA
-
 Breathing Assessment Quiz 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2167619695 🎥 Video: No Video ID found on page
 
 Lecture: Muscle Testing Fundamentals 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2164865269 🎥 Video: https://embed-ssl.wistia.com/deliveries/e37292d9950da2bf0a17301a86271c77.mp4
@@ -42,10 +40,13 @@ Lecture: Therapy Localisation 🔗 Page: https://functional-neuro-health.mykajab
 
 Lecture: Intention Based Muscle Testing 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152099724/posts/2164893984 🎥 Video: https://embed-ssl.wistia.com/deliveries/d184f429aeadf32399cea00daff99282.mp4
 
-Direct Muscle Tests
-Muscle Tests: Intrinsic Stabilisation System 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164756677 🎥 Video: https://embed-ssl.wistia.com/deliveries/364abce3a360a7845926d9d775c0b462.mp4
+Cogs
+Cogs Demo 🔗 Page: https://share.descript.com/view/RbM1PWQjiXA 🎥 Video: https://share.descript.com/view/RbM1PWQjiXA
 
 COGS Muscle Testing 🔗 Page: https://share.descript.com/view/EzVZo3b5G0r 🎥 Video: https://share.descript.com/view/EzVZo3b5G0r
+
+Direct Muscle Tests
+Muscle Tests: Intrinsic Stabilisation System 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164756677 🎥 Video: https://embed-ssl.wistia.com/deliveries/364abce3a360a7845926d9d775c0b462.mp4
 
 Muscle Tests: Transverse Abdominals 🔗 Page: https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations/categories/2152591139/posts/2164655470 🎥 Video: https://embed-ssl.wistia.com/deliveries/6b766a1d79b608a860d8b0b4886befb7.mp4
 
