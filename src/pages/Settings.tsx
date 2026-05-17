@@ -19,7 +19,9 @@ import {
   Save,
   LogOut,
   Mail,
-  CheckCircle2
+  CheckCircle2,
+  Copy,
+  Fingerprint
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { MadeWithDyad } from '@/components/made-with-dyad';
@@ -78,6 +80,13 @@ const Settings = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
+  };
+
+  const copyUserId = () => {
+    if (user?.id) {
+      navigator.clipboard.writeText(user.id);
+      showSuccess("User ID copied to clipboard!");
+    }
   };
 
   return (
@@ -199,6 +208,27 @@ const Settings = () => {
               <Badge className="bg-emerald-500/20 text-emerald-400 border-none px-3 py-1 w-fit text-[10px]">
                 <CheckCircle2 className="w-3 h-3 mr-1" /> Verified
               </Badge>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 gap-4">
+              <div className="flex items-center space-x-4">
+                <div className="bg-indigo-500/20 p-2 rounded-lg shrink-0">
+                  <Fingerprint className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">User ID</p>
+                  <p className="text-[10px] font-mono text-slate-400 truncate">{user?.id}</p>
+                </div>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={copyUserId}
+                className="h-8 text-[10px] font-bold text-indigo-400 hover:bg-indigo-400/10 rounded-lg"
+              >
+                <Copy className="w-3 h-3 mr-2" />
+                Copy ID
+              </Button>
             </div>
 
             <div className="pt-2">
