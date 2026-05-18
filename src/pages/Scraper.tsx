@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   Terminal, 
@@ -27,9 +26,9 @@ import { useAuth } from '@/integrations/supabase/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 
-const SCRAPER_V23_SCRIPT = `(async function() {
+const SCRAPER_ULTIMATE_SCRIPT = `(async function() {
   const log = (msg, color = "#4f46e5") => console.log("%c" + msg, "background: " + color + "; color: white; padding: 2px 5px; border-radius: 3px; font-weight: bold;");
-  log(" FNH Architect v23: Deep Scan Initiated ");
+  log(" FNH Architect vUltimate: Deep Metadata Scan Initiated ");
 
   const category = document.querySelector('.section__heading, h1, .syllabus__category-title')?.innerText?.trim() || "Uncategorized";
   const links = Array.from(document.querySelectorAll('a[href*="/posts/"]'))
@@ -47,20 +46,32 @@ const SCRAPER_V23_SCRIPT = `(async function() {
       const response = await fetch(url);
       const text = await response.text();
       
-      // Try to find Wistia ID or direct MP4 link
       let video_url = null;
       
-      // Pattern 1: Direct Wistia Delivery URL
-      const wistiaMp4 = text.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-z0-9]+\\.mp4/i);
-      
-      // Pattern 2: Wistia Media ID in embed code
-      const wistiaId = text.match(/wistia\\.com\\/embed\\/medias\\/([a-z0-9]+)/i) || 
-                       text.match(/wistia_async_([a-z0-9]+)/i);
+      // 1. Try to find Wistia Media ID
+      const wistiaIdMatch = text.match(/wistia\\.com\\/embed\\/medias\\/([a-z0-9]+)/i) || 
+                            text.match(/wistia_async_([a-z0-9]+)/i);
 
-      if (wistiaMp4) {
-        video_url = wistiaMp4[0];
-      } else if (wistiaId) {
-        video_url = \`https://embed-ssl.wistia.com/deliveries/\${wistiaId[1]}.mp4\`;
+      if (wistiaIdMatch) {
+        const mediaId = wistiaIdMatch[1];
+        log(\`  -> Found Wistia ID: \${mediaId}. Resolving metadata...\`, "#8b5cf6");
+        
+        try {
+          const metaRes = await fetch(\`https://fast.wistia.com/embed/medias/\${mediaId}.json\`);
+          const meta = await metaRes.json();
+          
+          // Find the best MP4 asset (original or highest bitrate)
+          const assets = meta.media.assets;
+          const mp4 = assets.find(a => a.type === 'original' && a.ext === 'mp4') || 
+                      assets.filter(a => a.ext === 'mp4').sort((a, b) => b.size - a.size)[0];
+          
+          if (mp4) {
+            video_url = mp4.url.replace('.bin', '.mp4');
+            log(\`  -> Resolved Delivery Hash: \${video_url.split('/').pop()}\`, "#10b981");
+          }
+        } catch (e) {
+          log(\`  -> Metadata resolution failed for \${mediaId}\`, "#ef4444");
+        }
       }
 
       results.push({ category, title, page_url: url, video_url });
@@ -68,15 +79,13 @@ const SCRAPER_V23_SCRIPT = `(async function() {
       console.error("Failed to fetch " + title, err);
       results.push({ category, title, page_url: url, video_url: null });
     }
-    // Small delay to avoid rate limiting
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 500));
   }
 
   log(" Scan Complete! JSON copied to clipboard. ", "#10b981");
   const finalJson = JSON.stringify(results, null, 2);
   console.log(finalJson);
   
-  // Attempt to copy to clipboard
   const el = document.createElement('textarea');
   el.value = finalJson;
   document.body.appendChild(el);
@@ -84,7 +93,7 @@ const SCRAPER_V23_SCRIPT = `(async function() {
   document.execCommand('copy');
   document.body.removeChild(el);
   
-  alert(\`Successfully scanned \${results.length} lessons from "\${category}". JSON is in your clipboard!\`);
+  alert(\`Successfully scanned \${results.length} lessons. JSON is in your clipboard!\`);
 })();`;
 
 const Scraper = () => {
@@ -248,9 +257,9 @@ const Scraper = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                   <Zap className="w-5 h-5 mr-2" />
-                  FNH Architect v23 (Deep Scan)
+                  FNH Architect vUltimate (Deep Scan)
                 </CardTitle>
-                <Button onClick={() => handleCopy(SCRAPER_V23_SCRIPT, 'v23')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                <Button onClick={() => handleCopy(SCRAPER_ULTIMATE_SCRIPT, 'Ultimate')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                   <Copy className="w-4 h-4 mr-2" />
                   Copy Script
                 </Button>
@@ -258,7 +267,7 @@ const Scraper = () => {
             </CardHeader>
             <CardContent className="p-8 space-y-6">
               <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V23_SCRIPT}</pre>
+                <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_ULTIMATE_SCRIPT}</pre>
               </ScrollArea>
             </CardContent>
           </Card>

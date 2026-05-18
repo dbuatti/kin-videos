@@ -52,8 +52,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const lastEndedTime = useRef<number>(0);
   const resumeAttemptCount = useRef<number>(0);
 
-  // Detect if this is an external embed (Loom, Descript, etc)
-  const isExternalEmbed = videoUrl.includes('loom.com') || videoUrl.includes('descript.com');
+  // Detect if this is an external embed or a Wistia Media ID (short hash)
+  const isWistiaMediaId = videoUrl.includes('wistia.com/deliveries/') && (videoUrl.split('/').pop()?.replace('.mp4', '').length || 0) <= 10;
+  const isExternalEmbed = videoUrl.includes('loom.com') || videoUrl.includes('descript.com') || isWistiaMediaId;
   
   const getEmbedUrl = (url: string) => {
     if (url.includes('loom.com/share/')) {
@@ -61,6 +62,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
     if (url.includes('share.descript.com/view/')) {
       return url.replace('/view/', '/embed/');
+    }
+    if (isWistiaMediaId) {
+      const mediaId = url.split('/').pop()?.replace('.mp4', '');
+      return `https://fast.wistia.net/embed/iframe/${mediaId}`;
     }
     return url;
   };
@@ -160,7 +165,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       media.load();
       if (autoPlay) {
         media.play().catch((err) => {
-          log(`[VideoPlayer] Initial play attempt failed: ${err.message}`, null, 'warn');
+          if (err.name !== 'AbortError') {
+            log(`[VideoPlayer] Initial play attempt failed: ${err.message}`, null, 'warn');
+          }
         });
       }
     }
@@ -220,7 +227,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     log('[VideoPlayer] Media can play');
     const media = mediaRef.current;
     if (media && autoPlay && media.paused) {
-      media.play().catch(err => log(`[VideoPlayer] Auto-play failed: ${err.message}`, null, 'warn'));
+      media.play().catch(err => {
+        if (err.name !== 'AbortError') {
+          log(`[VideoPlayer] Auto-play failed: ${err.message}`, null, 'warn');
+        }
+      });
     }
     attemptResume('handleCanPlay');
   };
@@ -296,7 +307,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const togglePlay = () => {
     if (mediaRef.current) {
       if (mediaRef.current.paused) {
-        mediaRef.current.play().catch(err => log(`[VideoPlayer] Manual play failed: ${err.message}`, null, 'error'));
+        mediaRef.current.play().catch(err => {
+          if (err.name !== 'AbortError') {
+            log(`[VideoPlayer] Manual play failed: ${err.message}`, null, 'error');
+          }
+        });
       } else {
         mediaRef.current.pause();
       }
@@ -401,7 +416,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     log('[VideoPlayer] Manual restart requested');
                     mediaRef.current.currentTime = 0;
                     saveProgress(0, mediaRef.current.duration);
-                    mediaRef.current.play().catch(err => log(`[VideoPlayer] Restart play failed: ${err.message}`, null, 'error'));
+                    mediaRef.current.play().catch(err => {
+                      if (err.name !== 'AbortError') {
+                        log(`[VideoPlayer] Restart play failed: ${err.message}`, null, 'error');
+                      }
+                    });
                   }
                 }}
               >
