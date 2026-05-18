@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Play, Download, ExternalLink, Star, Trash2 } from 'lucide-react';
+import { Play, Download, ExternalLink, Star, Trash2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { downloadFile } from '@/utils/download';
 import { useJobLessons } from '@/hooks/use-job-lessons';
+import { useVideoProgress } from '@/hooks/use-video-progress';
 
 interface GalleryVideoCardProps {
   video: any;
@@ -18,6 +19,7 @@ interface GalleryVideoCardProps {
 const GalleryVideoCard: React.FC<GalleryVideoCardProps> = ({ video }) => {
   const [isPlayerActive, setIsPlayerActive] = useState(false);
   const { deleteLesson } = useJobLessons();
+  const { watchCount } = useVideoProgress(video.id);
 
   const getThumbnailUrl = (videoUrl: string | null) => {
     if (!videoUrl) return "/placeholder.svg";
@@ -32,14 +34,20 @@ const GalleryVideoCard: React.FC<GalleryVideoCardProps> = ({ video }) => {
       "overflow-hidden border-white/5 bg-slate-900/40 hover:bg-slate-900/60 transition-all group rounded-2xl relative",
       video.isPriority && "ring-1 ring-amber-500/30 bg-amber-500/[0.02]"
     )}>
-      {video.isPriority && (
-        <div className="absolute top-3 left-3 z-10">
+      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+        {video.isPriority && (
           <Badge className="bg-amber-500 text-white border-none text-[9px] font-black uppercase tracking-widest px-2 py-0.5 shadow-lg">
             <Star className="w-2.5 h-2.5 mr-1 fill-white" />
             Priority
           </Badge>
-        </div>
-      )}
+        )}
+        {watchCount > 0 && (
+          <Badge className="bg-indigo-600 text-white border-none text-[9px] font-black uppercase tracking-widest px-2 py-0.5 shadow-lg">
+            <Eye className="w-2.5 h-2.5 mr-1 fill-white" />
+            {watchCount} {watchCount === 1 ? 'View' : 'Views'}
+          </Badge>
+        )}
+      </div>
 
       <div className="aspect-video relative bg-slate-950 overflow-hidden">
         {isPlayerActive ? (

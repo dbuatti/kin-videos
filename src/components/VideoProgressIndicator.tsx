@@ -35,13 +35,15 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
 
   const { playback_time: progress, duration, watch_count: watchCount } = data;
 
-  // Handle cases where duration is 0 or missing (like in your idx 64 data)
+  // Handle cases where duration is 0 or missing
   if (!duration || duration <= 0) {
     if (watchCount > 0) {
       return (
         <div className={cn("flex items-center space-x-2", className)}>
-          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-          <span className="text-[9px] font-bold text-emerald-500 uppercase">Watched {watchCount}x</span>
+          <div className="flex items-center bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            <Eye className="w-3 h-3 mr-1" />
+            <span className="text-[10px] font-black uppercase tracking-tight">{watchCount} {watchCount === 1 ? 'View' : 'Views'}</span>
+          </div>
         </div>
       );
     }
@@ -55,7 +57,7 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
   return (
     <div className={className}>
       {showText && (
-        <div className="flex justify-between items-center mb-1.5">
+        <div className="flex justify-between items-center mb-2">
           <div className="flex items-center space-x-2">
             <span className={cn(
               "text-[10px] font-black uppercase tracking-widest",
@@ -64,10 +66,10 @@ const VideoProgressIndicator: React.FC<VideoProgressIndicatorProps> = ({
               {isCurrentlyWatching ? `${percentage}% Watched` : (isCompleted ? "Completed" : "Not Started")}
             </span>
             {watchCount > 0 && (
-              <span className="flex items-center text-[9px] font-bold text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">
-                <Eye className="w-2.5 h-2.5 mr-1" />
-                {watchCount}x
-              </span>
+              <div className="flex items-center bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-500/30">
+                <Eye className="w-3 h-3 mr-1" />
+                <span className="text-[9px] font-black uppercase tracking-tight">{watchCount}x</span>
+              </div>
             )}
           </div>
           {isCompleted && !isCurrentlyWatching && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
