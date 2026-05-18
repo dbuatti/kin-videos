@@ -10,18 +10,13 @@ import {
   Terminal, 
   Copy, 
   Zap, 
-  ExternalLink,
-  Bug,
-  Database,
   Upload,
-  CheckCircle2,
   Loader2,
   ShieldCheck,
-  Search,
   Sparkles,
-  Download,
   FileJson,
-  Rocket
+  Rocket,
+  Database
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,10 +27,64 @@ import { useAuth } from '@/integrations/supabase/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 
-const COURSE_URL = "https://functional-neuro-health.mykajabi.com/products/functional-neuro-approach-foundations";
-
 const SCRAPER_V23_SCRIPT = `(async function() {
-  // ... (script content remains the same)
+  const log = (msg, color = "#4f46e5") => console.log("%c" + msg, "background: " + color + "; color: white; padding: 2px 5px; border-radius: 3px; font-weight: bold;");
+  log(" FNH Architect v23: Deep Scan Initiated ");
+
+  const category = document.querySelector('.section__heading, h1, .syllabus__category-title')?.innerText?.trim() || "Uncategorized";
+  const links = Array.from(document.querySelectorAll('a[href*="/posts/"]'))
+    .map(a => ({ title: a.innerText.trim().split('\\n')[0], url: a.href }))
+    .filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
+
+  log(\`Found \${links.length} lessons. Starting extraction...\`);
+
+  const results = [];
+  for (let i = 0; i < links.length; i++) {
+    const { title, url } = links[i];
+    log(\`[\${i+1}/\${links.length}] Scanning: \${title}\`, "#6366f1");
+
+    try {
+      const response = await fetch(url);
+      const text = await response.text();
+      
+      // Try to find Wistia ID or direct MP4 link
+      let video_url = null;
+      
+      // Pattern 1: Direct Wistia Delivery URL
+      const wistiaMp4 = text.match(/https:\\/\\/embed-ssl\\.wistia\\.com\\/deliveries\\/[a-z0-9]+\\.mp4/i);
+      
+      // Pattern 2: Wistia Media ID in embed code
+      const wistiaId = text.match(/wistia\\.com\\/embed\\/medias\\/([a-z0-9]+)/i) || 
+                       text.match(/wistia_async_([a-z0-9]+)/i);
+
+      if (wistiaMp4) {
+        video_url = wistiaMp4[0];
+      } else if (wistiaId) {
+        video_url = \`https://embed-ssl.wistia.com/deliveries/\${wistiaId[1]}.mp4\`;
+      }
+
+      results.push({ category, title, page_url: url, video_url });
+    } catch (err) {
+      console.error("Failed to fetch " + title, err);
+      results.push({ category, title, page_url: url, video_url: null });
+    }
+    // Small delay to avoid rate limiting
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  log(" Scan Complete! JSON copied to clipboard. ", "#10b981");
+  const finalJson = JSON.stringify(results, null, 2);
+  console.log(finalJson);
+  
+  // Attempt to copy to clipboard
+  const el = document.createElement('textarea');
+  el.value = finalJson;
+  document.body.appendChild(el);
+  el.select();
+  document.execCommand('copy');
+  document.body.removeChild(el);
+  
+  alert(\`Successfully scanned \${results.length} lessons from "\${category}". JSON is in your clipboard!\`);
 })();`;
 
 const Scraper = () => {
@@ -54,9 +103,7 @@ const Scraper = () => {
       const { data, error } = await supabase.functions.invoke('sync-course', {
         body: { user_id: user.id }
       });
-
       if (error) throw error;
-      
       showSuccess("Foundations Course archived successfully!");
       queryClient.invalidateQueries({ queryKey: ['allLessons'] });
       navigate('/gallery');
@@ -77,14 +124,12 @@ const Scraper = () => {
       showError("No lessons to export.");
       return;
     }
-    
     const exportData = lessons.map(l => ({
       category: l.category,
       title: l.title,
       page_url: l.lesson_url,
       video_url: l.video_url
     }));
-
     navigator.clipboard.writeText(JSON.stringify(exportData, null, 2));
     showSuccess("Full library JSON copied to clipboard!");
   };
@@ -95,12 +140,10 @@ const Scraper = () => {
       showError("Please paste the JSON first.");
       return;
     }
-
     setIsImporting(true);
     try {
       const data = JSON.parse(importJson);
       if (!Array.isArray(data)) throw new Error("Invalid format: Expected an array of lessons.");
-
       const lessonsToInsert = data.map((item: any) => ({
         user_id: user.id,
         lesson_url: item.page_url,
@@ -109,13 +152,10 @@ const Scraper = () => {
         status: item.video_url ? 'completed' : 'failed',
         category: item.category || 'Uncategorized',
       }));
-
       const { error } = await supabase
         .from('lessons')
         .upsert(lessonsToInsert, { onConflict: 'user_id,lesson_url' });
-
       if (error) throw error;
-
       showSuccess(`Successfully imported ${lessonsToInsert.length} lessons!`);
       setImportJson('');
       queryClient.invalidateQueries({ queryKey: ['allLessons'] });
@@ -143,20 +183,11 @@ const Scraper = () => {
           </div>
         </div>
         <div className="flex items-center space-x-3">
-          <Button 
-            variant="outline" 
-            onClick={handleExportLibrary}
-            className="border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 rounded-xl h-12 px-6 font-bold"
-          >
+          <Button variant="outline" onClick={handleExportLibrary} className="border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 rounded-xl h-12 px-6 font-bold">
             <FileJson className="w-4 h-4 mr-2" />
             Export JSON
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => cleanJunk()} 
-            disabled={isCleaning}
-            className="border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-xl h-12 px-6 font-bold"
-          >
+          <Button variant="outline" onClick={() => cleanJunk()} disabled={isCleaning} className="border-amber-500/20 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-xl h-12 px-6 font-bold">
             {isCleaning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
             Clean Junk
           </Button>
@@ -164,7 +195,6 @@ const Scraper = () => {
       </header>
 
       <main className="space-y-12">
-        {/* NEW: One-Click Archive Section */}
         <section className="space-y-6">
           <div className="flex items-center space-x-2 text-primary">
             <Rocket className="w-5 h-5" />
@@ -175,19 +205,11 @@ const Scraper = () => {
               <div className="space-y-4 text-center md:text-left">
                 <h3 className="text-2xl font-black text-white tracking-tight">Foundations Course</h3>
                 <p className="text-slate-400 text-sm max-w-md leading-relaxed">
-                  Instantly populate your library with all 60+ verified lessons, categories, and video links. No scraping required.
+                  Instantly populate your library with all 60+ verified lessons. No scraping required.
                 </p>
               </div>
-              <Button 
-                onClick={handleArchiveCourse} 
-                disabled={isArchiving}
-                className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-10 py-8 h-auto font-black text-lg shadow-2xl shadow-primary/20 transition-all transform hover:scale-105 active:scale-95 shrink-0"
-              >
-                {isArchiving ? (
-                  <><Loader2 className="w-6 h-6 mr-3 animate-spin" /> Archiving...</>
-                ) : (
-                  <><Zap className="w-6 h-6 mr-3 fill-current" /> Archive Course Now</>
-                )}
+              <Button onClick={handleArchiveCourse} disabled={isArchiving} className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-10 py-8 h-auto font-black text-lg shadow-2xl shadow-primary/20 transition-all transform hover:scale-105 active:scale-95 shrink-0">
+                {isArchiving ? <><Loader2 className="w-6 h-6 mr-3 animate-spin" /> Archiving...</> : <><Zap className="w-6 h-6 mr-3 fill-current" /> Archive Course Now</>}
               </Button>
             </CardContent>
           </Card>
@@ -209,16 +231,8 @@ const Scraper = () => {
                   onChange={(e) => setImportJson(e.target.value)}
                 />
               </div>
-              <Button 
-                onClick={handleManualImport} 
-                disabled={isImporting || !importJson.trim()}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-14 font-black shadow-lg shadow-emerald-500/20"
-              >
-                {isImporting ? (
-                  <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Importing...</>
-                ) : (
-                  <><Upload className="w-5 h-5 mr-2" /> Sync to My Library</>
-                )}
+              <Button onClick={handleManualImport} disabled={isImporting || !importJson.trim()} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-14 font-black shadow-lg shadow-emerald-500/20">
+                {isImporting ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Importing...</> : <><Upload className="w-5 h-5 mr-2" /> Sync to My Library</>}
               </Button>
             </CardContent>
           </Card>
@@ -229,41 +243,25 @@ const Scraper = () => {
             <ShieldCheck className="w-5 h-5" />
             <h2 className="text-sm font-black uppercase tracking-widest">Live Scraper Tools</h2>
           </div>
-          
-          <Tabs defaultValue="v23" className="w-full">
-            <TabsList className="bg-white/5 border border-white/5 p-1 rounded-2xl mb-6">
-              <TabsTrigger value="v23" className="rounded-xl px-6 font-bold data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
-                <Zap className="w-4 h-4 mr-2" />
-                Architect v23
-              </TabsTrigger>
-              <TabsTrigger value="v16" className="rounded-xl px-6 font-bold data-[state=active]:bg-slate-800 data-[state=active]:text-white">
-                <Bug className="w-4 h-4 mr-2" />
-                Titan v16
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="v23">
-              <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-                <CardHeader className="border-b border-white/5 py-6">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
-                      <Zap className="w-5 h-5 mr-2" />
-                      FNH Architect v23 (Deep Scan)
-                    </CardTitle>
-                    <Button onClick={() => handleCopy(SCRAPER_V23_SCRIPT, 'v23')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Script
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-8 space-y-6">
-                  <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                    <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V23_SCRIPT}</pre>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+            <CardHeader className="border-b border-white/5 py-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
+                  <Zap className="w-5 h-5 mr-2" />
+                  FNH Architect v23 (Deep Scan)
+                </CardTitle>
+                <Button onClick={() => handleCopy(SCRAPER_V23_SCRIPT, 'v23')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Script
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_V23_SCRIPT}</pre>
+              </ScrollArea>
+            </CardContent>
+          </Card>
         </section>
       </main>
 
