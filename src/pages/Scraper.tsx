@@ -26,74 +26,82 @@ import { useAuth } from '@/integrations/supabase/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 
-const SCRAPER_ULTIMATE_SCRIPT = `(async function() {
+const SCRAPER_MASTER_CRAWLER = `(async function() {
   const log = (msg, color = "#4f46e5") => console.log("%c" + msg, "background: " + color + "; color: white; padding: 2px 5px; border-radius: 3px; font-weight: bold;");
-  log(" FNH Architect vUltimate: Deep Metadata Scan Initiated ");
+  log(" FNH Architect v25: Master Syllabus Crawler Initiated ");
 
-  const category = document.querySelector('.section__heading, h1, .syllabus__category-title')?.innerText?.trim() || "Uncategorized";
-  const links = Array.from(document.querySelectorAll('a[href*="/posts/"]'))
-    .map(a => ({ title: a.innerText.trim().split('\\n')[0], url: a.href }))
-    .filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
-
-  log(\`Found \${links.length} lessons. Starting extraction...\`);
-
+  const isSyllabusPage = !!document.querySelector('.syllabus__categories, .product-syllabus');
   const results = [];
-  for (let i = 0; i < links.length; i++) {
-    const { title, url } = links[i];
-    log(\`[\${i+1}/\${links.length}] Scanning: \${title}\`, "#6366f1");
 
-    try {
-      const response = await fetch(url);
-      const text = await response.text();
-      
-      let video_url = null;
-      
-      // 1. Try to find Wistia Media ID
-      const wistiaIdMatch = text.match(/wistia\\.com\\/embed\\/medias\\/([a-z0-9]+)/i) || 
-                            text.match(/wistia_async_([a-z0-9]+)/i);
+  async function extractLessonsFromPage(url, categoryName) {
+    log(\`  -> Scanning Page: \${url}\`, "#6366f1");
+    const res = await fetch(url);
+    const html = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
 
-      if (wistiaIdMatch) {
-        const mediaId = wistiaIdMatch[1];
-        log(\`  -> Found Wistia ID: \${mediaId}. Resolving metadata...\`, "#8b5cf6");
+    const links = Array.from(doc.querySelectorAll('a[href*="/posts/"]'))
+      .map(a => ({ title: a.innerText.trim().split('\\n')[0], url: a.href }))
+      .filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
+
+    for (let i = 0; i < links.length; i++) {
+      const { title, url: lessonUrl } = links[i];
+      log(\`    [\${i+1}/\${links.length}] Extracting Video: \${title}\`, "#8b5cf6");
+      
+      try {
+        const lessonRes = await fetch(lessonUrl);
+        const lessonHtml = await lessonRes.text();
         
-        try {
+        let video_url = null;
+        const wistiaIdMatch = lessonHtml.match(/wistia\\\\.com\\\\/embed\\\\/medias\\\\/([a-z0-9]+)/i) || 
+                              lessonHtml.match(/wistia_async_([a-z0-9]+)/i);
+
+        if (wistiaIdMatch) {
+          const mediaId = wistiaIdMatch[1];
           const metaRes = await fetch(\`https://fast.wistia.com/embed/medias/\${mediaId}.json\`);
           const meta = await metaRes.json();
-          
-          // Find the best MP4 asset (original or highest bitrate)
           const assets = meta.media.assets;
           const mp4 = assets.find(a => a.type === 'original' && a.ext === 'mp4') || 
                       assets.filter(a => a.ext === 'mp4').sort((a, b) => b.size - a.size)[0];
-          
-          if (mp4) {
-            video_url = mp4.url.replace('.bin', '.mp4');
-            log(\`  -> Resolved Delivery Hash: \${video_url.split('/').pop()}\`, "#10b981");
-          }
-        } catch (e) {
-          log(\`  -> Metadata resolution failed for \${mediaId}\`, "#ef4444");
+          if (mp4) video_url = mp4.url.replace('.bin', '.mp4');
         }
+        results.push({ category: categoryName, title, page_url: lessonUrl, video_url });
+      } catch (e) {
+        results.push({ category: categoryName, title, page_url: lessonUrl, video_url: null });
       }
-
-      results.push({ category, title, page_url: url, video_url });
-    } catch (err) {
-      console.error("Failed to fetch " + title, err);
-      results.push({ category, title, page_url: url, video_url: null });
+      await new Promise(r => setTimeout(r, 300));
     }
-    await new Promise(r => setTimeout(r, 500));
+
+    // Check for pagination (Next Page)
+    const nextLink = doc.querySelector('a[rel="next"], .next_page a');
+    if (nextLink && nextLink.href !== url) {
+      await extractLessonsFromPage(nextLink.href, categoryName);
+    }
   }
 
-  log(" Scan Complete! JSON copied to clipboard. ", "#10b981");
+  if (isSyllabusPage) {
+    const categories = Array.from(document.querySelectorAll('.syllabus__category-title a, .category-card a'))
+      .map(a => ({ name: a.innerText.trim(), url: a.href }));
+    
+    log(\`Found \${categories.length} categories. Starting full course crawl...\`);
+    for (const cat of categories) {
+      log(\`CRAWLING CATEGORY: \${cat.name}\`, "#10b981");
+      await extractLessonsFromPage(cat.url, cat.name);
+    }
+  } else {
+    const category = document.querySelector('.section__heading, h1, .syllabus__category-title')?.innerText?.trim() || "Uncategorized";
+    await extractLessonsFromPage(window.location.href, category);
+  }
+
+  log(" Crawl Complete! JSON copied to clipboard. ", "#10b981");
   const finalJson = JSON.stringify(results, null, 2);
-  console.log(finalJson);
-  
   const el = document.createElement('textarea');
   el.value = finalJson;
   document.body.appendChild(el);
   el.select();
   document.execCommand('copy');
   document.body.removeChild(el);
-  
-  alert(\`Successfully scanned \${results.length} lessons. JSON is in your clipboard!\`);
+  alert(\`Successfully crawled \${results.length} lessons. JSON is in your clipboard!\`);
 })();`;
 
 const Scraper = () => {
@@ -225,6 +233,35 @@ const Scraper = () => {
         </section>
 
         <section className="space-y-6">
+          <div className="flex items-center space-x-2 text-blue-400">
+            <ShieldCheck className="w-5 h-5" />
+            <h2 className="text-sm font-black uppercase tracking-widest">Live Scraper Tools</h2>
+          </div>
+          <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
+            <CardHeader className="border-b border-white/5 py-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
+                  <Zap className="w-5 h-5 mr-2" />
+                  FNH Master Crawler (v25)
+                </CardTitle>
+                <Button onClick={() => handleCopy(SCRAPER_MASTER_CRAWLER, 'Master Crawler')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Script
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              <p className="text-xs text-slate-400">
+                Run this on the <strong>Main Syllabus Page</strong> to crawl the entire course, or on a <strong>Category Page</strong> to crawl just that module (including Page 2).
+              </p>
+              <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
+                <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_MASTER_CRAWLER}</pre>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="space-y-6">
           <div className="flex items-center space-x-2 text-emerald-400">
             <Database className="w-5 h-5" />
             <h2 className="text-sm font-black uppercase tracking-widest">Manual Import</h2>
@@ -243,32 +280,6 @@ const Scraper = () => {
               <Button onClick={handleManualImport} disabled={isImporting || !importJson.trim()} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl h-14 font-black shadow-lg shadow-emerald-500/20">
                 {isImporting ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Importing...</> : <><Upload className="w-5 h-5 mr-2" /> Sync to My Library</>}
               </Button>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="space-y-6">
-          <div className="flex items-center space-x-2 text-blue-400">
-            <ShieldCheck className="w-5 h-5" />
-            <h2 className="text-sm font-black uppercase tracking-widest">Live Scraper Tools</h2>
-          </div>
-          <Card className="border-white/5 bg-slate-900/40 backdrop-blur-xl rounded-[2rem] overflow-hidden">
-            <CardHeader className="border-b border-white/5 py-6">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
-                  <Zap className="w-5 h-5 mr-2" />
-                  FNH Architect vUltimate (Deep Scan)
-                </CardTitle>
-                <Button onClick={() => handleCopy(SCRAPER_ULTIMATE_SCRIPT, 'Ultimate')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy Script
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-              <ScrollArea className="h-[200px] w-full bg-black/40 rounded-2xl border border-white/5">
-                <pre className="p-6 text-indigo-400/50 font-mono text-[10px] leading-relaxed">{SCRAPER_ULTIMATE_SCRIPT}</pre>
-              </ScrollArea>
             </CardContent>
           </Card>
         </section>

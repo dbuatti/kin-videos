@@ -40,7 +40,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasStarted, setHasStarted] = useState(autoPlay);
-  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   
@@ -52,17 +52,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const lastEndedTime = useRef<number>(0);
   const resumeAttemptCount = useRef<number>(0);
 
-  // Detect if this is an external embed or a Wistia Media ID (short hash)
   const isWistiaMediaId = videoUrl.includes('wistia.com/deliveries/') && (videoUrl.split('/').pop()?.replace('.mp4', '').length || 0) <= 10;
   const isExternalEmbed = videoUrl.includes('loom.com') || videoUrl.includes('descript.com') || isWistiaMediaId;
   
   const getEmbedUrl = (url: string) => {
-    if (url.includes('loom.com/share/')) {
-      return url.replace('/share/', '/embed/');
-    }
-    if (url.includes('share.descript.com/view/')) {
-      return url.replace('/view/', '/embed/');
-    }
+    if (url.includes('loom.com/share/')) return url.replace('/share/', '/embed/');
+    if (url.includes('share.descript.com/view/')) return url.replace('/view/', '/embed/');
     if (isWistiaMediaId) {
       const mediaId = url.split('/').pop()?.replace('.mp4', '');
       return `https://fast.wistia.net/embed/iframe/${mediaId}`;
@@ -70,84 +65,42 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return url;
   };
 
-  // Media Session API
   useEffect(() => {
     if ('mediaSession' in navigator && title) {
-      log(`[VideoPlayer] Setting MediaSession for: ${title}`);
       const artworkUrl = posterUrl || 'https://xebtjnvfkroiplyzftas.supabase.co/storage/v1/object/public/assets/fnh-logo.png';
-      
       navigator.mediaSession.metadata = new MediaMetadata({
         title: title,
         artist: category || 'FNH Foundations',
         artwork: [{ src: artworkUrl, sizes: '512x512', type: 'image/png' }]
       });
-
       navigator.mediaSession.setActionHandler('play', () => mediaRef.current?.play());
       navigator.mediaSession.setActionHandler('pause', () => mediaRef.current?.pause());
-      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
-        if (mediaRef.current) mediaRef.current.currentTime -= (details.seekOffset || 10);
-      });
-      navigator.mediaSession.setActionHandler('seekforward', (details) => {
-        if (mediaRef.current) mediaRef.current.currentTime += (details.seekOffset || 10);
-      });
-      
       if (onNext) navigator.mediaSession.setActionHandler('nexttrack', onNext);
       if (onPrevious) navigator.mediaSession.setActionHandler('previoustrack', onPrevious);
     }
   }, [title, category, posterUrl, videoUrl, onNext, onPrevious]);
 
-  // Speed Enforcement
   useEffect(() => {
     const media = mediaRef.current;
     if (!media || isExternalEmbed) return;
-    const enforceSpeed = () => {
-      if (media.playbackRate !== speed) {
-        log(`[VideoPlayer] Enforcing speed: ${speed}x`);
-        media.playbackRate = speed;
-      }
-    };
-    media.addEventListener('ratechange', enforceSpeed);
-    media.addEventListener('play', enforceSpeed);
     media.playbackRate = speed;
-    return () => {
-      media.removeEventListener('ratechange', enforceSpeed);
-      media.removeEventListener('play', enforceSpeed);
-    };
   }, [speed, videoUrl, isExternalEmbed]);
 
-  // Save progress on unmount, visibility change, or beforeunload
   useEffect(() => {
     if (isExternalEmbed) return;
-
     const saveCurrentProgress = () => {
       if (mediaRef.current && isReady && mediaRef.current.currentTime > 0) {
-        log(`[VideoPlayer] Saving progress for ${effectiveKey}: ${mediaRef.current.currentTime.toFixed(2)}s`);
         saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
       }
     };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        saveCurrentProgress();
-      }
-    };
-
-    const handleBeforeUnload = () => {
-      saveCurrentProgress();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
+    window.addEventListener('beforeunload', saveCurrentProgress);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('beforeunload', saveCurrentProgress);
       saveCurrentProgress();
     };
   }, [isReady, saveProgress, effectiveKey, isExternalEmbed]);
 
   useEffect(() => {
-    log(`[VideoPlayer] Loading new media: ${effectiveKey}`, { url: videoUrl });
     setError(null);
     setIsReady(false);
     hasSuccessfullyResumed.current = false;
@@ -164,157 +117,52 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (media) {
       media.load();
       if (autoPlay) {
-        media.play().catch((err) => {
-          if (err.name !== 'AbortError') {
-            log(`[VideoPlayer] Initial play attempt failed: ${err.message}`, null, 'warn');
-          }
-        });
+        media.play().catch(() => {});
       }
     }
   }, [videoUrl, autoPlay, effectiveKey, isExternalEmbed]);
 
-  const attemptResume = (source: string) => {
+  const attemptResume = () => {
     const media = mediaRef.current;
     if (!media || !isReady || hasSuccessfullyResumed.current || progress <= 1 || isExternalEmbed) return;
-
-    if (media.currentTime > progress + 1) {
-      log(`[VideoPlayer] Skipping resume from ${source}, already past progress point`);
-      hasSuccessfullyResumed.current = true;
-      return;
-    }
-
     const seekTime = Math.min(progress, media.duration - 1);
     if (seekTime <= 0) return;
-
-    log(`[VideoPlayer] [Resume] Attempting seek from ${source} to ${seekTime.toFixed(2)}s (Duration: ${media.duration.toFixed(2)}s)`);
-
     try {
       media.currentTime = seekTime;
-      lastSavedTime.current = seekTime;
-      
-      setTimeout(() => {
-        if (media && Math.abs(media.currentTime - seekTime) < 2) {
-          log(`[VideoPlayer] [Resume] Seek verified successful at ${media.currentTime.toFixed(2)}s`);
-          hasSuccessfullyResumed.current = true;
-        } else if (resumeAttemptCount.current < 3) {
-          resumeAttemptCount.current++;
-          log(`[VideoPlayer] [Resume] Seek verification failed, retrying (${resumeAttemptCount.current}/3)...`);
-          attemptResume('retry');
-        }
-      }, 250);
-    } catch (e: any) {
-      log(`[VideoPlayer] [Resume] Seek error: ${e.message}`, null, 'error');
-    }
+      hasSuccessfullyResumed.current = true;
+    } catch (e) {}
   };
-
-  useEffect(() => {
-    if (isReady && progress > 1 && !hasSuccessfullyResumed.current && !isExternalEmbed) {
-      const timer = setTimeout(() => attemptResume('isReady/progress effect'), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [isReady, progress, isExternalEmbed]);
 
   const handleLoadedMetadata = () => {
     if (mediaRef.current) {
-      log(`[VideoPlayer] Metadata loaded. Duration: ${mediaRef.current.duration.toFixed(2)}s`);
       mediaRef.current.playbackRate = speed;
       setIsReady(true);
-      setTimeout(() => attemptResume('handleLoadedMetadata'), 200);
-    }
-  };
-
-  const handleCanPlay = () => {
-    log('[VideoPlayer] Media can play');
-    const media = mediaRef.current;
-    if (media && autoPlay && media.paused) {
-      media.play().catch(err => {
-        if (err.name !== 'AbortError') {
-          log(`[VideoPlayer] Auto-play failed: ${err.message}`, null, 'warn');
-        }
-      });
-    }
-    attemptResume('handleCanPlay');
-  };
-
-  const handleTimeUpdate = () => {
-    const media = mediaRef.current;
-    if (media && !media.paused && isReady) {
-      const currentTime = media.currentTime;
-      if (currentTime > lastSavedTime.current + 3) {
-        log(`[VideoPlayer] Periodic save for ${effectiveKey}: ${currentTime.toFixed(2)}s`);
-        saveProgress(currentTime, media.duration);
-        lastSavedTime.current = currentTime;
-      }
+      attemptResume();
     }
   };
 
   const handlePlay = () => {
-    log('[VideoPlayer] Playback started');
     setHasStarted(true);
     setIsPlaying(true);
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
-    
-    if (!hasSuccessfullyResumed.current && progress > 1) {
-      attemptResume('handlePlay');
-    }
+    if (!hasSuccessfullyResumed.current && progress > 1) attemptResume();
   };
 
-  const handlePause = () => {
-    log('[VideoPlayer] Playback paused');
-    setIsPlaying(false);
-    if (mediaRef.current && isReady && mediaRef.current.currentTime > 0) {
-      log(`[VideoPlayer] Pause save for ${effectiveKey}: ${mediaRef.current.currentTime.toFixed(2)}s`);
-      saveProgress(mediaRef.current.currentTime, mediaRef.current.duration);
-    }
-    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
-  };
+  const handlePause = () => setIsPlaying(false);
 
   const handleEnded = () => {
     const media = mediaRef.current;
     if (!media) return;
-
     const now = Date.now();
-    const timeSinceLastEnd = now - lastEndedTime.current;
-    
-    log(`[VideoPlayer] Playback ended event. CurrentTime: ${media.currentTime.toFixed(2)}s, Duration: ${media.duration.toFixed(2)}s, Time since last end: ${timeSinceLastEnd}ms`);
-
-    if (timeSinceLastEnd < 3000) {
-      log(`[VideoPlayer] Ignoring duplicate ended event (too soon)`);
-      return;
-    }
-
-    if (media.duration > 0 && media.currentTime < media.duration - 5) {
-      log(`[VideoPlayer] Ignoring premature ended event (currentTime ${media.currentTime.toFixed(2)}s is not near duration ${media.duration.toFixed(2)}s)`);
-      return;
-    }
-
+    if (now - lastEndedTime.current < 3000) return;
     lastEndedTime.current = now;
     incrementWatchCount();
-    
-    if (onEnded) {
-      log(`[VideoPlayer] Triggering onEnded callback`);
-      setTimeout(onEnded, 500);
-    }
-  };
-
-  const handleMediaError = (e: any) => {
-    const mediaElement = e.target as HTMLMediaElement;
-    const errorMsg = `Media Error: ${mediaElement.error?.code} - ${mediaElement.error?.message}`;
-    log(`[VideoPlayer] ${errorMsg}`, null, 'error');
-    setError(errorMsg);
+    if (onEnded) setTimeout(onEnded, 500);
   };
 
   const togglePlay = () => {
     if (mediaRef.current) {
-      if (mediaRef.current.paused) {
-        mediaRef.current.play().catch(err => {
-          if (err.name !== 'AbortError') {
-            log(`[VideoPlayer] Manual play failed: ${err.message}`, null, 'error');
-          }
-        });
-      } else {
-        mediaRef.current.pause();
-      }
+      if (mediaRef.current.paused) mediaRef.current.play().catch(() => {});
+      else mediaRef.current.pause();
     }
   };
 
@@ -331,101 +179,56 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {error ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 p-6 text-center z-30">
           <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-          <p className="text-slate-400 text-sm mb-4">{error}</p>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>Retry</Button>
         </div>
       ) : isExternalEmbed ? (
-        <div className="w-full h-full flex flex-col">
-          <iframe
-            src={getEmbedUrl(videoUrl)}
-            className="w-full h-full border-none"
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-          />
-          <div className="absolute bottom-4 right-4 z-20">
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="bg-black/60 hover:bg-black/80 text-white border-none backdrop-blur-md text-[10px] font-bold h-8"
-              asChild
-            >
-              <a href={videoUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-3 h-3 mr-2" />
-                Open Original
-              </a>
-            </Button>
-          </div>
-        </div>
+        <iframe src={getEmbedUrl(videoUrl)} className="w-full h-full border-none" allow="autoplay; fullscreen" allowFullScreen />
       ) : (
         <>
           {isAudioOnly ? (
             <audio
               ref={mediaRef as React.RefObject<HTMLAudioElement>}
               src={videoUrl}
-              preload="auto"
               onLoadedMetadata={handleLoadedMetadata}
-              onCanPlay={handleCanPlay}
-              onTimeUpdate={handleTimeUpdate}
               onPlay={handlePlay}
               onPause={handlePause}
               onEnded={handleEnded}
-              onError={handleMediaError}
-              className="opacity-0 pointer-events-none absolute w-1 h-1"
+              className="opacity-0 absolute w-1 h-1"
             />
           ) : (
             <video
               ref={mediaRef as React.RefObject<HTMLVideoElement>}
               src={videoUrl}
-              className="w-full h-full object-contain opacity-90 group-hover:opacity-100 transition-opacity"
+              className="w-full h-full object-contain"
               controls={hasStarted}
-              preload="auto"
               poster={posterUrl}
               playsInline
-              webkit-playsinline="true"
               onLoadedMetadata={handleLoadedMetadata}
-              onCanPlay={handleCanPlay}
-              onTimeUpdate={handleTimeUpdate}
               onPlay={handlePlay}
               onPause={handlePause}
               onEnded={handleEnded}
-              onError={handleMediaError}
             />
           )}
         </>
       )}
       
-      {!error && !isExternalEmbed && (!hasStarted || (!isPlaying && hasStarted)) && (
-        <div 
-          className="absolute inset-0 flex items-center justify-center bg-black/20 transition-opacity group-hover:bg-black/10 cursor-pointer z-20"
-          onClick={togglePlay}
-        >
+      {!error && !isExternalEmbed && !hasStarted && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer z-20" onClick={togglePlay}>
           <PlayCircle className="w-16 h-16 text-white drop-shadow-2xl opacity-80 group-hover:opacity-100 transition-all transform group-hover:scale-110" />
-          
-          {!hasStarted && progress && progress > 1 && (
-            <div className="absolute bottom-16 left-4 right-4 flex justify-between items-center pointer-events-auto">
-              <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-lg">
+          {progress > 1 && (
+            <div className="absolute bottom-16 left-4 right-4 flex justify-between items-center">
+              <div className="bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md">
                 RESUMING AT {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')}
               </div>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="h-7 px-2 bg-white/20 hover:bg-white/40 text-white border-none backdrop-blur-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (mediaRef.current) {
-                    log('[VideoPlayer] Manual restart requested');
-                    mediaRef.current.currentTime = 0;
-                    saveProgress(0, mediaRef.current.duration);
-                    mediaRef.current.play().catch(err => {
-                      if (err.name !== 'AbortError') {
-                        log(`[VideoPlayer] Restart play failed: ${err.message}`, null, 'error');
-                      }
-                    });
-                  }
-                }}
-              >
-                <RotateCcw className="w-3 h-3 mr-1" />
-                Restart
+              <Button variant="secondary" size="sm" className="h-7 px-2 bg-white/20 text-white border-none" onClick={(e) => {
+                e.stopPropagation();
+                if (mediaRef.current) {
+                  mediaRef.current.currentTime = 0;
+                  saveProgress(0, mediaRef.current.duration);
+                  mediaRef.current.play();
+                }
+              }}>
+                <RotateCcw className="w-3 h-3 mr-1" /> Restart
               </Button>
             </div>
           )}
