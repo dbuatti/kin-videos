@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from 'react';
-import { PlayCircle, RotateCcw, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+import { PlayCircle, RotateCcw, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVideoProgress } from '@/hooks/use-video-progress';
@@ -47,10 +47,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const effectiveKey = progressKey || videoId;
   const { progress, isLoading: isProgressLoading, saveProgress, incrementWatchCount } = useVideoProgress(effectiveKey);
   const { speed } = usePlaybackSpeed();
-  const lastSavedTime = useRef<number>(0);
   const hasSuccessfullyResumed = useRef<boolean>(false);
   const lastEndedTime = useRef<number>(0);
-  const resumeAttemptCount = useRef<number>(0);
 
   const isWistiaMediaId = videoUrl.includes('wistia.com/deliveries/') && (videoUrl.split('/').pop()?.replace('.mp4', '').length || 0) <= 10;
   const isExternalEmbed = videoUrl.includes('loom.com') || videoUrl.includes('descript.com') || isWistiaMediaId;
@@ -104,8 +102,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setError(null);
     setIsReady(false);
     hasSuccessfullyResumed.current = false;
-    resumeAttemptCount.current = 0;
-    lastSavedTime.current = 0;
     
     if (isExternalEmbed) {
       setIsReady(true);
@@ -117,7 +113,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (media) {
       media.load();
       if (autoPlay) {
-        media.play().catch(() => {});
+        // On iOS, play() must be called immediately after load() or in response to an event
+        const playPromise = media.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            log(`[Playback] Autoplay blocked or failed: ${error.message}`, null, 'warn');
+          });
+        }
       }
     }
   }, [videoUrl, autoPlay, effectiveKey, isExternalEmbed]);
@@ -152,11 +154,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleEnded = () => {
     const media = mediaRef.current;
     if (!media) return;
+    
     const now = Date.now();
-    if (now - lastEndedTime.current < 3000) return;
+    // Prevent duplicate ended events
+    if (now - lastEndedTime.current < 2000) return;
     lastEndedTime.current = now;
+    
+    log(`[Playback] Media ended: ${videoId}`);
     incrementWatchCount();
-    if (onEnded) setTimeout(onEnded, 500);
+    
+    // CRITICAL: Call onEnded immediately without setTimeout to preserve 
+    // the "user interaction" context required by iOS for the next play() call.
+    if (onEnded) onEnded();
   };
 
   const togglePlay = () => {
@@ -193,6 +202,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               onPlay={handlePlay}
               onPause={handlePause}
               onEnded={handleEnded}
+              preload="auto"
               className="opacity-0 absolute w-1 h-1"
             />
           ) : (
@@ -203,6 +213,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               controls={hasStarted}
               poster={posterUrl}
               playsInline
+              preload="auto"
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={handlePlay}
               onPause={handlePause}

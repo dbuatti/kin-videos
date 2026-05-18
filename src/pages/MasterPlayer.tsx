@@ -17,8 +17,7 @@ import {
   Maximize2,
   Minimize2,
   Keyboard,
-  Share2,
-  Mic
+  Share2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { MODULE_ORDER, VERIFIED_LESSON_ORDER } from '@/utils/filenames';
@@ -130,32 +129,17 @@ const MasterPlayer = () => {
     }
   };
 
-  // Handle voice query from URL
-  useEffect(() => {
-    const voiceQuery = searchParams.get('voiceQuery');
-    if (voiceQuery && playlist.length > 0 && !isInitialLoad) {
-      handleVoiceResult(voiceQuery);
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('voiceQuery');
-      setSearchParams(newParams);
-    }
-  }, [searchParams, playlist, isInitialLoad, setSearchParams]);
-
   useEffect(() => {
     if (!isStateLoading && isInitialLoad && playlist.length > 0) {
-      // If we have a lessonId in URL, it's handled by the other effect
       if (searchParams.get('lessonId')) {
         setIsInitialLoad(false);
         return;
       }
 
       const indexToLoad = Math.floor(Number(savedIndex));
-      log(`[MasterPlayer] Initial load for ${masterStateKey}. Saved index: ${savedIndex}, Loading index: ${indexToLoad}, Playlist size: ${playlist.length}`);
-      
       if (!isNaN(indexToLoad) && indexToLoad >= 0 && indexToLoad < playlist.length) {
         setCurrentIndex(indexToLoad);
       } else {
-        log(`[MasterPlayer] Saved index out of bounds or invalid (${savedIndex}), defaulting to 0`);
         setCurrentIndex(0);
       }
       setIsInitialLoad(false);
@@ -165,7 +149,6 @@ const MasterPlayer = () => {
   const lastSavedIndex = useRef<number>(-1);
   useEffect(() => {
     if (!isInitialLoad && currentIndex !== lastSavedIndex.current) {
-      log(`[MasterPlayer] Index changed to ${currentIndex}. Saving to ${masterStateKey}`);
       saveMasterIndex(currentIndex);
       lastSavedIndex.current = currentIndex;
     }
@@ -173,14 +156,15 @@ const MasterPlayer = () => {
 
   const currentVideo = playlist[currentIndex];
 
-  const handleNext = () => {
+  const handleNext = (isAuto = false) => {
     const now = Date.now();
-    if (now - lastActionTime.current < 1000) return;
+    // Only debounce manual clicks, allow auto-transitions to happen immediately
+    if (!isAuto && now - lastActionTime.current < 800) return;
     lastActionTime.current = now;
 
     if (currentIndex < playlist.length - 1) {
       const nextIdx = currentIndex + 1;
-      log(`[MasterPlayer] Moving to next lesson: ${nextIdx}`);
+      log(`[MasterPlayer] Moving to next lesson: ${nextIdx} (Auto: ${isAuto})`);
       setCurrentIndex(nextIdx);
       setAutoPlay(true);
       saveMasterIndex(nextIdx);
@@ -191,12 +175,11 @@ const MasterPlayer = () => {
 
   const handlePrevious = () => {
     const now = Date.now();
-    if (now - lastActionTime.current < 1000) return;
+    if (now - lastActionTime.current < 800) return;
     lastActionTime.current = now;
 
     if (currentIndex > 0) {
       const prevIdx = currentIndex - 1;
-      log(`[MasterPlayer] Moving to previous lesson: ${prevIdx}`);
       setCurrentIndex(prevIdx);
       setAutoPlay(true);
       saveMasterIndex(prevIdx);
@@ -205,7 +188,7 @@ const MasterPlayer = () => {
 
   const handleVideoEnded = () => {
     log(`[MasterPlayer] Video ended event received, moving to next.`);
-    handleNext();
+    handleNext(true);
   };
 
   const handleCopyLink = () => {
@@ -216,7 +199,6 @@ const MasterPlayer = () => {
   };
 
   const selectVideo = (index: number) => {
-    log(`[MasterPlayer] Selecting video at index: ${index}`);
     setCurrentIndex(index);
     setAutoPlay(true);
     saveMasterIndex(index);
@@ -342,7 +324,6 @@ const MasterPlayer = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    log(`[MasterPlayer] Switching mode. Current isAudioOnly: ${isAudioOnly}`);
                     setIsAudioOnly(!isAudioOnly);
                     setIsInitialLoad(true);
                   }}
@@ -392,7 +373,7 @@ const MasterPlayer = () => {
               progressKey={isAudioOnly ? `${currentVideo?.id}-audio` : currentVideo?.id}
               className="w-full h-full rounded-lg sm:rounded-2xl overflow-hidden"
               onEnded={handleVideoEnded}
-              onNext={handleNext}
+              onNext={() => handleNext(false)}
               onPrevious={handlePrevious}
               autoPlay={autoPlay}
             />
@@ -408,7 +389,7 @@ const MasterPlayer = () => {
                 <h3 className="text-xs sm:text-lg font-bold text-white truncate px-2">{currentVideo?.title}</h3>
                 <p className="text-[9px] sm:text-[10px] text-indigo-400 font-medium mt-0.5 sm:mt-1">Lesson {currentIndex + 1} of {playlist.length}</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleNext} disabled={currentIndex === playlist.length - 1} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
+              <Button variant="ghost" size="icon" onClick={() => handleNext(false)} disabled={currentIndex === playlist.length - 1} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-slate-800 text-slate-400 shrink-0">
                 <SkipForward className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
             </div>
