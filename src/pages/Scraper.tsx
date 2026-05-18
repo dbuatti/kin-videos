@@ -28,80 +28,213 @@ import { useJobLessons } from '@/hooks/use-job-lessons';
 
 const SCRAPER_MASTER_CRAWLER = `(async function() {
   const log = (msg, color = "#4f46e5") => console.log("%c" + msg, "background: " + color + "; color: white; padding: 2px 5px; border-radius: 3px; font-weight: bold;");
-  log(" FNH Architect v25: Master Syllabus Crawler Initiated ");
+  log(" FNH Architect v37 ");
 
-  const isSyllabusPage = !!document.querySelector('.syllabus__categories, .product-syllabus');
   const results = [];
+  const seenLessons = new Set();
+  const seenCatIds = new Set();
+  const junk = new Set(['reply','next','back','show more','play now','next module','next lesson','previous','resume course','modules','store','my library','blog','search']);
 
-  async function extractLessonsFromPage(url, categoryName) {
-    log(\`  -> Scanning Page: \${url}\`, "#6366f1");
-    const res = await fetch(url);
-    const html = await res.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-    const links = Array.from(doc.querySelectorAll('a[href*="/posts/"]'))
-      .map(a => ({ title: a.innerText.trim().split('\\n')[0], url: a.href }))
-      .filter((v, i, a) => a.findIndex(t => t.url === v.url) === i);
+  // ✅ Title-only: take text up to the first newline, then cap at 120 chars
+  const getTitle = (el) => {
+    if (!el) return "";
+    const raw = (el.textContent || "").trim();
+    // Split on newline or double-space (Kajabi uses both as title/description separators)
+    return raw.split(/\\n|\\r|  /)[0].trim().slice(0, 120);
+  };
 
-    for (let i = 0; i < links.length; i++) {
-      const { title, url: lessonUrl } = links[i];
-      log(\`    [\${i+1}/\${links.length}] Extracting Video: \${title}\`, "#8b5cf6");
-      
+  const getText = (el) => (el?.textContent || "").trim().replace(/\\s+/g, ' ');
+
+  const fetchWithRetry = async (url, retries = 3, delay = 600) => {
+    for (let i = 0; i < retries; i++) {
       try {
-        const lessonRes = await fetch(lessonUrl);
-        const lessonHtml = await lessonRes.text();
-        
-        let video_url = null;
-        const wistiaIdMatch = lessonHtml.match(/wistia\\\\.com\\\\/embed\\\\/medias\\\\/([a-z0-9]+)/i) || 
-                              lessonHtml.match(/wistia_async_([a-z0-9]+)/i);
-
-        if (wistiaIdMatch) {
-          const mediaId = wistiaIdMatch[1];
-          const metaRes = await fetch(\`https://fast.wistia.com/embed/medias/\${mediaId}.json\`);
-          const meta = await metaRes.json();
-          const assets = meta.media.assets;
-          const mp4 = assets.find(a => a.type === 'original' && a.ext === 'mp4') || 
-                      assets.filter(a => a.ext === 'mp4').sort((a, b) => b.size - a.size)[0];
-          if (mp4) video_url = mp4.url.replace('.bin', '.mp4');
-        }
-        results.push({ category: categoryName, title, page_url: lessonUrl, video_url });
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(\`HTTP \${res.status}\`);
+        return res;
       } catch (e) {
-        results.push({ category: categoryName, title, page_url: lessonUrl, video_url: null });
+        if (i < retries - 1) await sleep(delay * (i + 1));
+        else throw e;
       }
-      await new Promise(r => setTimeout(r, 300));
     }
+  };
 
-    // Check for pagination (Next Page)
-    const nextLink = doc.querySelector('a[rel="next"], .next_page a');
-    if (nextLink && nextLink.href !== url) {
-      await extractLessonsFromPage(nextLink.href, categoryName);
+  const getCatId = (url) => { const m = url.match(/\\/categories\\/(\\d+)/); return m ? m[1] : null; };
+
+  const baseUrl = window.location.href.split('?')[0];
+  const categoryMap = new Map(); // catId → { name, url }
+
+  // ── PHASE 1a: /categories index — top-level modules ──────────────────────
+  log("Phase 1a: /categories index...", "#3b82f6");
+  try {
+    const res = await fetchWithRetry(baseUrl + "/categories");
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('a[href*="/categories/"]').forEach(a => {
+      const catId = getCatId(a.href);
+      if (!catId || a.href.includes('/posts/') || categoryMap.has(catId)) return;
+      const name = getTitle(a);
+      if (name.length >= 3 && !junk.has(name.toLowerCase())) {
+        categoryMap.set(catId, { name, url: a.href.split('?')[0] });
+      }
+    });
+  } catch(e) { log("⚠ /categories failed", "#ef4444"); }
+
+  // ── PHASE 1b: Syllabus pages — sub-modules not on /categories index ───────
+  // Strategy: for each /posts/ link on the syllabus, extract its category ID
+  // from the URL itself (it's always /categories/CATID/posts/POSTID).
+  // Group posts by category ID → each unique catId is a module.
+  // Get the module name from the nearest heading above that group.
+  log("Phase 1b: Syllabus pages for sub-modules...", "#3b82f6");
+
+  for (const pageUrl of [baseUrl, baseUrl + "?page=2"]) {
+    try {
+      const res = await fetchWithRetry(pageUrl);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+
+      // Collect ALL post links and group by the catId embedded in the URL
+      const postLinks = Array.from(doc.querySelectorAll('a[href*="/posts/"]'));
+      const firstLinkByCat = new Map(); // catId → first <a> element with that catId
+
+      postLinks.forEach(a => {
+        const catId = getCatId(a.href);
+        if (!catId || firstLinkByCat.has(catId)) return;
+        firstLinkByCat.set(catId, a);
+      });
+
+      // For each category ID found via posts, find its module heading
+      firstLinkByCat.forEach((firstLink, catId) => {
+        if (categoryMap.has(catId)) return; // already have it
+
+        // Walk up the DOM from this link, scanning for a preceding heading
+        let moduleName = null;
+        let el = firstLink.parentElement;
+        for (let depth = 0; depth < 10 && el && el !== doc.body; depth++) {
+          // Scan previous siblings at this level for a heading
+          let sib = el.previousElementSibling;
+          while (sib) {
+            const h = sib.matches?.('h1,h2,h3,h4,h5') ? sib : sib.querySelector('h1,h2,h3,h4,h5');
+            if (h) {
+              const txt = getTitle(h);
+              if (txt.length >= 3 && !junk.has(txt.toLowerCase())) {
+                moduleName = txt;
+                break;
+              }
+            }
+            sib = sib.previousElementSibling;
+          }
+          if (moduleName) break;
+          el = el.parentElement;
+        }
+
+        // Fallback: use the first link's own title text as a last resort
+        if (!moduleName) {
+          // Try to get a clean name from the category URL itself if it has one
+          // (some Kajabi setups embed slug info — here it's just a number, so skip)
+          moduleName = null;
+        }
+
+        if (moduleName) {
+          const catUrl = firstLink.href.replace(/\\/posts\\/.*/, '').split('?')[0];
+          categoryMap.set(catId, { name: moduleName, url: catUrl });
+        }
+      });
+
+    } catch(e) { log(\`⚠ Syllabus page failed: \${pageUrl}\`, "#ef4444"); }
+  }
+
+  // Remove any entries where URL somehow contains /posts/
+  for (const [id, entry] of categoryMap) {
+    if (entry.url.includes('/posts/')) categoryMap.delete(id);
+  }
+
+  const categoriesToCrawl = Array.from(categoryMap.values());
+  log(\`Found \${categoriesToCrawl.length} modules:\`, "#10b981");
+  categoriesToCrawl.forEach(c => log(\`  → \${c.name}\`, "#6366f1"));
+
+  // ── PHASE 2: Crawl each module, all pages ────────────────────────────────
+  for (const cat of categoriesToCrawl) {
+    const moduleName = cat.name;
+    const catBaseUrl = cat.url;
+    let pageNum = 1;
+    let keepGoing = true;
+
+    while (keepGoing) {
+      const currentUrl = pageNum === 1 ? catBaseUrl : catBaseUrl + \`?page=\${pageNum}\`;
+      log(\`  [\${moduleName}] Page \${pageNum}...\`, "#6366f1");
+
+      try {
+        const res = await fetchWithRetry(currentUrl);
+        const html = await res.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+
+        const lessonLinks = Array.from(doc.querySelectorAll('a[href*="/posts/"]'))
+          .map(a => ({ title: getTitle(a), url: a.href.split('?')[0] }))
+          .filter(l => l.url && !seenLessons.has(l.url) && l.title.length > 2 && !junk.has(l.title.toLowerCase()));
+
+        if (lessonLinks.length === 0 && pageNum > 1) { keepGoing = false; break; }
+
+        for (const lesson of lessonLinks) {
+          seenLessons.add(lesson.url);
+          log(\`    [\${results.length + 1}] \${lesson.title}\`, "#8b5cf6");
+
+          let video_url = null;
+          try {
+            const lessonRes = await fetchWithRetry(lesson.url);
+            const lessonHtml = await lessonRes.text();
+            const m = lessonHtml.match(/wistia\\.com\\/embed\\/medias\\/([a-z0-9]+)/i)
+                   || lessonHtml.match(/wistia_async_([a-z0-9]+)/i)
+                   || lessonHtml.match(/mediaData\\["([a-z0-9]+)"\\]/i)
+                   || lessonHtml.match(/"hashed_id":"([a-z0-9]+)"/i);
+            if (m) {
+              const metaRes = await fetchWithRetry(\`https://fast.wistia.com/embed/medias/\${m[1]}.json\`);
+              const meta = await metaRes.json();
+              const assets = meta?.media?.assets || [];
+              const mp4 = assets.find(a => a.type === 'original' && a.ext === 'mp4')
+                       || assets.filter(a => a.ext === 'mp4').sort((a,b) => b.size - a.size)[0];
+              if (mp4) video_url = mp4.url.replace('.bin', '.mp4');
+            }
+          } catch(e) { log(\`      ⚠ Video failed: \${lesson.title}\`, "#f59e0b"); }
+
+          results.push({ category: moduleName, title: lesson.title, page_url: lesson.url, video_url });
+          await sleep(200);
+        }
+
+        const nextPageNum = pageNum + 1;
+        const hasNext = !!doc.querySelector('a[rel="next"]') ||
+          Array.from(doc.querySelectorAll('a')).some(a =>
+            getText(a).trim() === String(nextPageNum) || (a.href||'').includes(\`page=\${nextPageNum}\`)
+          );
+        hasNext ? pageNum++ : (keepGoing = false);
+
+      } catch(e) {
+        log(\`  ⚠ [\${moduleName}] page \${pageNum}: \${e.message}\`, "#ef4444");
+        keepGoing = false;
+      }
     }
   }
 
-  if (isSyllabusPage) {
-    const categories = Array.from(document.querySelectorAll('.syllabus__category-title a, .category-card a'))
-      .map(a => ({ name: a.innerText.trim(), url: a.href }));
-    
-    log(\`Found \${categories.length} categories. Starting full course crawl...\`);
-    for (const cat of categories) {
-      log(\`CRAWLING CATEGORY: \${cat.name}\`, "#10b981");
-      await extractLessonsFromPage(cat.url, cat.name);
-    }
-  } else {
-    const category = document.querySelector('.section__heading, h1, .syllabus__category-title')?.innerText?.trim() || "Uncategorized";
-    await extractLessonsFromPage(window.location.href, category);
-  }
-
-  log(" Crawl Complete! JSON copied to clipboard. ", "#10b981");
+  // ── PHASE 3: UI ──────────────────────────────────────────────────────────
   const finalJson = JSON.stringify(results, null, 2);
-  const el = document.createElement('textarea');
-  el.value = finalJson;
-  document.body.appendChild(el);
-  el.select();
-  document.execCommand('copy');
-  document.body.removeChild(el);
-  alert(\`Successfully crawled \${results.length} lessons. JSON is in your clipboard!\`);
+  const container = document.createElement('div');
+  container.style.cssText = "position:fixed;top:10px;left:10px;right:10px;bottom:10px;background:white;z-index:999999;padding:20px;border:5px solid #4f46e5;border-radius:20px;display:flex;flex-direction:column;box-shadow:0 0 50px rgba(0,0,0,0.5);";
+  container.innerHTML = \`
+    <h1 style="color:#4f46e5;margin:0 0 10px 0;font-family:sans-serif;">✅ \${results.length} Lessons across \${categoriesToCrawl.length} Modules</h1>
+    <p style="margin-bottom:10px;font-family:sans-serif;color:#666;">Copy and paste into the Scraper app.</p>
+    <textarea id="fnh-results" style="flex:1;width:100%;font-family:monospace;font-size:12px;padding:10px;border:1px solid #ccc;border-radius:10px;background:#f9fafb;">\${finalJson}</textarea>
+    <div style="margin-top:10px;display:flex;gap:10px;">
+      <button id="fnh-copy" style="background:#4f46e5;color:white;border:none;padding:15px 30px;border-radius:10px;font-weight:bold;cursor:pointer;flex:1;font-size:16px;">COPY TO CLIPBOARD</button>
+      <button id="fnh-close" style="background:#ccc;color:black;border:none;padding:15px 30px;border-radius:10px;font-weight:bold;cursor:pointer;">CLOSE</button>
+    </div>\`;
+  document.body.appendChild(container);
+  document.getElementById('fnh-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(finalJson); alert("Copied!"); }
+    catch { document.getElementById('fnh-results').select(); document.execCommand('copy'); alert("Copied!"); }
+  };
+  document.getElementById('fnh-close').onclick = () => container.remove();
+  log(\` DONE! \${results.length} lessons / \${categoriesToCrawl.length} modules \`, "#10b981");
 })();`;
 
 const Scraper = () => {
@@ -242,7 +375,7 @@ const Scraper = () => {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-black uppercase tracking-widest text-indigo-400 flex items-center">
                   <Zap className="w-5 h-5 mr-2" />
-                  FNH Master Crawler (v25)
+                  FNH Master Crawler (v37)
                 </CardTitle>
                 <Button onClick={() => handleCopy(SCRAPER_MASTER_CRAWLER, 'Master Crawler')} size="sm" className="bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold">
                   <Copy className="w-4 h-4 mr-2" />
