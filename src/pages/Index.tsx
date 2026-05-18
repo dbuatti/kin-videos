@@ -1,193 +1,222 @@
-"use client";
-
-import { useAuth } from "@/integrations/supabase/auth-context";
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  PlayCircle, 
-  Video, 
-  Headphones, 
-  Library,
-  ArrowRight,
-  Sparkles,
-  TrendingUp,
-  Zap,
-  Bookmark,
-  Mic
-} from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
-import React from 'react';
-import { useLastWatched } from "@/hooks/use-last-watched";
-import { useCourseProgress } from "@/hooks/use-course-progress";
-import { Progress } from "@/components/ui/progress";
-import DashboardSkeleton from "@/components/DashboardSkeleton";
-import { cn } from "@/lib/utils";
-import SyllabusClipboard from "@/components/SyllabusClipboard";
-import VoiceSearch from "@/components/VoiceSearch";
-import PriorityLessons from "@/components/PriorityLessons";
-import SmartSuggestions from "@/components/SmartSuggestions";
-import { showSuccess } from "@/utils/toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ExternalLink, Video, Copy, Check, Search, FilterX } from "lucide-react";
+import { toast } from "sonner";
+
+interface Lesson {
+  category: string;
+  title: string;
+  page_url: string;
+  video_url: string | null;
+}
 
 const Index = () => {
-  const navigate = useNavigate();
-  const { data: lastWatched, isLoading: isLastWatchedLoading } = useLastWatched();
-  const { data: progress, isLoading: isProgressLoading } = useCourseProgress();
+  const [jsonInput, setJsonInput] = useState('');
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [copied, setCopied] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
-  if (isProgressLoading || isLastWatchedLoading) {
-    return (
-      <div className="min-h-screen flex flex-col p-8">
-        <DashboardSkeleton />
-      </div>
-    );
-  }
-
-  const handleVoiceResult = (text: string) => {
-    // Navigate to player and let it handle the search
-    navigate(`/master-player?mode=video&voiceQuery=${encodeURIComponent(text)}`);
+  const handleParse = () => {
+    try {
+      const parsed = JSON.parse(jsonInput);
+      if (Array.isArray(parsed)) {
+        setLessons(parsed);
+        toast.success(`Loaded ${parsed.length} lessons`);
+      } else {
+        toast.error("Invalid format: Expected an array of lessons");
+      }
+    } catch (e) {
+      toast.error("Invalid JSON. Make sure you copied the entire output.");
+    }
   };
 
-  const ACTIONS = [
-    {
-      title: "Video Player",
-      desc: "Watch lessons with progress tracking",
-      icon: Video,
-      path: "/master-player?mode=video",
-      color: "text-primary",
-      bg: "bg-primary/10",
-      border: "border-primary/20"
-    },
-    {
-      title: "Audio Player",
-      desc: "Listen to course content on the go",
-      icon: Headphones,
-      path: "/master-player?mode=audio",
-      color: "text-accent",
-      bg: "bg-accent/10",
-      border: "border-accent/20"
-    },
-    {
-      title: "Library",
-      desc: "Browse all modules and downloads",
-      icon: Library,
-      path: "/gallery",
-      color: "text-emerald-400",
-      bg: "bg-emerald-400/10",
-      border: "border-emerald-400/20"
-    }
-  ];
+  const categories = useMemo(() => {
+    const cats = new Set(lessons.map(l => l.category));
+    return ['all', ...Array.from(cats)];
+  }, [lessons]);
+
+  const filteredLessons = useMemo(() => {
+    return lessons.filter(lesson => {
+      const matchesSearch = lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           lesson.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || lesson.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [lessons, searchQuery, categoryFilter]);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  };
 
   return (
-    <div className="min-h-screen flex flex-col animate-in-fade max-w-5xl mx-auto w-full p-6 sm:p-12 space-y-12">
-      
-      {/* Voice Search Hero */}
-      <section className="flex flex-col items-center text-center space-y-6 py-8">
-        <div className="relative">
-          <div className="absolute -inset-4 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-          <VoiceSearch onResult={handleVoiceResult} className="h-20 w-20 sm:h-24 sm:w-24 relative z-10" />
+    <div className="container mx-auto py-10 px-4 max-w-6xl">
+      <div className="flex flex-col gap-8">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">Course Data Viewer</h1>
+          <p className="text-muted-foreground">Visualize and manage your crawled Kajabi course content.</p>
         </div>
-        <div className="space-y-2">
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Voice Command</h2>
-          <p className="text-slate-500 text-sm max-w-xs mx-auto">
-            Tap the mic and say <span className="text-primary font-bold">"Play me something about brain zones"</span>
-          </p>
-        </div>
-      </section>
 
-      {/* 1. Core Purpose: The Big Buttons */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {ACTIONS.map((action) => (
-          <Link key={action.title} to={action.path} className="group">
-            <Card className={cn(
-              "h-full border-none rounded-[2.5rem] bg-slate-900/40 backdrop-blur-xl transition-all hover:bg-slate-900/60 border border-white/5 hover:scale-[1.02] active:scale-[0.98] shadow-2xl",
-              action.border
-            )}>
-              <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-                <div className={cn("p-5 rounded-[1.5rem] shadow-inner", action.bg)}>
-                  <action.icon className={cn("w-8 h-8", action.color)} />
+        {!lessons.length ? (
+          <Card className="border-dashed border-2">
+            <CardHeader>
+              <CardTitle>Import Scraper Results</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <textarea
+                className="w-full h-48 p-3 rounded-md border bg-muted/50 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder='Paste the JSON from your clipboard here...'
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+              />
+              <Button onClick={handleParse} className="w-full h-12 text-lg">
+                Parse & View {lessons.length > 0 ? 'More' : ''} Lessons
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1 space-y-2">
+                <label className="text-sm font-medium">Search Lessons</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search by title or category..." 
+                    className="pl-10"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
+              </div>
+              <div className="w-full md:w-64 space-y-2">
+                <label className="text-sm font-medium">Filter Category</label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map(cat => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat === 'all' ? 'All Categories' : cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchQuery('');
+                  setCategoryFilter('all');
+                }}
+                title="Clear Filters"
+              >
+                <FilterX className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="secondary"
+                onClick={() => setLessons([])}
+              >
+                Reset
+              </Button>
+            </div>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
                 <div>
-                  <h3 className="text-xl font-black text-white tracking-tight">{action.title}</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-1">{action.desc}</p>
+                  <CardTitle>{filteredLessons.length} Lessons</CardTitle>
+                  <p className="text-sm text-muted-foreground">Showing results for your current filters</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    copyToClipboard(JSON.stringify(lessons, null, 2));
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                  Copy All JSON
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="w-[200px] pl-6">Category</TableHead>
+                        <TableHead>Lesson Title</TableHead>
+                        <TableHead className="text-center">Video</TableHead>
+                        <TableHead className="text-right pr-6">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLessons.map((lesson, index) => (
+                        <TableRow key={index} className="hover:bg-muted/30 transition-colors">
+                          <TableCell className="pl-6">
+                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                              {lesson.category}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {lesson.title}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {lesson.video_url ? (
+                              <div className="flex justify-center">
+                                <a 
+                                  href={lesson.video_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium text-sm"
+                                >
+                                  <Video className="h-4 w-4" />
+                                  MP4
+                                </a>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs italic">No video</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right pr-6">
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                asChild
+                                className="h-8 px-2"
+                              >
+                                <a href={lesson.page_url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4 mr-1" />
+                                  Page
+                                </a>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filteredLessons.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                            No lessons found matching your search.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
-          </Link>
-        ))}
-      </section>
-
-      {/* Smart Suggestions Section */}
-      <SmartSuggestions />
-
-      {/* Priority Focus Section */}
-      <PriorityLessons />
-
-      {/* 2. Secondary: Resume & Progress */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between px-4">
-          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Continue Learning</h2>
-          <div className="flex items-center space-x-2">
-            <span className="text-[10px] font-black text-primary">{progress?.percentage || 0}% Complete</span>
-            <div className="w-24 h-1 bg-white/5 rounded-full overflow-hidden">
-              <div className="bg-primary h-full" style={{ width: `${progress?.percentage || 0}%` }} />
-            </div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Resume Card */}
-          <div className="lg:col-span-3">
-            {lastWatched ? (
-              <button 
-                onClick={() => navigate(`/master-player?mode=video`)}
-                className="w-full text-left group"
-              >
-                <Card className="border-none rounded-[2rem] bg-white/5 hover:bg-white/10 transition-all border border-white/5 overflow-hidden">
-                  <CardContent className="p-6 sm:p-8 flex items-center justify-between">
-                    <div className="flex items-center space-x-6 min-w-0">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/20 rounded-2xl flex items-center justify-center shrink-0">
-                        <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary animate-pulse" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Last Watched</p>
-                        <h3 className="text-sm sm:text-xl font-bold text-white truncate group-hover:text-primary transition-colors">
-                          {lastWatched.title}
-                        </h3>
-                        <p className="text-[10px] sm:text-xs text-slate-400 font-medium truncate mt-0.5">{lastWatched.category}</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-slate-600 group-hover:text-primary group-hover:translate-x-2 transition-all shrink-0 ml-4" />
-                  </CardContent>
-                </Card>
-              </button>
-            ) : (
-              <div className="p-12 text-center border-2 border-dashed border-white/5 rounded-[2rem] bg-white/5">
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">No recent activity found.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Bookmarks Button */}
-          <Link to="/bookmarks" className="group">
-            <Card className="h-full border-none rounded-[2rem] bg-white/5 hover:bg-white/10 transition-all border border-white/5 flex items-center justify-center p-6">
-              <div className="text-center">
-                <Bookmark className="w-6 h-6 text-slate-500 group-hover:text-primary mx-auto mb-2 transition-colors" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-white transition-colors">Bookmarks</span>
-              </div>
-            </Card>
-          </Link>
-        </div>
-      </section>
-
-      {/* 3. Master Syllabus Clipboard */}
-      <SyllabusClipboard />
-
-      <footer className="pt-12 opacity-30">
-        <div className="flex items-center justify-center space-x-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-          <Sparkles className="w-3 h-3" />
-          <span>FNH Archiver v2.0</span>
-        </div>
-      </footer>
+        )}
+      </div>
     </div>
   );
 };
