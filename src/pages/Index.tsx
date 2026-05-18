@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink, Video, Copy, Check, Search, FilterX } from "lucide-react";
+import { ExternalLink, Video, Copy, Check, Search, FilterX, Download, FileJson } from "lucide-react";
 import { toast } from "sonner";
 
 interface Lesson {
@@ -49,6 +49,26 @@ const Index = () => {
     });
   }, [lessons, searchQuery, categoryFilter]);
 
+  const downloadCSV = () => {
+    const headers = ['Category', 'Title', 'Page URL', 'Video URL'];
+    const rows = lessons.map(l => [
+      `"${l.category.replace(/"/g, '""')}"`,
+      `"${l.title.replace(/"/g, '""')}"`,
+      l.page_url,
+      l.video_url || ''
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'course_lessons.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV Downloaded");
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
@@ -59,13 +79,16 @@ const Index = () => {
       <div className="flex flex-col gap-8">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold tracking-tight">Course Data Viewer</h1>
-          <p className="text-muted-foreground">Visualize and manage your crawled Kajabi course content.</p>
+          <p className="text-muted-foreground">Visualize and export your crawled Kajabi course content.</p>
         </div>
 
         {!lessons.length ? (
           <Card className="border-dashed border-2">
             <CardHeader>
-              <CardTitle>Import Scraper Results</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileJson className="h-5 w-5 text-primary" />
+                Import Scraper Results
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <textarea
@@ -75,7 +98,7 @@ const Index = () => {
                 onChange={(e) => setJsonInput(e.target.value)}
               />
               <Button onClick={handleParse} className="w-full h-12 text-lg">
-                Parse & View {lessons.length > 0 ? 'More' : ''} Lessons
+                Parse & View Lessons
               </Button>
             </CardContent>
           </Card>
@@ -109,42 +132,56 @@ const Index = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSearchQuery('');
-                  setCategoryFilter('all');
-                }}
-                title="Clear Filters"
-              >
-                <FilterX className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="secondary"
-                onClick={() => setLessons([])}
-              >
-                Reset
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setCategoryFilter('all');
+                  }}
+                  title="Clear Filters"
+                >
+                  <FilterX className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="secondary"
+                  onClick={() => setLessons([])}
+                >
+                  Reset
+                </Button>
+              </div>
             </div>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-4 gap-4">
                 <div>
-                  <CardTitle>{filteredLessons.length} Lessons</CardTitle>
-                  <p className="text-sm text-muted-foreground">Showing results for your current filters</p>
+                  <CardTitle>{filteredLessons.length} Lessons Found</CardTitle>
+                  <p className="text-sm text-muted-foreground">Total lessons in course: {lessons.length}</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    copyToClipboard(JSON.stringify(lessons, null, 2));
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  }}
-                >
-                  {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                  Copy All JSON
-                </Button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 sm:flex-none"
+                    onClick={downloadCSV}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1 sm:flex-none"
+                    onClick={() => {
+                      copyToClipboard(JSON.stringify(lessons, null, 2));
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                    Copy JSON
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -161,7 +198,7 @@ const Index = () => {
                       {filteredLessons.map((lesson, index) => (
                         <TableRow key={index} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="pl-6">
-                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary max-w-[180px] truncate" title={lesson.category}>
                               {lesson.category}
                             </span>
                           </TableCell>
