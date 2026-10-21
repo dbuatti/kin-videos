@@ -891,7 +891,11 @@ const ON_MYKAJABI = /(^|\.)mykajabi\.com$/i.test(location.hostname);
 /* ================= KAJABI COURSE PROGRESS ================= */
 /* The portal knows how much of the course you have done. The relay reads it
    from the page you would see anyway, so the hub can show both numbers. */
-const RELAY = 'http://127.0.0.1:8788';
+/* The relay has to live on the same host the hub was opened from: on this
+   Mac that is 127.0.0.1, but from the iPad over Tailscale it is the Mac's
+   Tailscale name. Derive it rather than hard-coding it. */
+const HUB_HOST = (location.hostname === 'localhost' || location.hostname === '') ? '127.0.0.1' : location.hostname;
+const RELAY = 'http://' + HUB_HOST + ':8788';
 let kajabi = null;
 
 function fetchKajabiProgress(){
@@ -1149,7 +1153,7 @@ function renderPractice(){
 /* The FNH Clinical Reference App sends x-frame-options: DENY, so it cannot be
    framed directly. A second relay (FNH_Kajabi_Relay.py ref) serves it on
    127.0.0.1:8789 with that header removed. */
-const REF_RELAY = 'http://127.0.0.1:8789';
+const REF_RELAY = 'http://' + HUB_HOST + ':8789';
 let docOpen = null;
 
 function renderReference(){
