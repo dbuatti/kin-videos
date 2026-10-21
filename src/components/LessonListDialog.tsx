@@ -3,6 +3,8 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useJobLessons } from '@/hooks/use-job-lessons';
+import { useAllProgress } from '@/hooks/use-all-progress';
+import { watchedLessonIds } from '@/utils/watch-status';
 import { Loader2, CheckCircle, XCircle, Clock, Download, FolderDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,12 +21,18 @@ interface LessonListDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const getLessonStatusBadge = (status: Lesson['status']) => {
-  switch (status) {
+const getLessonStatusBadge = (lesson: Lesson, watched: Set<string>) => {
+  if (!lesson.video_url) {
+    return <Badge className="bg-slate-600 hover:bg-slate-700 text-white rounded-full"><XCircle className="w-3 h-3 mr-1" /> No video</Badge>;
+  }
+  if (watched.has(lesson.id)) {
+    return <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full"><CheckCircle className="w-3 h-3 mr-1" /> Watched</Badge>;
+  }
+  switch (lesson.status) {
     case 'processing':
       return <Badge className="bg-blue-500 hover:bg-blue-600 text-white rounded-full"><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Processing</Badge>;
     case 'completed':
-      return <Badge className="bg-green-500 hover:bg-green-600 text-white rounded-full"><CheckCircle className="w-3 h-3 mr-1" /> Completed</Badge>;
+      return <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full"><CheckCircle className="w-3 h-3 mr-1" /> Ready</Badge>;
     case 'failed':
       return <Badge className="bg-red-500 hover:bg-red-600 text-white rounded-full"><XCircle className="w-3 h-3 mr-1" /> Failed</Badge>;
     case 'pending':
@@ -65,14 +73,16 @@ const processLessons = (lessons: Lesson[]): Record<string, (Lesson & { displayIn
 
 const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChange }) => {
   const { data: lessons, isLoading, isError } = useJobLessons();
+  const { data: progress } = useAllProgress();
+  const watched = lessons ? watchedLessonIds(lessons, progress) : new Set<string>();
   const numberedGroupedLessons = lessons ? processLessons(lessons) : {};
   const categories = Object.keys(numberedGroupedLessons);
   const [defaultOpenCategory] = categories;
 
   const handleDownloadAll = async (category: string, lessons: (Lesson & { displayIndex: string, filename: string })[]) => {
-    const completedVideos = lessons.filter(l => l.status === 'completed' && l.video_url);
+    const completedVideos = lessons.filter(l => l.video_url);
     if (completedVideos.length === 0) {
-      showError(`No completed videos found in '${category}'.`);
+      showError(`No videos found in '${category}'.`);
       return;
     }
 
@@ -103,8 +113,8 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChang
             <Accordion type="multiple" defaultValue={[defaultOpenCategory]} className="w-full space-y-2">
               {categories.map((category) => {
                 const lessons = numberedGroupedLessons[category];
-                const completedCount = lessons.filter(l => l.status === 'completed').length;
-                const isDownloadable = completedCount > 0;
+                const readyCount = lessons.filter(l => l.video_url).length;
+                const isDownloadable = readyCount > 0;
 
                 return (
                   <AccordionItem key={category} value={category} className="border border-indigo-200 rounded-xl shadow-sm bg-white px-4">
@@ -112,7 +122,7 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChang
                       <AccordionTrigger className="flex-1 p-0 hover:no-underline">
                         <div className="flex flex-col items-start text-left">
                           <span className="font-bold text-indigo-800">{lessons[0].displayIndex.split('.')[0]}. {category}</span>
-                          <span className="text-xs text-gray-500">{lessons.length} Lessons ({completedCount} ready)</span>
+                          <span className="text-xs text-gray-500">{lessons.length} Lessons ({readyCount} ready)</span>
                         </div>
                       </AccordionTrigger>
                       <Button
@@ -130,9 +140,9 @@ const LessonListDialog: React.FC<LessonListDialogProps> = ({ isOpen, onOpenChang
                         <div key={lesson.id} className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-100">
                           <div className="flex-1 min-w-0 mr-4">
                             <p className="font-medium text-sm text-gray-800 truncate">{lesson.displayIndex} - {lesson.title}</p>
-                            <div className="flex items-center space-x-2 mt-1">{getLessonStatusBadge(lesson.status)}</div>
+                            <div className="flex items-center space-x-2 mt-1">{getLessonStatusBadge(lesson, watched)}</div>
                           </div>
-                          {lesson.video_url && lesson.status === 'completed' ? (
+                          {lesson.video_url ? (
                             <Button 
                               variant="secondary" 
                               size="sm" 

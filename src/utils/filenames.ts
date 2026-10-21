@@ -13,24 +13,35 @@ export const generateLessonFilename = (
   return `(${categoryNumber}) ${cleanCategory} / (${lessonNumber}) ${cleanLesson}.mp4`;
 };
 
-// Foundations specific order (Fallback)
+// Foundations course order — verified live against Kajabi (21 Oct 2026).
+// The course was restructured into 26 modules; this list matches the portal.
 export const FOUNDATIONS_MODULE_ORDER = [
+  "Functional Neuro Approach Foundations",
   "Course Introduction & Foundational Knowledge",
+  "Functional Anatomy and Biomechanics (Overview)",
   "Preliminary Assessments (P)",
-  "Direct Muscle Tests",
+  "Direct Muscle Tests (Preliminary Assessments)",
+  "Intrinsic System — Individual Tests",
+  "Outer Unit Core",
+  "Upper Quarter",
+  "Lumbo-Pelvic and Hip",
+  "Lower Quarter",
   "Ease the System: (E)",
-  "Lymphatic System Assessment and Correction",
-  "Vagus Nerve",
+  "Lymphatic System Assessment and Correction - (Ease the System)",
+  "Foundations Phase 1 and 2 Recap and Consolidation (P and E)",
   "Pathway Assessments and Corrections (A) Aligning the Hierarchies",
+  "Afferent: Unconscious Mechanoreception",
+  "Afferent: Nociception",
+  "Efferent - Corrections and Brain Zones",
   "Primitive Reflexes",
   "Postural Reflexes",
   "Cranial Nerves",
   "Emotional Corrections",
   "Embed (E) Finishing Procedures and Home Reinforcement",
+  "Foundations Integration Module",
   "Background Information",
-  "Functional Anatomy and Biomechanics",
-  "Putting it all Together",
-  "FNH Foundations Exam",
+  "Mentoring Q and A Recordings (2026)",
+  "Masterclasses",
 ];
 
 /**

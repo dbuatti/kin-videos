@@ -4,6 +4,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { useCourseProgress } from '@/hooks/use-course-progress';
+import { useAllProgress } from '@/hooks/use-all-progress';
+import { watchedLessonIds } from '@/utils/watch-status';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MODULE_ORDER } from '@/utils/filenames';
 import { CheckCircle2, Circle, Map as MapIcon, ChevronRight } from 'lucide-react';
@@ -13,26 +15,30 @@ import { Progress } from '@/components/ui/progress';
 const ModuleRoadmap = () => {
   const navigate = useNavigate();
   const { data: lessons } = useJobLessons();
-  
+  const { data: progress } = useAllProgress();
+
   const moduleStats = React.useMemo(() => {
     if (!lessons) return [];
-    
+
+    const watched = watchedLessonIds(lessons, progress);
+
     return MODULE_ORDER.map((category, index) => {
-      const categoryLessons = lessons.filter(l => l.category === category);
-      const total = categoryLessons.length;
-      const completed = categoryLessons.filter(l => l.status === 'completed').length;
+      const categoryLessons = lessons.filter((l) => l.category === category);
+      const videoLessons = categoryLessons.filter((l) => l.video_url);
+      const total = videoLessons.length;
+      const completed = videoLessons.filter((l) => watched.has(l.id)).length;
       const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-      
+
       return {
         category,
         index: index + 1,
         total,
         completed,
         percentage,
-        isCompleted: percentage === 100 && total > 0
+        isCompleted: percentage === 100 && total > 0,
       };
-    }).filter(m => m.total > 0);
-  }, [lessons]);
+    }).filter((m) => m.total > 0);
+  }, [lessons, progress]);
 
   const handleModuleClick = (category: string) => {
     navigate(`/gallery?search=${encodeURIComponent(category)}`);
@@ -70,7 +76,7 @@ const ModuleRoadmap = () => {
                     <ChevronRight className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
                   </span>
                 </div>
-                <span className="text-[10px] font-black text-slate-500 ml-4">{mod.percentage}%</span>
+                <span className="text-[10px] font-black text-slate-500 ml-4">{mod.completed}/{mod.total} · {mod.percentage}%</span>
               </div>
               <Progress 
                 value={mod.percentage} 
