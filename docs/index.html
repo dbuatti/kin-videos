@@ -784,7 +784,9 @@ $$('[data-energy]').forEach(b => b.onclick = () => { mine.energy = b.dataset.ene
 $$('[data-size]').forEach(b => b.onclick = () => { mine.size = Number(b.dataset.size); saveMine(); paintDials(); current = choose(); render(); });
 
 /* ================= COURSE TAB ================= */
-let courseFilter = 'all', courseQ = '', courseLive = false;
+let courseFilter = 'all', courseQ = '';
+/* On the owner's own domain the real Kajabi course is the default view. */
+let courseLive = ON_MYKAJABI;
 
 /* Kajabi's own policy allows *.mykajabi.com to frame the course pages, so the
    real course can only sit inside the hub when the hub is served from one of
@@ -818,7 +820,7 @@ function renderCourse(){
         <button class="chip" data-cf="practise">to practise</button>
         <span style="flex:1"></span>
         <button class="chip" id="cKajabi">Kajabi course ↗</button>
-        ${courseCanBeFramed() ? '<button class="chip" id="cLive">Show the Kajabi course in page</button>' : ''}
+        ${courseCanBeFramed() ? '<button class="chip" id="cLive" style="background:#12312c;border-color:#1f5f54;color:#6ee7b7">Show the lesson list instead</button>' : ''}
       </div>
       <div id="courseList"></div>`;
     col.dataset.built = '1';
@@ -830,8 +832,7 @@ function renderCourse(){
     });
     $('#cKajabi').onclick = () => window.open(C.courseUrl, '_blank', 'noopener');
     const liveBtn = $('#cLive');
-    if (liveBtn) liveBtn.onclick = () => { courseLive = !courseLive; renderCourse(); };
-  }
+    if (liveBtn) liveBtn.onclick = () => { courseLive = !courseLive; renderCourse(); };  }
   renderCourseList();
 }
 function renderCourseList(){
