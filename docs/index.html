@@ -83,6 +83,28 @@
            font-size:12.5px;color:var(--dim)}
  .relaybar span{flex:1}
  .relaybar .mini{width:auto;padding:5px 11px;border-radius:8px;font-size:11.5px}
+ /* the document reader — a PDF drawn as ordinary scrolling content, because a
+    PDF inside an iframe does not scroll on iOS Safari: it shows the first
+    page and stops there */
+ .pdfscroll{flex:1;min-height:0;overflow:auto;background:#0c1015;-webkit-overflow-scrolling:touch;
+            overscroll-behavior:contain;touch-action:pan-x pan-y}
+ .pdfpages{width:max-content;min-width:100%;margin:0 auto;padding:16px 14px 60px;display:flex;
+            flex-direction:column;gap:14px;align-items:center}
+ .pdfpage{position:relative;background:#fff;border-radius:4px;overflow:hidden;
+          box-shadow:0 3px 18px rgba(0,0,0,.45);flex:none}
+ .pdfpage canvas{display:block;width:100%;height:auto}
+ .pdfph{position:absolute;inset:0;display:grid;place-items:center;color:#8d97a1;font-size:13px;
+        background:#fff}
+ .pdftextlayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;
+               forced-color-adjust:none}
+ .pdftextlayer span{position:absolute;white-space:pre;transform-origin:0 0;color:transparent;cursor:text}
+ .pdftextlayer ::selection{background:rgba(0,110,255,.34)}
+ .pdfpageof{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--dim)}
+ .pdfgoto{width:74px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);
+          background:#0f151b;color:var(--ink);font-size:11.5px}
+ .pdfload{padding:40px 20px;text-align:center;color:var(--dim);font-size:14px}
+ .pdfload b{display:block;color:var(--ink);font-size:16px;margin-bottom:8px}
+ .pdfbar{background:#0f151b}
  /* PEACE simulator */
  .peacecnt{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
  .phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:8px;margin-bottom:14px}
@@ -531,6 +553,7 @@ function showTab(name){
   if (name === 'community') renderCommunity();
   if (name === 'practice') renderPractice();
   if (name === 'reference') renderReference();
+  else if (pdfReader){ pdfReader.close(); pdfReader = null; }
   if (name === 'library') renderLibrary();
   try { history.replaceState(null, '', '#' + name); } catch(e){}
 }
@@ -1199,12 +1222,307 @@ function renderPractice(){
    framed directly. A second relay (FNH_Kajabi_Relay.py ref) serves it on
    127.0.0.1:8789 with that header removed. */
 let docOpen = null;
+let pdfReader = null;
+
+/* ================= PDF READER =================
+   A PDF inside an iframe will not scroll on iOS Safari — it shows the first
+   page and stops, which is exactly what the manual did on the iPad. So it is
+   drawn here instead, as ordinary content that scrolls like any other page.
+
+   The manual is 208 pages, so pages are drawn as they come into view and
+   released again when they go off screen: an iPad will not give a tab enough
+   memory to hold 208 canvases at once. */
+let _pdfjs = null;
+function loadPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (_pdfjs) return _pdfjs;
+  _pdfjs = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'pdfjs/pdf.min.js';
+    s.onload = () => {
+      if (!window.pdfjsLib) return reject(new Error('pdf.js did not load'));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdfjs/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = () => reject(new Error('pdf.js could not be loaded'));
+    document.head.appendChild(s);
+  });
+  return _pdfjs;
+}
+
+class PdfReader {
+  constructor(mount, url, title, onBack){
+    this.mount = mount; this.url = url; this.title = title; this.onBack = onBack;
+    this.zoom = Number(localStorage.getItem('fnh-pdf-zoom') || 1) || 1;
+    this.pages = []; this.rendered = new Set(); this.doc = null; this.baseW = 1; this.baseH = 1.4;
+    this.maxLive = 5;          // an iPad will not give a tab much memory
+    this.drawing = new Set();  // pages being drawn right now
+    this.io = null; this.raf = 0; this.dead = false;
+  }
+
+  async open(){
+    this.mount.innerHTML = `<div class="pdfload">Loading the reader…</div>`;
+    let lib;
+    try { lib = await loadPdfJs(); setPdfTextLayer(lib); }
+    catch(e){ this.fail('The reader could not be loaded.'); return; }
+
+    this.mount.innerHTML = `
+      <div class="relaybar pdfbar">
+        <button class="mini" id="pdfBack">← back</button>
+        <span>${esc(this.title)}</span>
+        <span class="pdfpageof" id="pdfPos">…</span>
+        <button class="mini" id="pdfZoomOut" aria-label="zoom out">−</button>
+        <span class="pdfpageof" id="pdfZoomLbl">${Math.round(this.zoom*100)}%</span>
+        <button class="mini" id="pdfZoomIn" aria-label="zoom in">+</button>
+        <input class="pdfgoto" id="pdfGoto" type="number" min="1" placeholder="page" aria-label="go to page">
+        <a class="mini" href="${esc(this.url)}" target="_blank" rel="noopener">open in a tab ↗</a>
+      </div>
+      <div class="pdfscroll" id="pdfScroll"><div class="pdfpages" id="pdfPages"></div></div>`;
+
+    this.scroll = this.mount.querySelector('#pdfScroll');
+    this.pagesEl = this.mount.querySelector('#pdfPages');
+    this.mount.querySelector('#pdfBack').onclick = () => this.onBack && this.onBack();
+    this.mount.querySelector('#pdfZoomOut').onclick = () => this.setZoom(this.zoom / 1.25);
+    this.mount.querySelector('#pdfZoomIn').onclick  = () => this.setZoom(this.zoom * 1.25);
+    this.mount.querySelector('#pdfGoto').onchange = e => this.goTo(Number(e.target.value));
+    this.scroll.addEventListener('scroll', () => this.onScroll(), { passive: true });
+
+    // the document itself — the server supports byte ranges, so only the
+    // pages you actually scroll to are fetched
+    try {
+      this.doc = await lib.getDocument({ url: this.url, rangeChunkSize: 65536, disableAutoFetch: true }).promise;
+    } catch(e){
+      try {
+        const res = await fetch(this.url);
+        if (!res.ok) throw new Error('fetch failed ' + res.status);
+        this.doc = await lib.getDocument({ data: await res.arrayBuffer() }).promise;
+      } catch(e2){ this.fail('The manual could not be fetched. ' + (e2.message || '')); return; }
+    }
+    if (this.dead) return;
+
+    this.numPages = this.doc.numPages;
+    const first = await this.doc.getPage(1);
+    const v1 = first.getViewport({ scale: 1 });
+    this.baseW = v1.width; this.baseH = v1.height;
+
+    // one placeholder per page, so the scrollbar is honest from the start
+    this.pagesEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < this.numPages; i++){
+      const d = document.createElement('div');
+      d.className = 'pdfpage';
+      d.dataset.i = i;
+      d.style.aspectRatio = this.baseW + ' / ' + this.baseH;
+      d.innerHTML = `<div class="pdfph">${i+1}</div>`;
+      frag.appendChild(d);
+    }
+    this.pagesEl.appendChild(frag);
+    this.layout();
+
+    this.io = new IntersectionObserver((entries) => {
+      for (const e of entries) if (e.isIntersecting) this.draw(+e.target.dataset.i);
+    }, { root: this.scroll, rootMargin: '300% 0px' });
+    Array.from(this.pagesEl.children).forEach(el => this.io.observe(el));
+
+    this.onScroll();
+  }
+
+  /* the page fits the width of the column at 100%, so 100% reads as "fit" */
+  fit(){
+    const avail = Math.max(220, this.pagesEl.clientWidth - 28);
+    return avail / this.baseW;
+  }
+
+  layout(){
+    const s = this.fit() * this.zoom;
+    const w = Math.round(this.baseW * s);
+    const h = Math.round(this.baseH * s);
+    Array.from(this.pagesEl.children).forEach(el => {
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+    });
+  }
+
+  setZoom(z){
+    this.zoom = Math.min(4, Math.max(0.5, z));
+    localStorage.setItem('fnh-pdf-zoom', String(this.zoom));
+    const lbl = this.mount.querySelector('#pdfZoomLbl');
+    if (lbl) lbl.textContent = Math.round(this.zoom * 100) + '%';
+    // remember what was on screen: release() empties the set as it goes
+    const was = Array.from(this.rendered);
+    was.forEach(i => this.release(i));
+    this.layout();
+    was.forEach(i => this.draw(i));
+    this.onScroll();
+  }
+
+  async draw(i){
+    if (this.dead || this.rendered.has(i) || !this.doc) return;
+    this.rendered.add(i);
+    this.drawing.add(i);
+    const el = this.pagesEl.children[i];
+    if (!el){ this.drawing.delete(i); return; }
+    try {
+      const page = await this.doc.getPage(i + 1);
+      if (this.dead) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const base = page.getViewport({ scale: 1 });
+      // the page as it is shown on screen, and the same page at screen
+      // resolution for the canvas — two scales of the same geometry
+      const cssScale = this.fit() * this.zoom;
+      const cssW = Math.round(base.width * cssScale);
+      const cssH = Math.round(base.height * cssScale);
+      let pxScale = cssScale * dpr;
+      const MAXPX = 1600;                       // keep the canvas inside an iPad's memory
+      if (base.width * pxScale > MAXPX) pxScale = MAXPX / base.width;
+      const viewport = page.getViewport({ scale: pxScale });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const ctx = canvas.getContext('2d', { alpha: false });
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      // the page may have been released while it was being drawn — if so, put
+      // the memory straight back rather than hanging on to the canvas
+      if (this.dead || !this.rendered.has(i)) return;
+
+      const holder = document.createElement('div');
+      holder.style.position = 'relative';
+      holder.style.width = cssW + 'px';
+      holder.style.height = cssH + 'px';
+      canvas.style.width = cssW + 'px';
+      canvas.style.height = cssH + 'px';
+      holder.appendChild(canvas);
+
+      // a transparent text layer on top, so the words can be selected and
+      // copied. It is positioned as a percentage of the page, so it lines up
+      // with the canvas whatever size the page is shown at.
+      try {
+        const tc = await page.getTextContent();
+        if (this.dead || !this.rendered.has(i)) return;
+        const tl = document.createElement('div');
+        tl.className = 'pdftextlayer';
+        tl.style.width = cssW + 'px';
+        tl.style.height = cssH + 'px';
+        tl.style.setProperty('--scale-factor', String(cssScale));
+        holder.appendChild(tl);
+        const divs = [];
+        lib_renderTextLayer({ textContent: tc, container: tl, viewport: page.getViewport({ scale: cssScale }), textDivs: divs });
+        tl.style.width = cssW + 'px';
+        tl.style.height = cssH + 'px';
+      } catch(e){ /* a page with no text is fine */ }
+
+      el.innerHTML = '';
+      el.appendChild(holder);
+    } catch(e){
+      el.innerHTML = `<div class="pdfph">page ${i+1} — could not be drawn</div>`;
+      this.rendered.delete(i);
+    } finally {
+      this.drawing.delete(i);
+      this.trim();                              // never hold more than a few pages
+    }
+  }
+
+  /* Keep only the pages that are on screen (and one either side). A canvas of
+     a full page is ~12 MB, and an iPad will kill a tab that gets greedy. */
+  trim(){
+    if (!this.scroll || !this.pagesEl) return;
+    const view = this.scroll.getBoundingClientRect().top;   // top of the visible area
+    const h = this.scroll.clientHeight;
+    const keep = new Set();
+    const dist = [];
+    for (const i of this.rendered){
+      const el = this.pagesEl.children[i];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const rt = r.top - view, rb = rt + r.height;   // relative to the visible area
+      if (rb > 0 && rt < h){ keep.add(i); dist.push([i, 0]); }        // on screen
+      else if (rb > -h && rt < h * 2){                               // just off screen
+        keep.add(i);
+        dist.push([i, rb < 0 ? -rb : rt - h]);
+      }
+    }
+    if (keep.size > this.maxLive){
+      dist.sort((a, b) => a[1] - b[1]);
+      for (let k = this.maxLive; k < dist.length; k++) keep.delete(dist[k][0]);
+    }
+    // a page that is being drawn right now is left alone until it is finished
+    for (const i of Array.from(this.rendered)) if (!keep.has(i) && !this.drawing.has(i)) this.release(i);
+  }
+
+  /* give the memory back once a page is well out of sight */
+  release(i){
+    if (!this.rendered.has(i)) return;
+    this.rendered.delete(i);
+    const el = this.pagesEl.children[i];
+    if (el) el.innerHTML = `<div class="pdfph">${i+1}</div>`;
+  }
+
+  onScroll(){
+    if (this.raf) return;
+    this.raf = requestAnimationFrame(() => {
+      this.raf = 0;
+      if (this.dead || !this.scroll) return;
+      const top = this.scroll.scrollTop, bot = top + this.scroll.clientHeight;
+      const rootTop = this.scroll.getBoundingClientRect().top;
+      this.trim();
+      // which page are we on?
+      const kids = this.pagesEl.children;
+      let cur = 0;
+      for (let i = 0; i < kids.length; i++){
+        if (kids[i].getBoundingClientRect().top - rootTop <= this.scroll.clientHeight * 0.4) cur = i; else break;
+      }
+      // make sure the pages on screen are actually drawn: a page that was
+      // released while it was being drawn will not be picked up by the
+      // observer again, because it never stopped being in view
+      for (let i = Math.max(0, cur - 1); i <= Math.min(kids.length - 1, cur + 1); i++) this.draw(i);
+      const pos = this.mount.querySelector('#pdfPos');
+      if (pos) pos.textContent = `page ${cur+1} of ${this.numPages}`;
+    });
+  }
+
+  goTo(n){
+    if (!n || n < 1 || n > this.numPages) return;
+    const el = this.pagesEl.children[n-1];
+    if (!el) return;
+    this.scroll.scrollTo({ top: el.offsetTop - 12, behavior: 'smooth' });
+  }
+
+  fail(msg){
+    this.mount.innerHTML = `<div class="pdfload">
+      <b>The manual could not be opened here</b>
+      ${esc(msg)}<br><br>
+      <a class="mini" style="display:inline-block;padding:8px 14px;border-radius:8px;background:#1d7bd6;color:#fff"
+         href="${esc(this.url)}" target="_blank" rel="noopener">open the manual in a tab ↗</a></div>`;
+  }
+
+  close(){
+    this.dead = true;
+    if (this.io) this.io.disconnect();
+    if (this.raf) cancelAnimationFrame(this.raf);
+    this.rendered.clear();
+    if (this.doc && this.doc.destroy) { try { this.doc.destroy(); } catch(e){} }
+  }
+}
+
+/* pdf.js's text layer, called with whatever version of the API is present */
+let lib_renderTextLayer = null;
+function setPdfTextLayer(lib){ lib_renderTextLayer = (opts) => {
+  if (lib.renderTextLayer) return lib.renderTextLayer(opts);
+  return null;
+}; }
 
 function renderReference(){
   const col = $('#referenceCol');
   const tab = $('#tab-reference');
   if (docOpen){
     tab.classList.add('bleed');
+    if (/\.pdf(\?|#|$)/i.test(docOpen.url)){
+      const reader = new PdfReader(col, docOpen.url, docOpen.title, () => { reader.close(); pdfReader = null; docOpen = null; renderReference(); });
+      pdfReader = reader;
+      window.__fnhReader = reader;             // handy for checking on it
+      reader.open();
+      return;
+    }
     col.innerHTML = `<div class="relaybar">
         <span>${esc(docOpen.title)}</span>
         <button class="mini" id="docBack">← back</button>
