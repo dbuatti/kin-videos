@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Play, Download, ExternalLink, Star, Trash2, Eye } from 'lucide-react';
+import { Play, Download, ExternalLink, Star, Trash2, Eye, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import VideoProgressIndicator from '@/components/VideoProgressIndicator';
 import { downloadFile } from '@/utils/download';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import { useVideoProgress } from '@/hooks/use-video-progress';
+import { showSuccess, showError } from '@/utils/toast';
 
 interface GalleryVideoCardProps {
   video: any;
@@ -23,6 +24,7 @@ const GalleryVideoCard: React.FC<GalleryVideoCardProps> = ({ video }) => {
 
   const getThumbnailUrl = (videoUrl: string | null) => {
     if (!videoUrl) return "/placeholder.svg";
+    if (video.thumbnail_url) return video.thumbnail_url;
     if (videoUrl.includes('wistia.com/deliveries/')) {
       return videoUrl.replace('.mp4', '.jpg') + '?image_crop_resized=640x360';
     }
@@ -84,9 +86,24 @@ const GalleryVideoCard: React.FC<GalleryVideoCardProps> = ({ video }) => {
             {video.title}
           </CardTitle>
           <div className="flex items-center space-x-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-slate-500 hover:text-white"
+              title="Copy direct video link"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(video.video_url!).then(
+                  () => showSuccess("Video link copied"),
+                  () => showError("Copy failed")
+                );
+              }}
+            >
+              <Link2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8 text-slate-500 hover:text-white"
               onClick={(e) => {
                 e.stopPropagation();

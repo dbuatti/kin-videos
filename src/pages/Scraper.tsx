@@ -15,7 +15,8 @@ import {
   Sparkles,
   FileJson,
   Rocket,
-  Database
+  Database,
+  Link2
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,8 +27,17 @@ import { useAuth } from '@/integrations/supabase/auth-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useJobLessons } from '@/hooks/use-job-lessons';
 import scraperScript from '@/assets/scraper-v38.js?raw';
+import verified from '@/data/verifiedLessons.json';
 
 const SCRAPER_MASTER_CRAWLER = scraperScript;
+
+type VerifiedLesson = {
+  category: string;
+  title: string;
+  page_url: string;
+  video_url: string;
+  duration: number;
+};
 
 
 
@@ -42,13 +52,48 @@ const Scraper = () => {
 
   const handleArchiveCourse = async () => {
     if (!user) return;
+    const map = verified as VerifiedLesson[];
+    const withVideo = map.filter((l) => l.video_url).length;
+
+    const { data: existing } = await supabase
+      .from('lessons')
+      .select('id, lesson_url')
+      .eq('user_id', user.id);
+    const stale = (existing || []).filter((l) => !map.some((m) => m.page_url === l.lesson_url));
+
+    const confirmed = confirm(
+      `Replace your library with the verified 2026 course?\n\n` +
+      `${map.length} lessons (${withVideo} with video)\n` +
+      (stale.length ? `${stale.length} old lesson(s) will be removed\n` : '') +
+      `\nYour watch progress is kept — it is stored against the lesson, not the library.`
+    );
+    if (!confirmed) return;
+
     setIsArchiving(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-course', {
-        body: { user_id: user.id }
-      });
+      const lessonsToInsert = map.map((item) => ({
+        user_id: user.id,
+        lesson_url: item.page_url,
+        title: item.title,
+        video_url: item.video_url || null,
+        status: item.video_url ? 'completed' : 'failed',
+        category: item.category,
+      }));
+
+      const { error } = await supabase
+        .from('lessons')
+        .upsert(lessonsToInsert, { onConflict: 'user_id,lesson_url' });
       if (error) throw error;
-      showSuccess("Foundations Course archived successfully!");
+
+      if (stale.length) {
+        const { error: delError } = await supabase
+          .from('lessons')
+          .delete()
+          .in('id', stale.map((l) => l.id));
+        if (delError) throw delError;
+      }
+
+      showSuccess(`Course archived — ${map.length} lessons, ${stale.length} removed.`);
       queryClient.invalidateQueries({ queryKey: ['allLessons'] });
       navigate('/gallery');
     } catch (err: any) {
@@ -127,6 +172,10 @@ const Scraper = () => {
           </div>
         </div>
         <div className="flex items-center space-x-3">
+          <Button variant="outline" onClick={() => navigate('/links')} className="border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 rounded-xl h-12 px-6 font-bold">
+            <Link2 className="w-4 h-4 mr-2" />
+            Links
+          </Button>
           <Button variant="outline" onClick={handleExportLibrary} className="border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 rounded-xl h-12 px-6 font-bold">
             <FileJson className="w-4 h-4 mr-2" />
             Export JSON
@@ -147,9 +196,14 @@ const Scraper = () => {
           <Card className="border-primary/20 bg-primary/5 backdrop-blur-xl rounded-[2.5rem] overflow-hidden border-2">
             <CardContent className="p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="space-y-4 text-center md:text-left">
-                <h3 className="text-2xl font-black text-white tracking-tight">Foundations Course</h3>
+                <h3 className="text-2xl font-black text-white tracking-tight">Foundations Course — 2026</h3>
                 <p className="text-slate-400 text-sm max-w-md leading-relaxed">
-                  Instantly populate your library with all 60+ verified lessons. No scraping required.
+                  Instantly populate your library with all 146 verified lessons, each with a direct
+                  video link. Scraped from the live portal on 21 Oct 2026 — the course was restructured,
+                  so this replaces the old archive.
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  19 modules · 97 videos · 32.8 hours · your watch progress is kept
                 </p>
               </div>
               <Button onClick={handleArchiveCourse} disabled={isArchiving} className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-10 py-8 h-auto font-black text-lg shadow-2xl shadow-primary/20 transition-all transform hover:scale-105 active:scale-95 shrink-0">

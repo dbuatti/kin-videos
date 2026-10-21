@@ -15,6 +15,7 @@ import VideoGallery from "./pages/VideoGallery";
 import Bookmarks from "./pages/Bookmarks";
 import Scraper from "./pages/Scraper";
 import Stitcher from "./pages/Stitcher";
+import Links from "./pages/Links";
 import MasterPlayer from "./pages/MasterPlayer";
 import Settings from "./pages/Settings";
 import AppLayout from "./components/AppLayout";
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="/gallery" element={<VideoGallery />} />
                 <Route path="/bookmarks" element={<Bookmarks />} />
                 <Route path="/scraper" element={<Scraper />} />
+                <Route path="/links" element={<Links />} />
                 <Route path="/stitcher" element={<Stitcher />} />
                 <Route path="/master-player" element={<MasterPlayer />} />
                 <Route path="/settings" element={<Settings />} />

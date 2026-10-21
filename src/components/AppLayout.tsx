@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Bookmark,
   Terminal,
-  Scissors
+  Scissors,
+  Link2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   { label: 'Home', icon: LayoutDashboard, path: '/' },
   { label: 'Player', icon: Zap, path: '/master-player' },
   { label: 'Videos', icon: PlayCircle, path: '/gallery' },
+  { label: 'Links', icon: Link2, path: '/links' },
   { label: 'Inventory', icon: Library, path: '/library' },
   { label: 'Bookmarks', icon: Bookmark, path: '/bookmarks' },
   { label: 'Scraper', icon: Terminal, path: '/scraper' },
