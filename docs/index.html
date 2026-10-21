@@ -359,6 +359,7 @@
         <div class="dots" id="dots"></div>
         <div class="footright">
           <a class="quicklink" href="FNH_Heart_Wall.html">heart wall ↗</a>
+          <a class="quicklink" href="#manual" id="manualLink">manual ↗</a>
           <a class="quicklink" href="https://notebook.google.com/notebook/97c027cb-1078-4c6b-8ba7-8e32411d0385?pli=1&authuser=1&pageId=none" target="_blank" rel="noopener">notebook ↗</a>
           <div class="where" id="where"></div>
         </div>
@@ -480,6 +481,11 @@ function setMinutes(m){
 }
 $('#timerBtn').onclick = e => { e.stopPropagation(); $('#timerPop').classList.toggle('on'); paintTimer(); };
 $('#kajabiProg').onclick = () => { fetchKajabiProgress().then(() => { if (currentTab === 'course') renderCourseList(); }); };
+$('#manualLink').onclick = e => {
+  e.preventDefault();
+  docOpen = { url: '00 Reference/FNH_Foundations_Practitioner_Manual.pdf', title: 'FNH Foundations Practitioner Manual (2026)' };
+  showTab('reference');
+};
 document.addEventListener('click', e => { if (!e.target.closest('#timerPop') && !e.target.closest('#timerBtn')) $('#timerPop').classList.remove('on'); });
 $$('#presets button').forEach(b => b.onclick = () => setMinutes(Number(b.dataset.m)));
 $('#timerMins').onchange = e => { const v = Math.max(5, Math.min(240, Number(e.target.value)||30)); setMinutes(v); };
