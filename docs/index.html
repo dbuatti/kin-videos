@@ -180,6 +180,13 @@
  .dot.on{background:var(--acc)}
  .dot.today{box-shadow:0 0 0 2px rgba(110,231,183,.22)}
  .where{font-variant-numeric:tabular-nums}
+ .publicnote{display:none;align-items:center;gap:12px;padding:9px 16px;background:#1b2a1f;
+             border-bottom:1px solid #2f4a37;color:#cfe6d6;font-size:13px;line-height:1.5}
+ .publicnote b{color:#eaf6ee}
+ .publicnote div{flex:1}
+ .pubgo{background:#2f9e5c;color:#fff;text-decoration:none;padding:7px 14px;border-radius:8px;
+        font-size:12.5px;white-space:nowrap;font-weight:600}
+ @media(max-width:720px){.publicnote{flex-wrap:wrap}.pubgo{width:100%;text-align:center}}
  .footright{display:flex;align-items:center;gap:14px}
  .quicklink{font-size:12px;color:var(--dim);text-decoration:none;border-bottom:1px dotted #3a4754;white-space:nowrap}
  .quicklink:hover{color:var(--acc);border-bottom-color:var(--acc)}
@@ -307,6 +314,13 @@
  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style></head>
 <body>
+
+<!-- shown only on the public copy -->
+<div class="publicnote" id="publicNote">
+  <div><b>This is the public copy.</b> Your manual, your Kajabi progress and the
+  reference app live on your own Mac, which a public page is not allowed to reach.</div>
+  <a class="pubgo" id="publicGo">Open your hub ↗</a>
+</div>
 
 <header>
   <div class="brand">FNH · <b>hub</b></div>
@@ -505,7 +519,8 @@ $('#timerBtn').onclick = e => { e.stopPropagation(); $('#timerPop').classList.to
 $('#kajabiProg').onclick = () => { fetchKajabiProgress().then(() => { if (currentTab === 'course') renderCourseList(); }); };
 $('#manualLink').onclick = e => {
   e.preventDefault();
-  docOpen = { url: (IS_PRIVATE ? '' : PRIVATE_HUB) + encodeURI('00 Reference/FNH_Foundations_Practitioner_Manual.pdf'), title: 'FNH Foundations Practitioner Manual (2026)' };
+  if (!IS_PRIVATE){ window.open(MANUAL_PUBLIC, '_blank', 'noopener'); return; }
+  docOpen = { url: MANUAL_REL, title: MANUAL_TITLE };
   showTab('reference');
 };
 document.addEventListener('click', e => { if (!e.target.closest('#timerPop') && !e.target.closest('#timerBtn')) $('#timerPop').classList.remove('on'); });
@@ -563,7 +578,17 @@ function tabFromHash(){
   const h = (location.hash || '').replace('#','').toLowerCase();
   return TAB_NAMES.indexOf(h) >= 0 ? h : 'study';
 }
-window.addEventListener('hashchange', () => showTab(tabFromHash()));
+/* #manual opens the reader on the 2026 manual straight away */
+function applyHash(){
+  const h = (location.hash || '').replace('#','').toLowerCase();
+  if (h === 'manual'){
+    docOpen = { url: MANUAL_REL, title: MANUAL_TITLE };
+    showTab('reference');
+    return;
+  }
+  showTab(tabFromHash());
+}
+window.addEventListener('hashchange', applyHash);
 
 /* ================= STUDY (the one button) ================= */
 const order = new Map();
@@ -936,6 +961,14 @@ const RELAY = IS_PRIVATE ? SCHEME + '//' + HUB_HOST + ':8788' : '';
 const REF_RELAY = IS_PRIVATE ? SCHEME + '//' + HUB_HOST + ':8789' : '';
 /* the private hub, for anything that should not sit on a public copy */
 const PRIVATE_HUB = 'https://macbook-pro-6.tailab1fd5.ts.net:8778/';
+/* The 2026 manual. On this machine, or over Tailscale, it is read in place by
+   the reader. On the public copy it cannot be: a page on the public web is not
+   allowed to read from a private network unless the reader grants permission,
+   and Safari on the iPad simply refuses. So there it opens the private hub
+   instead, with the reader already open on the manual. */
+const MANUAL_REL = '00 Reference/FNH_Foundations_Practitioner_Manual.pdf';
+const MANUAL_TITLE = 'FNH Foundations Practitioner Manual (2026)';
+const MANUAL_PUBLIC = PRIVATE_HUB + 'FNH_Hub.html#manual';
 let kajabi = null;
 
 function fetchKajabiProgress(){
@@ -1564,8 +1597,11 @@ function renderLibrary(){
   const col = $('#libraryCol');
   const L = LIBRARY;
   const card = l => l.doc
-    ? `<a class="tool" href="#" data-doc="${esc(IS_PRIVATE ? l.url : PRIVATE_HUB + encodeURI(l.url))}" data-doctitle="${esc(l.name)}">
-        <b>${esc(l.name)}</b><span>${esc(l.note)}</span></a>`
+    ? (IS_PRIVATE
+        ? `<a class="tool" href="#" data-doc="${esc(l.url)}" data-doctitle="${esc(l.name)}">
+            <b>${esc(l.name)}</b><span>${esc(l.note)}</span></a>`
+        : `<a class="tool" href="${esc(MANUAL_PUBLIC)}" target="_blank" rel="noopener">
+            <b>${esc(l.name)}</b><span>${esc(l.note)} — opens in your hub</span></a>`)
     : `<a class="tool" href="${esc(l.url)}"${l.external ? ' target="_blank" rel="noopener"' : ''}>
         <b>${esc(l.name)}</b><span>${esc(l.note)}</span></a>`;
   $('#libraryCol').innerHTML = `
@@ -1583,9 +1619,22 @@ function renderLibrary(){
     docOpen = { url: a.dataset.doc, title: a.dataset.doctitle };
     showTab('reference');
   });
+  if (!IS_PRIVATE){
+    const note = document.createElement('div');
+    note.className = 'snapshot';
+    note.style.margin = '0 0 12px';
+    note.innerHTML = `The manual lives on your own Mac, not on this public copy, so it opens in
+      <a href="${esc(MANUAL_PUBLIC)}" target="_blank" rel="noopener">your hub</a> — with the reader already open on it.`;
+    col.prepend(note);
+  }
 }
 
 /* ================= go ================= */
+if (!IS_PRIVATE){
+  const note = document.getElementById('publicNote');
+  note.style.display = 'flex';
+  document.getElementById('publicGo').href = PRIVATE_HUB + 'FNH_Hub.html';
+}
 paintDials();
 updateParkPip();
 paintTimer();
@@ -1593,8 +1642,8 @@ fetchKajabiProgress();
 if (!timer.running && !timer.endsAt) { timer.remaining = timer.mins*60; }
 $('#timerMins').value = timer.mins;
 $$('#presets button').forEach(b => b.classList.toggle('on', Number(b.dataset.m) === timer.mins));
-render();
-showTab(tabFromHash());
+  render();
+  applyHash();
 })();
 </script>
 </body></html>
