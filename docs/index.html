@@ -69,13 +69,17 @@
  .tab.bleed{overflow:hidden}
  .tab.bleed .col{max-width:none;padding:0}
  .bleedframe{width:100%;height:100%;border:0;display:block;background:#fff}
- .tab.bleed .col{flex:1;display:flex;min-height:0;max-width:none;padding:0}
+ .tab.bleed .col{flex:1;display:flex;flex-direction:column;min-height:0;max-width:none;padding:0}
  #tab-course .col{max-width:1180px}
  #tab-library .col{max-width:900px}
  .bleednote{position:absolute;inset:0;display:grid;place-items:center;padding:30px;text-align:center}
  .bleednote div{max-width:46ch}
  .bleednote b{display:block;font-size:17px;margin-bottom:8px}
  .bleednote p{color:var(--dim);font-size:14px;line-height:1.6;margin:0 0 16px}
+ .relaybar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:#141a20;border-bottom:1px solid var(--line);
+           font-size:12.5px;color:var(--dim)}
+ .relaybar span{flex:1}
+ .relaybar .mini{width:auto;padding:5px 11px;border-radius:8px;font-size:11.5px}
 
  /* ---- study tab (the one button) ---- */
  .dials{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin:0 0 4px;flex:0 0 auto}
@@ -99,6 +103,7 @@
  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 22px;text-align:center}
  .player{margin:0 0 16px;border-radius:12px;overflow:hidden;background:#000;line-height:0}
  .player video{width:100%;max-height:42vh;display:block;background:#000}
+ .player audio{width:100%;display:block;background:#000;border-radius:10px}
  .mod{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);font-weight:700}
  .title{font-size:23px;line-height:1.25;font-weight:650;margin:10px 0 8px;letter-spacing:-.01em}
  .meta{font-size:13px;color:var(--dim);display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
@@ -602,8 +607,9 @@ function choose(){
   return all[0];
 }
 
-/* the video player */
+/* the media player */
 let videoEl = null;
+let audioEl = null;
 let playing = false;
 function buildVideo(it){
   const v = document.createElement('video');
@@ -619,6 +625,40 @@ function buildVideo(it){
   v.addEventListener('pause', ()=>{ if(!v.ended){ playing = false; updateGoLabel(); } });
   return v;
 }
+function buildAudio(it){
+  const a = document.createElement('audio');
+  a.controls = true; a.preload = 'metadata';
+  a.dataset.itemId = it.id;
+  a.style.width = '100%'; a.style.display = 'block';
+  a.src = target(it);
+  const saved = positions[it.id];
+  if (saved > 2) a.addEventListener('loadedmetadata', ()=>{ try{ a.currentTime = saved; }catch(e){} }, {once:true});
+  a.addEventListener('timeupdate', ()=>savePos(it.id, a.currentTime));
+  a.addEventListener('ended', ()=>savePos(it.id, a.duration || 0));
+  a.addEventListener('play', ()=>{ playing = true; updateGoLabel(); });
+  a.addEventListener('pause', ()=>{ if(!a.ended){ playing = false; updateGoLabel(); } });
+  return a;
+}
+
+function slotAudio(it){
+  if (!audioEl || audioEl.dataset.itemId !== it.id){ stopAudio(); audioEl = buildAudio(it); }
+  return audioEl;
+}
+
+function stopAudio(){
+  if (!audioEl) return;
+  try{ audioEl.pause(); }catch(e){}
+  if (audioEl.parentElement) audioEl.parentElement.removeChild(audioEl);
+  audioEl = null; playing = false;
+}
+
+function startAudio(){
+  if (!audioEl) return;
+  const p = audioEl.play();
+  if (p && p.catch) p.catch(()=>toast('Press play on the audio bar to start it.'));
+  updateGoLabel();
+}
+
 function slotVideo(it){
   if (!videoEl || videoEl.dataset.itemId !== it.id){ stopVideo(); videoEl = buildVideo(it); }
   return videoEl;
@@ -638,8 +678,8 @@ function startVideo(){
 function updateGoLabel(){
   const b = $('#go'); if (!b || !current) return;
   const st = stageForSession(current);
-  if (current.k === 'video' && st === 'see'){
-    b.innerHTML = `<span>${playing ? 'Mark it seen' : 'Watch this'}</span><span class="arrow">→</span>`;
+  if ((current.k === 'video' || current.k === 'audio') && st === 'see'){
+    b.innerHTML = `<span>${playing ? 'Mark it seen' : (current.k === 'audio' ? 'Listen to this' : 'Watch this')}</span><span class="arrow">→</span>`;
     const a = $('#cardBody .stage-ask');
     if (a) a.textContent = playing ? 'Press again when it has landed.' : 'Press to play it here.';
   }
@@ -660,12 +700,13 @@ function render(){
     host.hidden = true; stopVideo(); renderFoot(); return;
   }
   const it = current, st = stageForSession(it), s = get(it.id), isVideo = it.k === 'video';
+  const isAudio = it.k === 'audio', isMedia = isVideo || isAudio;
   const modNote = NOTE_OF(it.m);
   const len = it.k === 'video' ? (it.d||0) : it.k === 'audio' ? '' : it.k === 'quiz' ? '' : (it.p ? (it.p + ' pp') : '');
   let verb = (VERB[st] && VERB[st][it.k]) || 'Do this';
-  if (isVideo && st === 'see') verb = playing ? 'Mark it seen' : 'Watch this';
-  const ask = isVideo && st === 'see' ? (playing ? 'Press again when it has landed.' : 'Press to play it here.')
-            : (it.k === 'audio' && st === 'see' ? 'Listen to it, then press again when it has landed.' : ASK[st]);
+  if (isMedia && st === 'see') verb = playing ? 'Mark it seen' : (isAudio ? 'Listen to this' : 'Watch this');
+  const ask = isMedia && st === 'see' ? (playing ? 'Press again when it has landed.' : 'Press to play it here.')
+            : ASK[st];
   body.innerHTML = `
       <div class="mod">${esc(it.m)}</div>
       <div class="title">${esc(it.t)}</div>
@@ -684,15 +725,22 @@ function render(){
     <div class="subrow">
       <button class="ghost" id="park">not now</button>
       ${isVideo ? '<button class="ghost" id="open">open in my player</button>' : ''}
-      ${st === 'see' && !isVideo ? '<button class="ghost" id="open">open without marking</button>' : ''}
+      ${isAudio ? '<button class="ghost" id="open">open the audio file</button>' : ''}
+      ${st === 'see' && !isMedia ? '<button class="ghost" id="open">open without marking</button>' : ''}
     </div>
     ${it.page ? `<div class="kajabi"><a href="${esc(it.page)}" target="_blank" rel="noopener">mark this complete in Kajabi ↗</a></div>` : ''}`;
-  if (isVideo){ host.hidden = false; const el = slotVideo(it); if (el.parentElement !== host) host.appendChild(el); }
-  else { host.hidden = true; stopVideo(); }
+  if (isVideo){
+    host.hidden = false; stopAudio();
+    const el = slotVideo(it); if (el.parentElement !== host) host.appendChild(el);
+  } else if (isAudio){
+    host.hidden = false; stopVideo();
+    const el = slotAudio(it); if (el.parentElement !== host) host.appendChild(el);
+  }
+  else { host.hidden = true; stopVideo(); stopAudio(); }
   $('#go').onclick = doStage;
   $('#park').onclick = parkCurrent;
   const ob = $('#open');
-  if (ob) ob.onclick = () => { window.open(target(it), '_blank', 'noopener'); toast(isVideo ? 'Opened in a new tab.' : 'Opened — mark it when you are ready.'); };
+  if (ob) ob.onclick = () => { window.open(target(it), '_blank', 'noopener'); toast(isMedia ? 'Opened in a new tab.' : 'Opened — mark it when you are ready.'); };
   renderFoot();
 }
 
@@ -700,13 +748,15 @@ function doStage(){
   const it = current; if (!it) return;
   const st = stageForSession(it), s = get(it.id);
   if (st === 'see' && it.k === 'video' && !playing){ startVideo(); return; }
+  if (st === 'see' && it.k === 'audio' && !playing){ startAudio(); return; }
   if (st === 'see'){
-    if (it.k !== 'video') window.open(target(it), '_blank', 'noopener');
+    if (it.k !== 'video' && it.k !== 'audio') window.open(target(it), '_blank', 'noopener');
     s.w = 1; mine.session.push(it.id); mine.history.push({id:it.id, at:Date.now()});
     if (mine.history.length > 400) mine.history = mine.history.slice(-400);
     saveTicks(); saveMine(); toast('Marked as seen.');
   } else if (st === 'revise'){
     if (it.k === 'video' && videoEl){ const p = videoEl.play(); if (p && p.catch) p.catch(()=>{}); }
+    else if (it.k === 'audio' && audioEl){ const p = audioEl.play(); if (p && p.catch) p.catch(()=>{}); }
     else window.open(target(it), '_blank', 'noopener');
     mine.session.push(it.id); mine.history.push({id:it.id, at:Date.now()}); saveMine();
     toast('Revisited.'); current = choose();
@@ -796,11 +846,23 @@ const ON_MYKAJABI = /(^|\.)mykajabi\.com$/i.test(location.hostname);
 let courseFilter = 'all', courseQ = '';
 /* On the owner's own domain the real Kajabi course is the default view. */
 let courseLive = ON_MYKAJABI;
+let courseNative = false;
+let relayUp = null;
+
+/* The local relay (FNH_Kajabi_Relay.py) serves the real Kajabi course page on
+   127.0.0.1. It is the only way to see that page inside a frame: Kajabi's own
+   frame-ancestors stops it being framed from anywhere else. */
+const RELAY = 'http://127.0.0.1:8788';
+function checkRelay(){
+  if (relayUp) return relayUp;
+  relayUp = fetch(RELAY + '/__ping', { cache: 'no-store' })
+    .then(r => r.ok).catch(() => false);
+  return relayUp;
+}
 
 /* Kajabi's own policy allows *.mykajabi.com to frame the course pages, so the
    real course can only sit inside the hub when the hub is served from one of
-   the owner's own subdomains. From localhost, Kajabi refuses — so there we
-   show the course natively instead.
+   the owner's own subdomains. From localhost, the relay does the job instead.
    Add ?kajabi=1 to force the live frame on for testing. */
 function courseCanBeFramed(){
   return ON_MYKAJABI || /[?&]kajabi=1/.test(location.search);
@@ -819,9 +881,23 @@ function renderCourse(){
     return;
   }
 
-  tab.classList.remove('bleed');
-  if (!col.dataset.built){
-    col.innerHTML = `
+  checkRelay().then(up => {
+    if (up && !courseNative){
+      tab.classList.add('bleed');
+      col.innerHTML = `<div class="relaybar">
+          <span>The real Kajabi course</span>
+          <button class="mini" id="cNative">Lesson list instead</button>
+          <button class="mini" id="cKajabi2">Open in Kajabi ↗</button>
+        </div>
+        <iframe class="bleedframe" src="${esc(RELAY)}/products/functional-neuro-approach-foundations/categories"
+                title="FNH Foundations course"></iframe>`;
+      col.querySelector('#cNative').onclick = () => { courseNative = true; renderCourse(); };
+      col.querySelector('#cKajabi2').onclick = () => window.open(C.courseUrl, '_blank', 'noopener');
+      return;
+    }
+    tab.classList.remove('bleed');
+    if (!col.dataset.built){
+      col.innerHTML = `
       <div class="toolbar">
         <input type="search" id="cq" placeholder="Search the course…">
         <button class="chip on" data-cf="all">all</button>
@@ -829,20 +905,23 @@ function renderCourse(){
         <button class="chip" data-cf="practise">to practise</button>
         <span style="flex:1"></span>
         <button class="chip" id="cKajabi">Kajabi course ↗</button>
-        ${courseCanBeFramed() ? '<button class="chip" id="cLive" style="background:#12312c;border-color:#1f5f54;color:#6ee7b7">Show the lesson list instead</button>' : ''}
+        ${courseCanBeFramed() ? '<button class="chip" id="cLive" style="background:#12312c;border-color:#1f5f54;color:#6ee7b7">Show the Kajabi course in page</button>' : ''}
       </div>
+      ${up ? '' : '<div class="snapshot" style="margin:0 0 12px">To see the <b>real Kajabi course page</b> inside this tab, start the relay: <b>python3 _TOOLS/FNH_Kajabi_Relay.py</b> — or use <b>FNH_Hub.command</b>, which starts it for you. Until then, the whole lesson list is here.</div>'}
       <div id="courseList"></div>`;
-    col.dataset.built = '1';
-    $('#cq').oninput = e => { courseQ = e.target.value.toLowerCase(); renderCourseList(); };
-    $$('[data-cf]').forEach(b => b.onclick = () => {
-      courseFilter = b.dataset.cf;
-      $$('[data-cf]').forEach(x => x.classList.toggle('on', x === b));
-      renderCourseList();
-    });
-    $('#cKajabi').onclick = () => window.open(C.courseUrl, '_blank', 'noopener');
-    const liveBtn = $('#cLive');
-    if (liveBtn) liveBtn.onclick = () => { courseLive = !courseLive; renderCourse(); };  }
-  renderCourseList();
+      col.dataset.built = '1';
+      $('#cq').oninput = e => { courseQ = e.target.value.toLowerCase(); renderCourseList(); };
+      $$('[data-cf]').forEach(b => b.onclick = () => {
+        courseFilter = b.dataset.cf;
+        $$('[data-cf]').forEach(x => x.classList.toggle('on', x === b));
+        renderCourseList();
+      });
+      $('#cKajabi').onclick = () => window.open(C.courseUrl, '_blank', 'noopener');
+      const liveBtn = $('#cLive');
+      if (liveBtn) liveBtn.onclick = () => { courseLive = !courseLive; renderCourse(); };
+    }
+    renderCourseList();
+  });
 }
 function renderCourseList(){
   const host = $('#courseList');
