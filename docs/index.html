@@ -483,7 +483,7 @@ $('#timerBtn').onclick = e => { e.stopPropagation(); $('#timerPop').classList.to
 $('#kajabiProg').onclick = () => { fetchKajabiProgress().then(() => { if (currentTab === 'course') renderCourseList(); }); };
 $('#manualLink').onclick = e => {
   e.preventDefault();
-  docOpen = { url: '00 Reference/FNH_Foundations_Practitioner_Manual.pdf', title: 'FNH Foundations Practitioner Manual (2026)' };
+  docOpen = { url: (IS_PRIVATE ? '' : PRIVATE_HUB) + encodeURI('00 Reference/FNH_Foundations_Practitioner_Manual.pdf'), title: 'FNH Foundations Practitioner Manual (2026)' };
   showTab('reference');
 };
 document.addEventListener('click', e => { if (!e.target.closest('#timerPop') && !e.target.closest('#timerBtn')) $('#timerPop').classList.remove('on'); });
@@ -897,14 +897,26 @@ const ON_MYKAJABI = /(^|\.)mykajabi\.com$/i.test(location.hostname);
 /* ================= KAJABI COURSE PROGRESS ================= */
 /* The portal knows how much of the course you have done. The relay reads it
    from the page you would see anyway, so the hub can show both numbers. */
-/* The relay has to live on the same host the hub was opened from: on this
-   Mac that is 127.0.0.1, but from the iPad over Tailscale it is the Mac's
-   Tailscale name. Derive it rather than hard-coding it. */
+/* Where the hub is running decides where the relays are.
+   - On this Mac, or on the network / over Tailscale, the relays are on the
+     same machine, so use the same host (and the same scheme, so an https hub
+     does not frame an http relay — the browser blocks that as mixed content).
+   - On a public copy (GitHub Pages), there is no relay to reach, so the
+     course tab falls back to the lesson list rather than erroring. */
 const HUB_HOST = (location.hostname === 'localhost' || location.hostname === '') ? '127.0.0.1' : location.hostname;
-const RELAY = 'http://' + HUB_HOST + ':8788';
+const PRIVATE_HOST =
+  /^(localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/.test(location.hostname) ||
+  /\.ts\.net$|\.local$/.test(location.hostname);
+const IS_PRIVATE = location.protocol === 'file:' || PRIVATE_HOST;
+const SCHEME = location.protocol === 'https:' ? 'https:' : 'http:';
+const RELAY = IS_PRIVATE ? SCHEME + '//' + HUB_HOST + ':8788' : '';
+const REF_RELAY = IS_PRIVATE ? SCHEME + '//' + HUB_HOST + ':8789' : '';
+/* the private hub, for anything that should not sit on a public copy */
+const PRIVATE_HUB = 'https://macbook-pro-6.tailab1fd5.ts.net:8778/';
 let kajabi = null;
 
 function fetchKajabiProgress(){
+  if (!RELAY){ kajabi = null; paintKajabi(); return Promise.resolve(null); }
   return fetch(RELAY + '/__progress', { cache: 'no-store' })
     .then(r => r.ok ? r.json() : null)
     .then(d => { kajabi = (d && d.ok) ? d : null; paintKajabi(); return kajabi; })
@@ -959,11 +971,38 @@ function renderCourse(){
   const tab = $('#tab-course');
   const C = COMMUNITY;
 
+  if (!RELAY){
+    // a public copy has no relay to reach — show the lesson list instead
+    courseLive = false;
+    tab.classList.remove('bleed');
+    col.innerHTML = `
+      <div class="toolbar">
+        <input type="search" id="cq" placeholder="Search the course…">
+        <button class="chip on" data-cf="all">all</button>
+        <button class="chip" data-cf="unseen">unseen</button>
+        <button class="chip" data-cf="practise">to practise</button>
+        <span style="flex:1"></span>
+        <button class="chip" id="cKajabi">Kajabi course ↗</button>
+      </div>
+      <div class="snapshot" style="margin:0 0 12px">This is the public copy, so it cannot reach the local relay that carries your Kajabi session. <a href="${esc(PRIVATE_HUB)}">Open the hub on your own machine</a> for the live course page and your progress.</div>
+      <div id="courseList"></div>`;
+    col.dataset.built = '1';
+    $('#cq').oninput = e => { courseQ = e.target.value.toLowerCase(); renderCourseList(); };
+    $$('[data-cf]').forEach(b => b.onclick = () => {
+      courseFilter = b.dataset.cf;
+      $$('[data-cf]').forEach(x => x.classList.toggle('on', x === b));
+      renderCourseList();
+    });
+    $('#cKajabi').onclick = () => window.open(COMMUNITY.courseUrl || '#', '_blank', 'noopener');
+    renderCourseList();
+    return;
+  }
+
   if (courseLive && courseCanBeFramed()){
     tab.classList.add('bleed');
     col.innerHTML = `<iframe class="bleedframe" src="${esc(C.courseUrl)}" title="FNH Foundations course"
                             referrerpolicy="no-referrer"
-                            sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-popups-to-escape-sandbox"></iframe>`;
+                            ></iframe>`;
     return;
   }
 
@@ -1159,7 +1198,6 @@ function renderPractice(){
 /* The FNH Clinical Reference App sends x-frame-options: DENY, so it cannot be
    framed directly. A second relay (FNH_Kajabi_Relay.py ref) serves it on
    127.0.0.1:8789 with that header removed. */
-const REF_RELAY = 'http://' + HUB_HOST + ':8789';
 let docOpen = null;
 
 function renderReference(){
@@ -1177,6 +1215,15 @@ function renderReference(){
     return;
   }
   tab.classList.add('bleed');
+  if (!REF_RELAY){
+    col.innerHTML = `
+      <div class="door" style="margin-bottom:14px">
+        <div><b>FNH Practitioner Reference</b><span>The clinical reference app — zone maps, point locations, deep reference</span></div>
+        <a href="https://fnhrefapp-ggs6ojfk.manus.space/" target="_blank" rel="noopener">Open it ↗</a>
+      </div>
+      <p class="snapshot">This is the public copy, so the app is not proxied here. <a href="${esc(PRIVATE_HUB)}">Open the hub on your own machine</a> to have it inside the page.</p>`;
+    return;
+  }
   col.innerHTML = `
     <div class="door" style="margin-bottom:14px">
       <div><b>FNH Practitioner Reference</b><span>The clinical reference app — zone maps, point locations, deep reference</span></div>
@@ -1199,7 +1246,7 @@ function renderLibrary(){
   const col = $('#libraryCol');
   const L = LIBRARY;
   const card = l => l.doc
-    ? `<a class="tool" href="#" data-doc="${esc(l.url)}" data-doctitle="${esc(l.name)}">
+    ? `<a class="tool" href="#" data-doc="${esc(IS_PRIVATE ? l.url : PRIVATE_HUB + encodeURI(l.url))}" data-doctitle="${esc(l.name)}">
         <b>${esc(l.name)}</b><span>${esc(l.note)}</span></a>`
     : `<a class="tool" href="${esc(l.url)}"${l.external ? ' target="_blank" rel="noopener"' : ''}>
         <b>${esc(l.name)}</b><span>${esc(l.note)}</span></a>`;
