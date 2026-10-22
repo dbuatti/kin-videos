@@ -528,10 +528,10 @@ const saveMine  = () => { try { localStorage.setItem(MINE, JSON.stringify(mine))
 /* The marks also live on the server, so the hub can be opened from the
    MacBook or from the Mac mini, on the iPad or on the desktop, and still see
    the same ticks. The newest mark for each item wins. */
-const MARK_HOSTS = Array.from(new Set([
-  HUB_HOSTS.mini,
-  (location.protocol === 'http:' || location.protocol === 'https:') ? location.origin : null
-].filter(Boolean)));
+/* Both hubs, always. Each mirrors its marks to the other, so that whichever
+   machine is switched on has the same set — that is what makes the Mac mini
+   a real stand-by rather than a copy that drifts. */
+const MARK_HOSTS = Array.from(new Set([HUB_HOSTS.mini, HUB_HOSTS.macbook]));
 let marksTimer = 0;
 let marksBlocked = false;
 function pushMarks(){
@@ -548,7 +548,7 @@ function pushMarks(){
       } catch(e){ fail++; }
     }
     setTimeout(() => {
-      const blocked = fail > 0 && ok === 0;
+      const blocked = IS_PRIVATE && fail > 0 && ok === 0;
       if (blocked !== marksBlocked){
         marksBlocked = blocked;
         const n = document.getElementById('marksNote');
