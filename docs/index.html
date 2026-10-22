@@ -107,6 +107,21 @@
  .pdfbar{background:#0f151b}
  .pdftitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34vw}
  /* PEACE simulator */
+ /* the session details, and the box you write in at each step */
+ .peacesess{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:0 0 16px}
+ .psf{display:block}
+ .psf>span{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+ .psf input{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+             color:var(--fg);outline:none;font-size:14px}
+ .psf input:focus{border-color:#2f6f60}
+ .pcapture{margin:14px 0 0;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px}
+ .pclabel{display:block;font-size:12.5px;font-weight:650;color:var(--acc);margin-bottom:7px}
+ .pcapture textarea{width:100%;background:#11161b;border:1px solid var(--line);border-radius:9px;padding:11px 12px;
+                    color:var(--fg);outline:none;font:inherit;font-size:14px;line-height:1.5;resize:vertical;min-height:64px}
+ .pcapture textarea:focus{border-color:#2f6f60}
+ .peacerecord{width:100%;background:#11161b;border:1px solid var(--line);border-radius:12px;padding:14px;
+               color:var(--fg);font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;min-height:220px}
+ .peacerecord:focus{outline:none;border-color:#2f6f60}
  .peacecnt{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
  .phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:8px;margin-bottom:14px}
  .phase{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;text-align:left;display:grid;
@@ -217,6 +232,11 @@
    .pdfgoto{width:62px}
    /* the library and course lists read better with a little more air */
    .col{padding-left:14px;padding-right:14px}
+   /* the session details: two across on a phone, so the work starts sooner */
+   .peacesess{grid-template-columns:1fr 1fr;gap:8px}
+   .peacesess .psf:last-child{grid-column:1 / -1}
+   .psf>span{font-size:9px;letter-spacing:.1em}
+   .psf input{padding:10px 11px;font-size:15px}
    /* a door is a row on a desk, and a stack on a phone */
    .door{flex-direction:column;align-items:stretch;gap:12px;padding:14px}
    .door b{font-size:15px}
@@ -608,7 +628,7 @@ function pushMarks(now){
   if (!MARK_HOSTS.length) return;
   clearTimeout(marksTimer);
   const send = () => {
-    const body = JSON.stringify({ items: state, mine: { energy:mine.energy, size:mine.size, parked:mine.parked, history:mine.history }, pos: positions });
+    const body = JSON.stringify({ items: state, mine: { energy:mine.energy, size:mine.size, parked:mine.parked, history:mine.history }, pos: positions, notes: peaceNotes, session: peaceSession });
     let ok = 0, fail = 0;
     for (const h of MARK_HOSTS){
       try {
@@ -655,6 +675,12 @@ function pullMarks(){
         }
         for (const k in d.pos || {}){
           if (posStamp(d.pos[k]) >= posStamp(positions[k])) positions[k] = d.pos[k];
+        }
+        for (const k in d.notes || {}){
+          if (noteStamp(d.notes[k]) >= noteStamp(peaceNotes[k])) peaceNotes[k] = d.notes[k];
+        }
+        for (const k in d.session || {}){
+          if (noteStamp(d.session[k]) >= noteStamp(peaceSession[k])) peaceSession[k] = d.session[k];
         }
       }
       return changed;
@@ -1367,8 +1393,27 @@ function renderCommunity(){
 }
 
 /* ================= PRACTICE TAB — the PEACE simulator ================= */
-const PEACE = {"title":"PEACE","throughline":"settle the system → find the driver → correct it → embed it","intro":"One process, every session. Run it the same way each time and let the nervous system reveal the work. Tap through each phase as if you were treating someone, then mark the steps you actually did.","phases":[{"key":"P","name":"Preliminary","part":"Part 2","tagline":"gather, never correct","goal":"Gather a baseline. Find, don't fix.","note":"Every later finding is read through muscle testing, so the instrument comes first. Screens are not diagnoses — their value lands on the re-test.","steps":[{"id":"P1","title":"History","do":"Old injuries, surgeries, scars, impacts, life events.","watch":"This is the nociception list. Write it down; do not treat it yet."},{"id":"P2","title":"BOLT","do":"Normal breath in and out, pinch the nose at the end of the exhale, time to first air-hunger.","watch":"Under 20 s means breathing retraining is a priority from session 1. 25 s+ is functional, 40 s+ ideal."},{"id":"P3","title":"Fukuda","do":"Eyes-closed march, 30 s.","watch":"Left/right rotation = ipsilateral cerebellar weakness, vestibular hypertonicity or peripheral nociception. Note it — don't interpret it alone."},{"id":"P4","title":"Romberg / single leg","do":"Adds the proprioceptive read.","watch":"Eyes closed removes visual compensation. Asymmetry matters."},{"id":"P5","title":"COGS","do":"Pelvis and cranium move the same direction, rib cage opposite — across frontal, sagittal and transverse planes.","watch":"Effortful = disorganised. Correlate with muscle testing, don't read it alone."},{"id":"P6","title":"Specific ROM","do":"The symptomatic baseline.","watch":"This is the number you re-test against. Nothing else counts without it."},{"id":"P7","title":"Global ROM","do":"Forward bend, trunk rotation, cervical rotation.","watch":"Compare against the specific finding."},{"id":"P8","title":"Inner unit","do":"TVA, diaphragm, pelvic floor, sacrospinalis, multifidus. The body's pressure system and structural midline.","watch":"Diaphragm and pelvic floor are indicator tests; TVA, multifidi and sacrospinalis are direct. Record bilateral and side-by-side combinations. TVA or diaphragm inhibited → phrenic is likely a priority in Ease."},{"id":"P9","title":"Palpation","do":"Palpate and note.","watch":"Note, don't correct. Correction here is out of order."},{"id":"P10","title":"All primitive reflexes","do":"Test every reflex, in order.","watch":"This is your Align working list, not a place to start correcting."},{"id":"P11","title":"All 12 cranial nerves","do":"Test all twelve.","watch":"Same — this is the list, not the work."},{"id":"P12","title":"Flag scars, surgery and impacts","do":"Mark every one for Align.","watch":"An active scar that inhibits a facilitated indicator gets corrected first."},{"id":"P13","title":"Mono-tasking (optional)","do":"6–8 integrated · 3–4 moderate · 1–2 significant.","watch":"A resource, not a test. It tells you how much the system is holding."}]},{"key":"E","name":"Ease the System","part":"Part 3","tagline":"down-regulate first","goal":"Settle the system so the findings are clean. Make it safe to work.","note":"Sympathetic over-drive is the main blocker. Ease = SNS down, PNS up, and move the lymph. Done thoroughly early, Align works far better.","steps":[{"id":"E1","title":"Rocking — the cornerstone","do":"Slow and rhythmic. SC-joint and umbilicus hands. Head wobble signals release.","watch":"Settles, integrates, fail-safes, and can stand alone. When in doubt, rock. If they don't settle, they aren't ready to correct."},{"id":"E2","title":"Phrenic release","do":"Crossed sternum / C4 pattern. Counterstrain both sides, then belly breathing.","watch":"Restores diaphragm drive and vagal tone. Check bilaterally, every client, every session. 1–3 times is usually enough."},{"id":"E3","title":"T1 sympathetic reset","do":"Frees the sympathetic chain at the first rib: contract-relax in external rotation, 45–90 s.","watch":"Confirm via the contralateral psoas. Occasional — not every session. Indicated when globally hypertonic and phrenic alone isn't enough."},{"id":"E4","title":"Lymph","do":"Screen every session. Start at the temporoparietal suture.","watch":"Re-assess it afterwards. The lymph changes with the other work."}]},{"key":"A","name":"Align the Hierarchy","part":"Part 4","tagline":"find the top domino","goal":"Assess the pathways and find the driver. The core correction work.","note":"Input → processing → output. The symptom is always the output, which is why chasing it so often fails to hold. The driver is upstream.","steps":[{"id":"A0","title":"The model","do":"Input (afferent) → processing (efferent) → output.","watch":"A problem is either afferent (input: mechanoreception, nociception) or efferent (processing: cortical, sub-cortical, emotions). Muscle testing is the readout that tells you which side."},{"id":"A1","title":"Working order","do":"Fear Paralysis · Tendon Guard · cranial/neck/spinal nociception (or active scar) · ATNR · priority cranial nerves.","watch":"Stay loose — emotions, a cranial nerve or active nociception can come first. The muscle test confirms."},{"id":"A2","title":"Four steps","do":"1 challenge (stim, touch or test) · 2 state the direction · 3 branch and correct · 4 re-test the original pathway to 'no issue'.","watch":"'Afferent' locks in 5–10 s = afferent. Correct the driver, retest to no issue, and only then load. 80–90% of the time the driver is efferent."},{"id":"A3","title":"Nociception override","do":"An active scar or old impact that inhibits a facilitated indicator gets corrected first.","watch":"This is an override — it jumps the queue, and that is correct."},{"id":"A4","title":"Emotions override","do":"Visibly activated, or corrections not holding → route to the Emotions Process.","watch":"An override too. If a correction won't hold, the driver is not where you were looking."}]},{"key":"C","name":"Correct","part":"Part 4","tagline":"minimum effective dose","goal":"Make the correction, then re-check for the cascade.","note":"A and C run as a loop: assess → correct → retest → load.","steps":[{"id":"C1","title":"Permission","do":"Stim the zone and state 'Permission to correct'.","watch":"Facilitates = go. If it doesn't, check resources before trying harder."},{"id":"C2","title":"Resources","do":"Electrons (rock first) · hydration · omega-3 · sleep · blood sugar · adrenals · mono-tasking.","watch":"Ligament stretch inhibits everything — that's Stage 3. Check the basics before you escalate the technique."},{"id":"C3","title":"Correct → re-assess → repeat","do":"One correction often clears several. Note what cleared.","watch":"Stop when the system has had enough. Three to six high-priority corrections beat twenty low-priority ones."},{"id":"C4","title":"Finish","do":"Transition slowly off the table → gaits with VOR mapping → cross-crawls (add counting, then eyes closed).","watch":"The transition is part of the correction, not a gap after it."}]},{"key":"E","name":"Embed","part":"Part 5","tagline":"make it hold","goal":"Integrate it upright and send home reinforcement.","note":"A correction that only holds lying down won't survive the drive home.","steps":[{"id":"F1","title":"Transition every session","do":"Supine → seated → standing → walking.","watch":"Never let them stand up from the table and leave."},{"id":"F2","title":"Breathing recovery","do":"Nasal breath, 5 s hold, 10–15 s calm breathing. 5–15 min, 2–3× a day.","watch":"BOLT target 25 s+, ideally 40 s+."},{"id":"F3","title":"Hydration","do":"Water and electrolytes.","watch":"Especially the first few sessions."},{"id":"F4","title":"Binder (if indicated)","do":"On the navel. Facilitates an inhibited indicator = indicated.","watch":"Refer for dosing unless you are qualified."},{"id":"F5","title":"Cranial-nerve homework","do":"The corrected nerve only, at 60–70% of threshold.","watch":"Double the reps weekly for 3–6 weeks."},{"id":"F6","title":"Infinity walks","do":"Eyes locked on an X, figure-eight around it. 5 laps, 5× a day, or between corrections.","watch":"A cheap integrator. Between corrections is when it does the most good."},{"id":"F7","title":"Plan the journey","do":"Stabilise → integrate → optimise.","watch":"Foundations: 6 sessions minimum. Chronic: 12."},{"id":"F8","title":"Gaits and VOR mapping","do":"Read the gait. Where it won't integrate: VOR mapping — eyes diagnose head position → hold + nasal breathing → retest — or the cerebellum / brain-zone method.","watch":"Cross-lateral or crossed-extensor gait is a whole-body test. Load capacity at the finish: cross-crawls plus a cognitive stressor. Send them out with more capacity than they arrived with."}]}],"watch":[{"t":"Dorsal-vagal signs","d":"Going blank, dissociating, shutting down. Do less and re-assess."},{"t":"Three to six high-priority corrections","d":"Beat twenty low-priority ones."},{"t":"The symptom is the output","d":"Chase the symptom and it won't hold. The driver is upstream."}],"refer":{"t":"Refer, don't treat","d":"Adult positive Babinski or other upper-motor-neuron signs · progressive or unexplained weakness, numbness or sensory loss · new severe or worst-ever headache, seizures, sudden vision/speech/balance change, FAST signs · saddle anaesthesia, new bladder or bowel dysfunction, bilateral leg weakness (urgent) · red-flag concussion: deteriorating consciousness, worsening headache, repeated vomiting, unequal pupils · unexplained weight loss, fever or night sweats, cancer history with new pain, severe unremitting night pain · chest pain, breathlessness at rest, palpitations with collapse, uncontrolled hypertension · acute psychological distress or active trauma beyond the Emotions Process.","contra":"Absolute contraindications: undiagnosed acute presentation · acute trauma or suspected fracture · acute infection or systemic illness · any active red flag · cannot give informed consent. Relative (modify or defer): pregnancy · recent surgery or acute injury · acute flare or highly sensitised system · anticoagulation · frailty · highly dysregulated on the day."}};
+const PEACE = {"title":"PEACE","throughline":"settle the system → find the driver → correct it → embed it","intro":"One process, every session. Run it the same way each time and let the nervous system reveal the work. Tap through each phase as if you were treating someone, then mark the steps you actually did.","phases":[{"key":"P","name":"Preliminary","part":"Part 2","tagline":"gather, never correct","goal":"Gather a baseline. Find, don't fix.","note":"Every later finding is read through muscle testing, so the instrument comes first. Screens are not diagnoses — their value lands on the re-test.","steps":[{"id":"P1","title":"History","do":"Old injuries, surgeries, scars, impacts, life events.","watch":"This is the nociception list. Write it down; do not treat it yet.","capture":{"label":"History — old injuries, surgeries, scars, impacts, life events","hint":"One per line. Add the year if you know it.","rows":4}},{"id":"P2","title":"BOLT","do":"Normal breath in and out, pinch the nose at the end of the exhale, time to first air-hunger.","watch":"Under 20 s means breathing retraining is a priority from session 1. 25 s+ is functional, 40 s+ ideal.","capture":{"label":"BOLT — the longest you can hold after the pinch","hint":"In seconds. Under 20 s means breathing retraining is a priority from session 1.","rows":2}},{"id":"P3","title":"Fukuda","do":"Eyes-closed march, 30 s.","watch":"Left/right rotation = ipsilateral cerebellar weakness, vestibular hypertonicity or peripheral nociception. Note it — don't interpret it alone.","capture":{"label":"Fukuda — what you saw","hint":"Left or right rotation, or none. Which eye.","rows":2}},{"id":"P4","title":"Romberg / single leg","do":"Adds the proprioceptive read.","watch":"Eyes closed removes visual compensation. Asymmetry matters.","capture":{"label":"Romberg / single leg — what you saw","hint":"Asymmetry, and what it points to.","rows":2}},{"id":"P5","title":"COGS","do":"Pelvis and cranium move the same direction, rib cage opposite — across frontal, sagittal and transverse planes.","watch":"Effortful = disorganised. Correlate with muscle testing, don't read it alone.","capture":{"label":"COGS — what you saw","hint":"Effortful, or disorganised. Which pattern.","rows":3}},{"id":"P6","title":"Specific ROM","do":"The symptomatic baseline.","watch":"This is the number you re-test against. Nothing else counts without it.","capture":{"label":"Specific ROM — the baseline you re-test against","hint":"In degrees, and which direction. Nothing else counts without this number.","rows":3}},{"id":"P7","title":"Global ROM","do":"Forward bend, trunk rotation, cervical rotation.","watch":"Compare against the specific finding.","capture":{"label":"Global ROM — forward bend, trunk rotation, cervical rotation","hint":"The numbers, and how they compare with the specific finding.","rows":3}},{"id":"P8","title":"Inner unit","do":"TVA, diaphragm, pelvic floor, sacrospinalis, multifidus. The body's pressure system and structural midline.","watch":"Diaphragm and pelvic floor are indicator tests; TVA, multifidi and sacrospinalis are direct. Record bilateral and side-by-side combinations. TVA or diaphragm inhibited → phrenic is likely a priority in Ease.","capture":{"label":"Inner unit — TVA, diaphragm, pelvic floor, sacrospinalis, multifidus","hint":"Which facilitated, which inhibited.","rows":4}},{"id":"P9","title":"Palpation","do":"Palpate and note.","watch":"Note, don't correct. Correction here is out of order.","capture":{"label":"Palpation — what you found","hint":"Note, don't correct. What is notable, and where.","rows":4}},{"id":"P10","title":"All primitive reflexes","do":"Test every reflex, in order.","watch":"This is your Align working list, not a place to start correcting.","capture":{"label":"Primitive reflexes — which are present","hint":"In order. This is your Align working list, not a place to start correcting.","rows":4}},{"id":"P11","title":"All 12 cranial nerves","do":"Test all twelve.","watch":"Same — this is the list, not the work.","capture":{"label":"Cranial nerves I–XII — the findings","hint":"Which are affected, and how.","rows":4}},{"id":"P12","title":"Flag scars, surgery and impacts","do":"Mark every one for Align.","watch":"An active scar that inhibits a facilitated indicator gets corrected first.","capture":{"label":"Scars, surgery and impacts — mark every one for Align","hint":"Where on the body, and what it inhibits.","rows":4}},{"id":"P13","title":"Mono-tasking (optional)","do":"6–8 integrated · 3–4 moderate · 1–2 significant.","watch":"A resource, not a test. It tells you how much the system is holding.","capture":{"label":"Mono-tasking — what it told you","hint":"How much the system is holding. A resource, not a test.","rows":2}}]},{"key":"E","name":"Ease the System","part":"Part 3","tagline":"down-regulate first","goal":"Settle the system so the findings are clean. Make it safe to work.","note":"Sympathetic over-drive is the main blocker. Ease = SNS down, PNS up, and move the lymph. Done thoroughly early, Align works far better.","steps":[{"id":"E1","title":"Rocking — the cornerstone","do":"Slow and rhythmic. SC-joint and umbilicus hands. Head wobble signals release.","watch":"Settles, integrates, fail-safes, and can stand alone. When in doubt, rock. If they don't settle, they aren't ready to correct."},{"id":"E2","title":"Phrenic release","do":"Crossed sternum / C4 pattern. Counterstrain both sides, then belly breathing.","watch":"Restores diaphragm drive and vagal tone. Check bilaterally, every client, every session. 1–3 times is usually enough."},{"id":"E3","title":"T1 sympathetic reset","do":"Frees the sympathetic chain at the first rib: contract-relax in external rotation, 45–90 s.","watch":"Confirm via the contralateral psoas. Occasional — not every session. Indicated when globally hypertonic and phrenic alone isn't enough."},{"id":"E4","title":"Lymph","do":"Screen every session. Start at the temporoparietal suture.","watch":"Re-assess it afterwards. The lymph changes with the other work.","capture":{"label":"Lymph — before and after","hint":"Before, and how it re-assessed after the other work.","rows":2}}]},{"key":"A","name":"Align the Hierarchy","part":"Part 4","tagline":"find the top domino","goal":"Assess the pathways and find the driver. The core correction work.","note":"Input → processing → output. The symptom is always the output, which is why chasing it so often fails to hold. The driver is upstream.","steps":[{"id":"A0","title":"The model","do":"Input (afferent) → processing (efferent) → output.","watch":"A problem is either afferent (input: mechanoreception, nociception) or efferent (processing: cortical, sub-cortical, emotions). Muscle testing is the readout that tells you which side."},{"id":"A1","title":"Working order","do":"Fear Paralysis · Tendon Guard · cranial/neck/spinal nociception (or active scar) · ATNR · priority cranial nerves.","watch":"Stay loose — emotions, a cranial nerve or active nociception can come first. The muscle test confirms.","capture":{"label":"Your working order for this session","hint":"What you are working on first, and why.","rows":4}},{"id":"A2","title":"Four steps","do":"1 challenge (stim, touch or test) · 2 state the direction · 3 branch and correct · 4 re-test the original pathway to 'no issue'.","watch":"'Afferent' locks in 5–10 s = afferent. Correct the driver, retest to no issue, and only then load. 80–90% of the time the driver is efferent.","capture":{"label":"The four steps — what you found","hint":"1 challenge · 2 direction · 3 branch · 4 retest. What came back.","rows":4}},{"id":"A3","title":"Nociception override","do":"An active scar or old impact that inhibits a facilitated indicator gets corrected first.","watch":"This is an override — it jumps the queue, and that is correct.","capture":{"label":"Nociception override — what overrode what","hint":"An active scar or old impact that inhibits a facilitated indicator.","rows":3}},{"id":"A4","title":"Emotions override","do":"Visibly activated, or corrections not holding → route to the Emotions Process.","watch":"An override too. If a correction won't hold, the driver is not where you were looking.","capture":{"label":"Emotions override — what came up","hint":"What was visibly activated, or what would not hold.","rows":3}}]},{"key":"C","name":"Correct","part":"Part 4","tagline":"minimum effective dose","goal":"Make the correction, then re-check for the cascade.","note":"A and C run as a loop: assess → correct → retest → load.","steps":[{"id":"C1","title":"Permission","do":"Stim the zone and state 'Permission to correct'.","watch":"Facilitates = go. If it doesn't, check resources before trying harder."},{"id":"C2","title":"Resources","do":"Electrons (rock first) · hydration · omega-3 · sleep · blood sugar · adrenals · mono-tasking.","watch":"Ligament stretch inhibits everything — that's Stage 3. Check the basics before you escalate the technique.","capture":{"label":"Resources — what was actually available today","hint":"Electrons, hydration, omega-3, sleep, blood sugar, anything else.","rows":4}},{"id":"C3","title":"Correct → re-assess → repeat","do":"One correction often clears several. Note what cleared.","watch":"Stop when the system has had enough. Three to six high-priority corrections beat twenty low-priority ones.","capture":{"label":"What you corrected, and what it cleared","hint":"One correction often clears several. Note what cleared.","rows":5}},{"id":"C4","title":"Finish","do":"Transition slowly off the table → gaits with VOR mapping → cross-crawls (add counting, then eyes closed).","watch":"The transition is part of the correction, not a gap after it.","capture":{"label":"How the session finished","hint":"The transition, the gaits, how they got up.","rows":3}}]},{"key":"E","name":"Embed","part":"Part 5","tagline":"make it hold","goal":"Integrate it upright and send home reinforcement.","note":"A correction that only holds lying down won't survive the drive home.","steps":[{"id":"F1","title":"Transition every session","do":"Supine → seated → standing → walking.","watch":"Never let them stand up from the table and leave."},{"id":"F2","title":"Breathing recovery","do":"Nasal breath, 5 s hold, 10–15 s calm breathing. 5–15 min, 2–3× a day.","watch":"BOLT target 25 s+, ideally 40 s+.","capture":{"label":"Breathing recovery — the plan","hint":"How many times a day, and for how long.","rows":2}},{"id":"F3","title":"Hydration","do":"Water and electrolytes.","watch":"Especially the first few sessions.","capture":{"label":"Hydration — what you told them","hint":"Water and electrolytes, and how much.","rows":2}},{"id":"F4","title":"Binder (if indicated)","do":"On the navel. Facilitates an inhibited indicator = indicated.","watch":"Refer for dosing unless you are qualified.","capture":{"label":"Binder — if indicated","hint":"On the navel, and the indication.","rows":2}},{"id":"F5","title":"Cranial-nerve homework","do":"The corrected nerve only, at 60–70% of threshold.","watch":"Double the reps weekly for 3–6 weeks.","capture":{"label":"Cranial-nerve homework","hint":"Which nerve, at what threshold, how many reps.","rows":2}},{"id":"F6","title":"Infinity walks","do":"Eyes locked on an X, figure-eight around it. 5 laps, 5× a day, or between corrections.","watch":"A cheap integrator. Between corrections is when it does the most good.","capture":{"label":"Infinity walks","hint":"How many laps, how many times a day.","rows":2}},{"id":"F7","title":"Plan the journey","do":"Stabilise → integrate → optimise.","watch":"Foundations: 6 sessions minimum. Chronic: 12.","capture":{"label":"The plan — stabilise, integrate, optimise","hint":"The number of sessions you are working to.","rows":3}},{"id":"F8","title":"Gaits and VOR mapping","do":"Read the gait. Where it won't integrate: VOR mapping — eyes diagnose head position → hold + nasal breathing → retest — or the cerebellum / brain-zone method.","watch":"Cross-lateral or crossed-extensor gait is a whole-body test. Load capacity at the finish: cross-crawls plus a cognitive stressor. Send them out with more capacity than they arrived with.","capture":{"label":"Gaits and VOR mapping — what you saw","hint":"The gait, and where it would not integrate.","rows":4}}]}],"watch":[{"t":"Dorsal-vagal signs","d":"Going blank, dissociating, shutting down. Do less and re-assess."},{"t":"Three to six high-priority corrections","d":"Beat twenty low-priority ones."},{"t":"The symptom is the output","d":"Chase the symptom and it won't hold. The driver is upstream."}],"refer":{"t":"Refer, don't treat","d":"Adult positive Babinski or other upper-motor-neuron signs · progressive or unexplained weakness, numbness or sensory loss · new severe or worst-ever headache, seizures, sudden vision/speech/balance change, FAST signs · saddle anaesthesia, new bladder or bowel dysfunction, bilateral leg weakness (urgent) · red-flag concussion: deteriorating consciousness, worsening headache, repeated vomiting, unequal pupils · unexplained weight loss, fever or night sweats, cancer history with new pain, severe unremitting night pain · chest pain, breathlessness at rest, palpitations with collapse, uncontrolled hypertension · acute psychological distress or active trauma beyond the Emotions Process.","contra":"Absolute contraindications: undiagnosed acute presentation · acute trauma or suspected fracture · acute infection or systemic illness · any active red flag · cannot give informed consent. Relative (modify or defer): pregnancy · recent surgery or acute injury · acute flare or highly sensitised system · anticoagulation · frailty · highly dysregulated on the day."},"session":{"title":"Your session","intro":"Write down what you find as you go. At the end you can copy it, or save it as a file.","fields":[{"key":"client","label":"Who you worked with","hint":"Name, or 'self'"},{"key":"date","label":"Date","hint":""},{"key":"reason","label":"What they came for","hint":"One line"}]}};
 let peacePhase = 0, peaceStep = 0;
+
+/* What you write down during a session. It lives on the server with the rest
+   of your record, so a session started on the iPad is still there on the
+   MacBook, and the export is the same wherever you make it. */
+let peaceNotes = {}, peaceSession = {};
+try { peaceNotes  = JSON.parse(localStorage.getItem('fnh-peace-notes-v1')   || '{}'); } catch(e){}
+try { peaceSession = JSON.parse(localStorage.getItem('fnh-peace-session-v1') || '{}'); } catch(e){}
+const noteVal   = v => v == null ? '' : (typeof v === 'string' ? v : (v.text || ''));
+const noteStamp = v => v == null ? 0 : (typeof v === 'string' ? 0 : (v.d || 0));
+function saveNote(id, text){
+  peaceNotes[id] = { text: text, d: Date.now() };
+  try { localStorage.setItem('fnh-peace-notes-v1', JSON.stringify(peaceNotes)); } catch(e){}
+  pushPositions();
+}
+function saveSessionField(key, text){
+  peaceSession[key] = { text: text, d: Date.now() };
+  try { localStorage.setItem('fnh-peace-session-v1', JSON.stringify(peaceSession)); } catch(e){}
+  pushPositions();
+}
 
 function peaceDone(){
   try { return new Set(JSON.parse(localStorage.getItem('fnh_peace_done_v1') || '[]')); } catch(e){ return new Set(); }
@@ -1393,6 +1438,14 @@ function renderPractice(){
     </div>
     <p class="snapshot" style="margin:0 0 16px">${esc(PEACE.intro)}</p>
 
+    <div class="peacesess">
+      ${(PEACE.session && PEACE.session.fields || []).map(f=>`
+        <label class="psf">
+          <span>${esc(f.label)}</span>
+          <input type="text" data-sess="${esc(f.key)}" value="${esc(noteVal(peaceSession[f.key]))}" placeholder="${esc(f.hint||'')}" autocomplete="off">
+        </label>`).join('')}
+    </div>
+
     <div class="phases" id="phases">
       ${PEACE.phases.map((p,i)=>`
         <button class="phase ${i===peacePhase?'on':''}" data-ph="${i}">
@@ -1410,6 +1463,11 @@ function renderPractice(){
       </div>
       <div class="pblock"><span class="plabel">Do</span><p>${esc(step.do)}</p></div>
       <div class="pblock watch"><span class="plabel">Watch</span><p>${esc(step.watch)}</p></div>
+      ${step.capture ? `
+      <div class="pcapture">
+        <label class="pclabel">${esc(step.capture.label)}</label>
+        <textarea data-note="${esc(step.id)}" rows="${step.capture.rows||3}" placeholder="${esc(step.capture.hint||'')}">${esc(noteVal(peaceNotes[step.id]))}</textarea>
+      </div>` : ''}
       <div class="pnav">
         <button class="mini" id="pPrev">&larr; back</button>
         <button class="mini" id="pMark">${done.has(step.id) ? 'done — unmark' : 'mark done'}</button>
@@ -1418,6 +1476,15 @@ function renderPractice(){
     </div>
 
     <div class="phasesub">${esc(ph.goal)} <em>${esc(ph.note)}</em></div>
+
+    <div class="h2">Your session — the record</div>
+    <p class="snapshot" style="margin:0 0 10px">Everything you wrote down, in one place. Copy it, or save it as a file.</p>
+    <div class="tools" style="margin:0 0 10px">
+      <button class="tool" id="peaceCopy" style="text-align:left"><b>Copy to the clipboard ↗</b><span>Paste it into your notes</span></button>
+      <button class="tool" id="peaceSave" style="text-align:left"><b>Save as a text file ↗</b><span>A .txt you can keep or email</span></button>
+      <button class="tool" id="peaceClear" style="text-align:left"><b>Clear the record</b><span>Start the next session fresh</span></button>
+    </div>
+    <textarea id="peaceRecord" class="peacerecord" readonly rows="14"></textarea>
 
     <div class="h2">Watch for</div>
     <div class="linklist">${PEACE.watch.map(w=>`<div class="lrow"><div class="lt"><b>${esc(w.t)}</b><small>${esc(w.d)}</small></div></div>`).join('')}</div>
@@ -1441,6 +1508,87 @@ function renderPractice(){
     renderPractice();
   };
   $('#pMark').onclick = () => { markPeace(step.id, !done.has(step.id)); renderPractice(); };
+
+  /* the session details and the notes — saved as you type, never re-rendered
+     out from under you */
+  col.querySelectorAll('[data-sess]').forEach(inp => {
+    inp.oninput = () => { saveSessionField(inp.dataset.sess, inp.value); paintPeaceRecord(); };
+  });
+  col.querySelectorAll('[data-note]').forEach(ta => {
+    ta.oninput = () => { saveNote(ta.dataset.note, ta.value); paintPeaceRecord(); };
+  });
+
+  $('#peaceCopy').onclick = () => {
+    const text = peaceRecord();
+    const done2 = () => toast('The session record is on the clipboard.');
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done2).catch(() => { selectRecord(); });
+    } else selectRecord();
+  };
+  const selectRecord = () => {
+    const box = document.getElementById('peaceRecord');
+    if (box){ box.focus(); box.select(); try{ document.execCommand('copy'); toast('Copied.'); }catch(e){ toast('Press and hold to copy the record.'); } }
+  };
+  $('#peaceSave').onclick = () => {
+    const blob = new Blob([peaceRecord()], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = peaceFileName();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast('Saved as ' + peaceFileName());
+  };
+  $('#peaceClear').onclick = () => {
+    if (!confirm('Clear the notes for this session? The steps you marked done stay as they are.')) return;
+    peaceNotes = {}; peaceSession = {};
+    try { localStorage.removeItem('fnh-peace-notes-v1'); localStorage.removeItem('fnh-peace-session-v1'); } catch(e){}
+    pushMarks(true);
+    renderPractice();
+  };
+
+  paintPeaceRecord();
+}
+
+/* The session record — the same text on screen, in the clipboard, and in the
+   file you save. */
+function peaceRecord(){
+  const L = [];
+  const s = k => noteVal(peaceSession[k]);
+  const done = peaceDone();
+  L.push('FNH SESSION RECORD');
+  L.push('');
+  L.push('Who       ' + (s('client') || '—'));
+  L.push('Date      ' + (s('date') || new Date().toLocaleDateString()));
+  L.push('Came for  ' + (s('reason') || '—'));
+  L.push('');
+  PEACE.phases.forEach(p => {
+    L.push('── ' + p.key + '  ' + p.name + '  (' + p.part + ')');
+    p.steps.forEach(st => {
+      L.push('  ' + (done.has(st.id) ? '[x]' : '[ ]') + ' ' + st.id.padEnd(4) + ' ' + st.title);
+      const n = noteVal(peaceNotes[st.id]).trim();
+      if (n) L.push('        ' + n.replace(/\n/g, '\n        '));
+    });
+    L.push('');
+  });
+  L.push('── WATCH FOR');
+  PEACE.watch.forEach(w => L.push('  • ' + w.t + ' — ' + w.d));
+  L.push('');
+  L.push('── STOP AND REFER');
+  L.push('  ' + PEACE.refer.t);
+  L.push('  ' + PEACE.refer.d);
+  L.push('  Contraindications: ' + PEACE.refer.contra);
+  L.push('');
+  L.push('Recorded with the FNH Hub');
+  return L.join('\n');
+}
+function peaceFileName(){
+  const who = (noteVal(peaceSession.client) || 'session').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g,'').toLowerCase();
+  const d = (noteVal(peaceSession.date) || new Date().toISOString().slice(0,10));
+  return 'fnh-session-' + who + '-' + d + '.txt';
+}
+function paintPeaceRecord(){
+  const box = document.getElementById('peaceRecord');
+  if (box) box.value = peaceRecord();
 }
 
 /* ================= REFERENCE TAB ================= */
