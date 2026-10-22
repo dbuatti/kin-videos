@@ -105,6 +105,7 @@
  .pdfload{padding:40px 20px;text-align:center;color:var(--dim);font-size:14px}
  .pdfload b{display:block;color:var(--ink);font-size:16px;margin-bottom:8px}
  .pdfbar{background:#0f151b}
+ .pdftitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34vw}
  /* PEACE simulator */
  .peacecnt{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
  .phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:8px;margin-bottom:14px}
@@ -184,11 +185,70 @@
  .gfoot{flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:7px 18px;border-top:1px solid var(--line);
         background:#12161b;font-size:12px;color:var(--dim)}
  .gfootlinks{display:flex;align-items:center;gap:16px;flex:1;min-width:0;overflow-x:auto;
-             -webkit-overflow-scrolling:touch;scrollbar-width:none}
+             -webkit-overflow-scrolling:touch;scrollbar-width:none;
+             -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 22px),transparent 100%);
+             mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 22px),transparent 100%)}
  .gfootlinks::-webkit-scrollbar{display:none}
  .gfoot .quicklink{white-space:nowrap;flex:0 0 auto}
  .gfootright{display:flex;align-items:center;gap:14px;flex:0 0 auto}
- @media(max-width:640px){.gfoot{padding:6px 12px;gap:10px}.gfootlinks{gap:13px}}
+ @media(max-width:760px){
+   /* a phone: the tab strip scrolls sideways, and the head keeps out of its way */
+   header{gap:8px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px}
+   .brand{display:none}
+   .tabs{order:-1;width:100%;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;
+         scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:0;
+         -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 26px),transparent 100%);
+         mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 26px),transparent 100%)}
+   .tabs::-webkit-scrollbar{display:none}
+   .tabs button{flex:0 0 auto;padding:9px 13px;font-size:13px;text-align:left;white-space:nowrap}
+   .head-right{margin-left:auto;gap:6px}
+   .timerbtn{padding:6px 10px 6px 7px}
+   .tlabel{min-width:0}
+   .kajabipill{padding:7px 10px;font-size:11.5px}
+   /* the nav bar: full width, above the home indicator */
+   .gfoot{padding:6px 12px calc(6px + env(safe-area-inset-bottom));gap:10px}
+   .gfootlinks{gap:16px}
+   .gfoot .quicklink{padding:10px 0;font-size:12.5px}
+   /* the reader's own bar has a lot in it — let it scroll too */
+   .relaybar{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;white-space:nowrap}
+   .relaybar::-webkit-scrollbar{display:none}
+   .relaybar>*{flex:0 0 auto}
+   .relaybar span:first-child{overflow:hidden;text-overflow:ellipsis;max-width:44vw}
+   .pdfgoto{width:62px}
+   /* the library and course lists read better with a little more air */
+   .col{padding-left:14px;padding-right:14px}
+   /* a door is a row on a desk, and a stack on a phone */
+   .door{flex-direction:column;align-items:stretch;gap:12px;padding:14px}
+   .door b{font-size:15px}
+   .door>span:last-child{width:100%}
+   .door a{flex:1 1 0;text-align:center;padding:12px 10px}
+ }
+ /* a phone on its side: the head and the foot cannot have two rows each */
+ @media(max-height:540px) and (orientation:landscape){
+   header{padding:5px 10px;gap:8px}
+   .brand{display:block;font-size:11px}
+   .tabs{order:0;width:auto;flex:1 1 auto;min-width:0}
+   .tabs button{padding:7px 11px;font-size:12px}
+   .gfoot{padding:2px 10px calc(2px + env(safe-area-inset-bottom))}
+   .gfoot .quicklink{padding:7px 0;font-size:11.5px}
+   .dials{display:none}
+ }
+ /* a finger, not a mouse: nothing important should be under 32 points */
+ @media(hover:none) and (pointer:coarse){
+   .quicklink{padding:9px 0;display:inline-block;line-height:1.25}
+   .gfoot .quicklink{padding:11px 0}
+   .icon-btn{width:40px;height:40px}
+   .timerbtn{padding:8px 12px 8px 9px}
+   .kajabipill{padding:9px 12px}
+   .tabs button{padding:11px 13px}
+   .stop{height:30px}
+   .track{height:36px;border-radius:18px}
+   .track .knob{height:30px;top:2px;border-radius:15px}
+   .seg{height:48px}
+   .seg button{padding:0 16px}
+   .dot{width:9px;height:9px}
+   .chips button,.chip{padding:10px 13px}
+ }
  .publicnote{display:none;align-items:center;gap:12px;padding:9px 16px;background:#1b2a1f;
              border-bottom:1px solid #2f4a37;color:#cfe6d6;font-size:13px;line-height:1.5}
  .publicnote b{color:#eaf6ee}
@@ -410,6 +470,7 @@
       </div>
       <div class="foot">
         <div class="dots" id="dots"></div>
+        <div class="where" id="where"></div>
       </div>
     </div>
   </section>
@@ -439,9 +500,6 @@
     <a class="quicklink" href="https://notebook.google.com/notebook/97c027cb-1078-4c6b-8ba7-8e32411d0385" target="_blank" rel="noopener">notebook ↗</a>
     <a class="quicklink" href="#" id="clinicLink">clinic ↗</a>
     <a class="quicklink" href="https://cal.com/danielebuatti/fnh-neuro" target="_blank" rel="noopener">book a session ↗</a>
-  </div>
-  <div class="gfootright">
-    <div class="where" id="where"></div>
   </div>
 </footer>
 
@@ -682,7 +740,13 @@ function showTab(name){
   if (name === 'clinic') renderClinic();
   try { history.replaceState(null, '', '#' + name); } catch(e){}
 }
-$$('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+function revealTab(btn){
+  const bar = btn.parentElement;
+  if (!bar) return;
+  const want = btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2;
+  bar.scrollTo({ left: Math.max(0, want), behavior: 'smooth' });
+}
+$$('#tabs button').forEach(b => b.onclick = () => { showTab(b.dataset.tab); revealTab(b); });
 /* deep links: FNH_Hub.html#community opens straight to that tab */
 function tabFromHash(){
   const h = (location.hash || '').replace('#','').toLowerCase();
@@ -1064,6 +1128,8 @@ const ON_MYKAJABI = /(^|\.)mykajabi\.com$/i.test(location.hostname);
 const MANUAL_REL = '00 Reference/FNH_Foundations_Practitioner_Manual.pdf';
 const MANUAL_TITLE = 'FNH Foundations Practitioner Manual (2026)';
 const MANUAL_PUBLIC = PRIVATE_HUB + 'FNH_Hub.html#manual';
+/* the PDF itself, on the machine that always holds it */
+const MANUAL_PDF = HUB_HOSTS.mini + '/00%20Reference/FNH_Foundations_Practitioner_Manual.pdf';
 let kajabi = null;
 
 function fetchKajabiProgress(){
@@ -1351,6 +1417,7 @@ function renderPractice(){
    127.0.0.1:8789 with that header removed. */
 let docOpen = null;
 let pdfReader = null;
+let refAppOpen = false;
 
 /* ================= PDF READER =================
    A PDF inside an iframe will not scroll on iOS Safari — it shows the first
@@ -1397,13 +1464,13 @@ class PdfReader {
     this.mount.innerHTML = `
       <div class="relaybar pdfbar">
         <button class="mini" id="pdfBack">← back</button>
-        <span>${esc(this.title)}</span>
+        <span class="pdftitle">${esc(this.title)}</span>
         <span class="pdfpageof" id="pdfPos">…</span>
         <button class="mini" id="pdfZoomOut" aria-label="zoom out">−</button>
         <span class="pdfpageof" id="pdfZoomLbl">${Math.round(this.zoom*100)}%</span>
         <button class="mini" id="pdfZoomIn" aria-label="zoom in">+</button>
         <input class="pdfgoto" id="pdfGoto" type="number" min="1" placeholder="page" aria-label="go to page">
-        <a class="mini" href="${esc(this.url)}" target="_blank" rel="noopener">open in a tab ↗</a>
+        <a class="mini" href="${esc(this.url)}" target="_blank" rel="noopener" title="The PDF itself, in the browser's own reader">open the PDF ↗</a>
       </div>
       <div class="pdfscroll" id="pdfScroll"><div class="pdfpages" id="pdfPages"></div></div>`;
 
@@ -1418,7 +1485,7 @@ class PdfReader {
     // the document itself — the server supports byte ranges, so only the
     // pages you actually scroll to are fetched
     try {
-      this.doc = await lib.getDocument({ url: this.url, rangeChunkSize: 65536, disableAutoFetch: true }).promise;
+      this.doc = await lib.getDocument({ url: this.url, rangeChunkSize: 131072, disableAutoFetch: true }).promise;
     } catch(e){
       try {
         const res = await fetch(this.url);
@@ -1504,6 +1571,7 @@ class PdfReader {
       const MAXPX = 1600;                       // keep the canvas inside an iPad's memory
       if (base.width * pxScale > MAXPX) pxScale = MAXPX / base.width;
       const viewport = page.getViewport({ scale: pxScale });
+      const viewportCss = page.getViewport({ scale: cssScale });
       const canvas = document.createElement('canvas');
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
@@ -1538,6 +1606,42 @@ class PdfReader {
         tl.style.width = cssW + 'px';
         tl.style.height = cssH + 'px';
       } catch(e){ /* a page with no text is fine */ }
+
+      // The links inside the page. The manual links out to websites and
+      // around its own contents, and those links were dead in the reader —
+      // one opens in a new tab, the other jumps to its page.
+      try {
+        const annots = await page.getAnnotations();
+        if (this.dead) return;
+        for (const a of annots){
+          if (a.subtype !== 'Link' || !a.rect) continue;
+          // a transform is six numbers, so the two corners are put through
+          // it one at a time rather than read off the end of it
+          const c1 = window.pdfjsLib.Util.applyTransform([a.rect[0], a.rect[1]], viewportCss.transform);
+          const c2 = window.pdfjsLib.Util.applyTransform([a.rect[2], a.rect[3]], viewportCss.transform);
+          const x = Math.min(c1[0], c2[0]), y = Math.min(c1[1], c2[1]);
+          const w = Math.abs(c2[0] - c1[0]), h = Math.abs(c2[1] - c1[1]);
+          if (!w || !h || isNaN(x) || isNaN(y)) continue;
+          const el = document.createElement('a');
+          el.style.cssText = 'position:absolute;left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;';
+          el.title = a.url || 'go to page';
+          if (a.url){
+            el.href = a.url;
+            el.target = '_blank';
+            el.rel = 'noopener noreferrer';
+          } else {
+            el.href = '#';
+            el.addEventListener('click', async ev => {
+              ev.preventDefault();
+              try {
+                const idx = Array.isArray(a.dest) ? await this.doc.getPageIndex(a.dest[0]) : null;
+                if (idx != null) this.goTo(idx + 1);
+              } catch(e){}
+            });
+          }
+          holder.appendChild(el);
+        }
+      } catch(e){ /* a page with no links is fine */ }
 
       el.innerHTML = '';
       el.appendChild(holder);
@@ -1639,6 +1743,29 @@ function setPdfTextLayer(lib){ lib_renderTextLayer = (opts) => {
   return null;
 }; }
 
+/* The manual, offered where you would go looking for it. "Read it here" draws
+   it in the page; "open the PDF" hands it to the browser's own reader, where
+   the links inside it work the way they are meant to. */
+function manualDoor(){
+  return `<div class="door" style="margin-bottom:14px">
+      <div><b>Practitioner manual</b><span>The 2026 edition, 208 pages — read it in the page, or open the PDF</span></div>
+      <span style="display:flex;gap:8px;flex:0 0 auto">
+        <a href="${esc(IS_PRIVATE ? MANUAL_REL : MANUAL_PUBLIC)}" id="readManualBtn">Read it here</a>
+        <a href="${esc(IS_PRIVATE ? MANUAL_REL : MANUAL_PDF)}" target="_blank" rel="noopener">open the PDF ↗</a>
+      </span>
+    </div>`;
+}
+function wireManualDoor(col){
+  const b = col.querySelector('#readManualBtn');
+  if (!b) return;
+  b.onclick = e => {
+    e.preventDefault();
+    if (!IS_PRIVATE){ window.open(MANUAL_PUBLIC, '_blank', 'noopener'); return; }
+    docOpen = { url: MANUAL_REL, title: MANUAL_TITLE };
+    showTab('reference');
+  };
+}
+
 function renderReference(){
   const col = $('#referenceCol');
   const tab = $('#tab-reference');
@@ -1663,28 +1790,45 @@ function renderReference(){
   tab.classList.add('bleed');
   if (!REF_RELAY){
     col.innerHTML = `
+      ${manualDoor()}
       <div class="door" style="margin-bottom:14px">
         <div><b>FNH Practitioner Reference</b><span>The clinical reference app — zone maps, point locations, deep reference</span></div>
         <a href="https://fnhrefapp-ggs6ojfk.manus.space/" target="_blank" rel="noopener">Open it ↗</a>
       </div>
       <p class="snapshot">This is the public copy, so the app is not proxied here. <a href="${esc(PRIVATE_HUB)}">Open the hub on your own machine</a> to have it inside the page.</p>`;
+    wireManualDoor(col);
     return;
   }
+  if (refAppOpen){
+    col.innerHTML = `
+      <div class="relaybar" style="border-radius:12px;border:1px solid var(--line);margin-bottom:10px">
+        <span>Reference app (relayed)</span>
+        <button class="mini" id="refBack">← back</button>
+        <a class="mini" href="https://fnhrefapp-ggs6ojfk.manus.space/" target="_blank" rel="noopener">open in a tab ↗</a>
+      </div>
+      <iframe class="bleedframe" style="height:min(74vh,820px);border:1px solid var(--line);border-radius:12px"
+              src="${esc(REF_RELAY)}/" title="FNH Practitioner Reference"></iframe>`;
+    $('#refBack').onclick = () => { refAppOpen = false; renderReference(); };
+    return;
+  }
+  /* The app is a heavy one, and it was loading beside the manual — taking
+     the connection with it, so the manual took the best part of a minute to
+     open. It now waits until you ask for it. */
   col.innerHTML = `
+    ${manualDoor()}
     <div class="door" style="margin-bottom:14px">
       <div><b>FNH Practitioner Reference</b><span>The clinical reference app — zone maps, point locations, deep reference</span></div>
-      <a href="https://fnhrefapp-ggs6ojfk.manus.space/" target="_blank" rel="noopener">Open it ↗</a>
+      <span style="display:flex;gap:8px;flex:0 0 auto">
+        <a href="#" id="refOpenBtn">Open it here</a>
+        <a href="https://fnhrefapp-ggs6ojfk.manus.space/" target="_blank" rel="noopener">open in a tab ↗</a>
+      </span>
     </div>
-    <p class="snapshot" style="margin:0 0 14px"><b>Sign in has to happen on its own site.</b> The app sends
-    <b>x-frame-options: DENY</b>, so it is shown here through the local relay — but its sign-in is Manus' own OAuth,
-    which Google ties to the real address. Google refuses the relay's address, so the frame below will
-    sit at the sign-in screen. Use <b>Open it ↗</b> and sign in there; it will then stay signed in in this browser.</p>
-    <div class="relaybar" style="border-radius:12px;border:1px solid var(--line);margin-bottom:10px">
-      <span>Reference app (relayed)</span>
-      <a class="mini" href="https://fnhrefapp-ggs6ojfk.manus.space/" target="_blank" rel="noopener">open in a tab ↗</a>
-    </div>
-    <iframe class="bleedframe" style="height:min(74vh,820px);border:1px solid var(--line);border-radius:12px"
-            src="${esc(REF_RELAY)}/" title="FNH Practitioner Reference"></iframe>`;
+    <p class="snapshot" style="margin:0 0 14px"><b>Sign in has to happen on its own site.</b> The app will not
+    be framed, so it comes through the local relay — but its sign-in is Google's, and Google only recognises the real
+    address. So the frame below will sit at the sign-in screen. Use <b>open in a tab ↗</b>, sign in there, and it stays
+    signed in in this browser.</p>`;
+  wireManualDoor(col);
+  $('#refOpenBtn').onclick = e => { e.preventDefault(); refAppOpen = true; renderReference(); };
 }
 
 /* ================= CLINIC TAB ================= */
