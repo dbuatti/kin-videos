@@ -323,8 +323,10 @@
 </div>
 
 <div class="publicnote" id="marksNote" style="display:none;background:#3a2a1b;border-bottom-color:#5a4128;color:#f0dcc4">
-  <div><b>Your browser is blocking this copy from reaching your hub</b>, so your ticks are not being
-  saved across. Allow local network access for this site, or open the hub on your own machine.</div>
+  <div><b>Your browser is blocking this copy from reaching your hub</b>, so the ticks you make here
+  are not being saved across. Allow this site to reach your local network, then try again — or just
+  open the hub on your own machine, where nothing is in the way.</div>
+  <button class="pubgo" id="marksRetry" style="background:#a8703a">Save my ticks there →</button>
 </div>
 
 <header>
@@ -1718,6 +1720,8 @@ $$('#presets button').forEach(b => b.classList.toggle('on', Number(b.dataset.m) 
     if (changed){ saveTicks(); saveMine(); try { render(); } catch(e){} }
     pushMarks();          // so this browser's own ticks reach every hub
   });
+  const retry = document.getElementById('marksRetry');
+  if (retry) retry.onclick = () => { marksBlocked = false; pushMarks(); };
 })();
 </script>
 </body></html>
