@@ -572,9 +572,20 @@ try { state = JSON.parse(localStorage.getItem(KEY) || '{}').items || {}; } catch
 try { const m = JSON.parse(localStorage.getItem(MINE) || '{}'); mine = Object.assign(mine, m); } catch(e){}
 try { const t = JSON.parse(localStorage.getItem(TKEY) || '{}'); timer = Object.assign(timer, t); } catch(e){}
 
+/* Where you got to in a video or an audio track. This used to live only in
+   the browser, which meant the iPad and the Mac knew nothing about each
+   other. It now goes to the server with everything else, so a track picks up
+   where you left it on any device. Each position carries the time it was
+   written, so the newer one wins. */
 let positions = {};
 try { positions = JSON.parse(localStorage.getItem('fnh_one_button_pos_v1') || '{}'); } catch(e){}
-const savePos = (id, t) => { positions[id] = Math.round(t); try { localStorage.setItem('fnh_one_button_pos_v1', JSON.stringify(positions)); } catch(e){} };
+const posSeconds = p => p == null ? 0 : (typeof p === 'number' ? p : (p.t || 0));
+const posStamp   = p => p == null ? 0 : (typeof p === 'number' ? 0 : (p.d || 0));
+const savePos = (id, t, urgent) => {
+  positions[id] = { t: Math.round(t), d: Date.now() };
+  try { localStorage.setItem('fnh_one_button_pos_v1', JSON.stringify(positions)); } catch(e){}
+  if (urgent) pushMarks(true); else pushPositions();
+};
 
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -591,12 +602,13 @@ const saveMine  = () => { try { localStorage.setItem(MINE, JSON.stringify(mine))
    a real stand-by rather than a copy that drifts. */
 const MARK_HOSTS = Array.from(new Set([HUB_HOSTS.mini, HUB_HOSTS.macbook]));
 let marksTimer = 0;
+let posTimer = 0;
 let marksBlocked = false;
-function pushMarks(){
+function pushMarks(now){
   if (!MARK_HOSTS.length) return;
   clearTimeout(marksTimer);
-  marksTimer = setTimeout(() => {
-    const body = JSON.stringify({ items: state, mine: { energy:mine.energy, size:mine.size, parked:mine.parked, history:mine.history } });
+  const send = () => {
+    const body = JSON.stringify({ items: state, mine: { energy:mine.energy, size:mine.size, parked:mine.parked, history:mine.history }, pos: positions });
     let ok = 0, fail = 0;
     for (const h of MARK_HOSTS){
       try {
@@ -613,7 +625,17 @@ function pushMarks(){
         if (n) n.style.display = blocked ? 'flex' : 'none';
       }
     }, 1500);
-  }, 1200);
+  };
+  if (now) send(); else marksTimer = setTimeout(send, 1200);
+}
+/* A position is written while you watch, so it is not pushed on every
+   tick — every twenty seconds, and the moment you stop. */
+/* A throttle, not a delay: the position is written several times a second
+   while you watch, and a delay would be pushed back every time and never
+   arrive. */
+function pushPositions(){
+  if (posTimer) return;
+  posTimer = setTimeout(() => { posTimer = 0; pushMarks(); }, 20000);
 }
 function pullMarks(){
   if (!MARK_HOSTS.length) return Promise.resolve(false);
@@ -630,6 +652,9 @@ function pullMarks(){
         if (d.mine){
           if (Array.isArray(d.mine.parked) && d.mine.parked.length > (mine.parked||[]).length) mine.parked = d.mine.parked;
           if (Array.isArray(d.mine.history) && d.mine.history.length > (mine.history||[]).length) mine.history = d.mine.history;
+        }
+        for (const k in d.pos || {}){
+          if (posStamp(d.pos[k]) >= posStamp(positions[k])) positions[k] = d.pos[k];
         }
       }
       return changed;
@@ -891,10 +916,14 @@ function buildVideo(it){
   v.dataset.itemId = it.id;
   v.style.width = '100%'; v.style.display='block'; v.style.maxHeight='42vh'; v.style.background='#000';
   v.src = target(it);
-  const saved = positions[it.id];
-  if (saved > 3) v.addEventListener('loadedmetadata', ()=>{ try{ v.currentTime = saved; }catch(e){} }, {once:true});
+  const saved = posSeconds(positions[it.id]);
+  v.addEventListener('loadedmetadata', ()=>{
+    // a finished track starts at the beginning, not at the end
+    if (saved > 3 && (!v.duration || saved < v.duration - 2)){ try{ v.currentTime = saved; }catch(e){} }
+  }, {once:true});
   v.addEventListener('timeupdate', ()=>savePos(it.id, v.currentTime));
-  v.addEventListener('ended', ()=>savePos(it.id, v.duration || 0));
+  v.addEventListener('pause', ()=>savePos(it.id, v.currentTime, true));
+  v.addEventListener('ended', ()=>savePos(it.id, v.duration || 0, true));
   v.addEventListener('play', ()=>{ playing = true; updateGoLabel(); });
   v.addEventListener('pause', ()=>{ if(!v.ended){ playing = false; updateGoLabel(); } });
   return v;
@@ -905,10 +934,13 @@ function buildAudio(it){
   a.dataset.itemId = it.id;
   a.style.width = '100%'; a.style.display = 'block';
   a.src = target(it);
-  const saved = positions[it.id];
-  if (saved > 2) a.addEventListener('loadedmetadata', ()=>{ try{ a.currentTime = saved; }catch(e){} }, {once:true});
+  const saved = posSeconds(positions[it.id]);
+  a.addEventListener('loadedmetadata', ()=>{
+    if (saved > 2 && (!a.duration || saved < a.duration - 2)){ try{ a.currentTime = saved; }catch(e){} }
+  }, {once:true});
   a.addEventListener('timeupdate', ()=>savePos(it.id, a.currentTime));
-  a.addEventListener('ended', ()=>savePos(it.id, a.duration || 0));
+  a.addEventListener('pause', ()=>savePos(it.id, a.currentTime, true));
+  a.addEventListener('ended', ()=>savePos(it.id, a.duration || 0, true));
   a.addEventListener('play', ()=>{ playing = true; updateGoLabel(); });
   a.addEventListener('pause', ()=>{ if(!a.ended){ playing = false; updateGoLabel(); } });
   return a;
@@ -1914,6 +1946,9 @@ $$('#presets button').forEach(b => b.classList.toggle('on', Number(b.dataset.m) 
     if (changed){ saveTicks(); saveMine(); try { render(); } catch(e){} }
     pushMarks();          // so this browser's own ticks reach every hub
   });
+  /* going away with the tab open should not lose the last few seconds */
+  window.addEventListener('pagehide', () => pushMarks(true));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pushMarks(true); });
   const retry = document.getElementById('marksRetry');
   if (retry) retry.onclick = () => { marksBlocked = false; pushMarks(); };
 })();
