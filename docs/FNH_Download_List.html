@@ -14,10 +14,9 @@
   button:hover{border-color:#3a4754}
   .stat{color:var(--dim);font-size:13px;margin-left:auto}
   main{max-width:1000px;margin:0 auto;padding:24px 24px 100px}
-  .cat{margin-bottom:36px}
-  .cat h2{font-size:18px;margin:0 0 16px;padding-bottom:8px;border-bottom:1px solid var(--line);color:var(--acc)}
-  .mod{margin-bottom:24px}
-  .mod h3{font-size:15px;margin:0 0 10px;color:var(--fg);font-weight:600}
+  .mod{margin-bottom:30px}
+  .mod h2{font-size:18px;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);color:var(--acc)}
+  .mod h2 .modsz{font-size:11px;color:var(--dim);font-weight:500;margin-left:8px}
   .video{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;margin-bottom:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;cursor:pointer}
   .video:hover{border-color:#3a4754}
   .video.checked{background:#12312c;border-color:#1f5f54}
@@ -50,44 +49,47 @@ var KEY='fnh_vdl';
 var checked = new Set(JSON.parse(localStorage.getItem(KEY)||'[]'));
 function save(){localStorage.setItem(KEY,JSON.stringify(Array.from(checked)));document.getElementById('c').textContent=checked.size;}
 function selAll(v){for(var i=0;i<DATA.length;i++){if(v)checked.add(i);else checked.delete(i);}var vids=document.querySelectorAll('.video');for(var j=0;j<vids.length;j++){var vid=vids[j];var idx=+vid.getAttribute('data-idx');vid.classList.toggle('checked',checked.has(idx));vid.querySelector('input').checked=checked.has(idx);}save();}
-function exportList(){var s=DATA.filter(function(_,i){return checked.has(i);}).map(function(v,idx){return (idx+1)+'. Module '+v.mod+' | '+v.cat+' | Lesson '+ (v.lesson||'')+' | '+v.title+'\n   URL: '+v.url+'\n   Page: '+v.page;}).join('\n\n');var b=new Blob(['FNH Videos to Download - '+checked.size+' videos\nGenerated: '+new Date().toISOString()+'\n\n'+s],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fnh-videos-download-'+Date.now()+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);}
-function copyUrls(){var u=DATA.filter(function(_,i){return checked.has(i);}).map(function(v){return v.url;}).join('\n');navigator.clipboard.writeText(u).then(function(){alert('Copied '+checked.size+' URLs');});}
+function exportList(){var s=DATA.filter(function(_,i){return checked.has(i);}).map(function(v,idx){return (idx+1)+'. Module '+v.mod+' | '+v.cat+' | Lesson '+ (v.lesson||'')+' | '+v.title+'
+   URL: '+v.url+'
+   Page: '+v.page;}).join('
+
+');var b=new Blob(['FNH Videos to Download - '+checked.size+' videos
+Generated: '+new Date().toISOString()+'
+
+'+s],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fnh-videos-download-'+Date.now()+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+function copyUrls(){var u=DATA.filter(function(_,i){return checked.has(i);}).map(function(v){return v.url;}).join('
+');navigator.clipboard.writeText(u).then(function(){alert('Copied '+checked.size+' URLs');});}
 function render(){
   var el=document.getElementById('list');
   el.innerHTML='';
-  var cats={};
+  var lastMod=null;
   for(var i=0;i<DATA.length;i++){
     var v=DATA[i];
-    if(!cats[v.cat])cats[v.cat]={};
-    if(!cats[v.cat][v.mod])cats[v.cat][v.mod]=[];
-    cats[v.cat][v.mod].push({v:v,i:i});
-  }
-  Object.keys(cats).sort().forEach(function(cat){
-    var cd=document.createElement('div');cd.className='cat';
-    var ch=document.createElement('h2');ch.textContent=cat;cd.appendChild(ch);
-    Object.keys(cats[cat]).sort(function(a,b){return +a-+b;}).forEach(function(mod){
+    if(v.mod!==lastMod){
       var md=document.createElement('div');md.className='mod';
-      var mh=document.createElement('h3');mh.textContent='Module '+mod;md.appendChild(mh);
-      cats[cat][mod].sort(function(a,b){return (a.v.lesson||0)-(b.v.lesson||0);}).forEach(function(item){
-        var v=item.v, idx=item.i;
-        var vd=document.createElement('div');vd.className='video'+(checked.has(idx)?' checked':'');vd.setAttribute('data-idx',idx);
-        var cb=document.createElement('input');cb.type='checkbox';cb.checked=checked.has(idx);
-        var info=document.createElement('div');info.className='info';
-        var t=document.createElement('div');t.className='title';t.textContent=(v.lesson? v.lesson+'. ':'')+v.title;
-        var m2=document.createElement('div');m2.className='meta';
-        var a=document.createElement('a');a.className='url';a.href=v.page;a.target='_blank';a.rel='noopener';a.textContent='View in Kajabi ↗';
-        m2.appendChild(a);info.appendChild(t);info.appendChild(m2);
-        vd.appendChild(cb);vd.appendChild(info);
-        (function(vd,cb,idx){
-          cb.onchange=function(e){if(e.target.checked)checked.add(idx);else checked.delete(idx);vd.classList.toggle('checked',e.target.checked);save();};
-          vd.onclick=function(e){if(e.target.tagName==='A')return;cb.checked=!cb.checked;var ev=document.createEvent('Event');ev.initEvent('change',true,true);cb.dispatchEvent(ev);};
-        })(vd,cb,idx);
-        md.appendChild(vd);
-      });
-      cd.appendChild(md);
-    });
-    el.appendChild(cd);
-  });
+      var mh=document.createElement('h2');mh.textContent='Module '+v.mod;
+      var sz=document.createElement('span');sz.className='modsz';sz.textContent='('+DATA.filter(function(x){return x.mod===v.mod;}).length+' videos)';
+      mh.appendChild(sz);
+      md.appendChild(mh);
+      el.appendChild(md);
+      lastMod=v.mod;
+    }
+    var vd=document.createElement('div');vd.className='video'+(checked.has(i)?' checked':'');vd.setAttribute('data-idx',i);
+    var cb=document.createElement('input');cb.type='checkbox';cb.checked=checked.has(i);
+    var info=document.createElement('div');info.className='info';
+    var t=document.createElement('div');t.className='title';t.textContent=(v.lesson? v.lesson+'. ':'')+v.title;
+    var m2=document.createElement('div');m2.className='meta';
+    var a=document.createElement('a');a.className='url';a.href=v.page;a.target='_blank';a.rel='noopener';a.textContent='View in Kajabi ↗';
+    m2.appendChild(a);info.appendChild(t);info.appendChild(m2);
+    vd.appendChild(cb);vd.appendChild(info);
+    (function(vd,cb,idx){
+      cb.onchange=function(e){if(e.target.checked)checked.add(idx);else checked.delete(idx);vd.classList.toggle('checked',e.target.checked);save();};
+      vd.onclick=function(e){if(e.target.tagName==='A')return;cb.checked=!cb.checked;var ev=document.createEvent('Event');ev.initEvent('change',true,true);cb.dispatchEvent(ev);};
+    })(vd,cb,i);
+    // append video to the current module div
+    var curMod=document.querySelector('.mod:last-child');
+    if(curMod && curMod.className==='mod') curMod.appendChild(vd);
+  }
 }
 render();save();
 </script>
