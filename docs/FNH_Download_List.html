@@ -18,6 +18,8 @@
   .mod h2{font-size:18px;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);color:var(--acc)}
   .video{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;margin-bottom:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;cursor:pointer}
   .video:hover{border-color:#3a4754}
+  .mod-btn{border:1px solid var(--line);background:var(--card);color:var(--dim);padding:3px 10px;border-radius:6px;font:11px/1.4 inherit;cursor:pointer;margin-left:10px;vertical-align:middle}
+  .mod-btn:hover{border-color:#3a4754;color:var(--fg)}
   .video.checked{background:#12312c;border-color:#1f5f54}
   .video.checked .title{color:var(--fg)}
   input[type=checkbox]{width:20px;height:20px;margin-top:2px;cursor:pointer;accent-color:var(--check)}
@@ -48,6 +50,7 @@ var KEY='fnh_vdl';
 var checked = new Set(JSON.parse(localStorage.getItem(KEY)||'[]'));
 function save(){localStorage.setItem(KEY,JSON.stringify(Array.from(checked)));document.getElementById('c').textContent=checked.size;}
 function selAll(v){for(var i=0;i<DATA.length;i++){if(v)checked.add(i);else checked.delete(i);}var vids=document.querySelectorAll('.video');for(var j=0;j<vids.length;j++){var vid=vids[j];var idx=+vid.getAttribute('data-idx');vid.classList.toggle('checked',checked.has(idx));vid.querySelector('input').checked=checked.has(idx);}save();}
+function selMod(v,mod){for(var i=0;i<DATA.length;i++){if(DATA[i].mod===mod){if(v)checked.add(i);else checked.delete(i);}}var vids=document.querySelectorAll('.video[data-idx]');for(var j=0;j<vids.length;j++){var idx=+vids[j].getAttribute('data-idx');var vd=vids[j];vd.classList.toggle('checked',checked.has(idx));vd.querySelector('input').checked=checked.has(idx);}save();}
 function exportList(){var s=DATA.filter(function(_,i){return checked.has(i);}).map(function(v,idx){return (idx+1)+'. Module '+v.mod+' | '+v.cat+' | Lesson '+ (v.lesson||'')+' | '+v.title+'\n   URL: '+v.url+'\n   Page: '+v.page;}).join('\n');var b=new Blob(['FNH Videos to Download - '+checked.size+' videos\nGenerated: '+new Date().toISOString()+'\n\n'+s],{type:'text/plain'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fnh-videos-download-'+Date.now()+'.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);}
 function copyUrls(){var u=DATA.filter(function(_,i){return checked.has(i);}).map(function(v){return v.url;}).join('\n');navigator.clipboard.writeText(u).then(function(){alert('Copied '+checked.size+' URLs');});}
 function render(){
@@ -60,7 +63,7 @@ function render(){
       var md=document.createElement('div');md.className='mod';
       var mh=document.createElement('h2');mh.textContent='Module '+v.mod;
       var sz=document.createElement('span');sz.className='modsz';sz.textContent='('+DATA.filter(function(x){return x.mod===v.mod;}).length+' videos)';
-      mh.appendChild(sz);md.appendChild(mh);el.appendChild(md);lastMod=v.mod;
+      mh.appendChild(sz);var mb=document.createElement('button');mb.className='mod-btn';mb.textContent='Select all';mb.onclick=function(){selMod(true,v.mod);};mh.appendChild(mb);md.appendChild(mh);el.appendChild(md);lastMod=v.mod;
     }
     var vd=document.createElement('div');vd.className='video'+(checked.has(i)?' checked':'');vd.setAttribute('data-idx',i);
     var cb=document.createElement('input');cb.type='checkbox';cb.checked=checked.has(i);
